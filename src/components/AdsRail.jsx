@@ -10,6 +10,17 @@ import { Icon } from './Icons.jsx'
 const ACCENTS = ['#D8A63A', '#4A90E8', '#27AE60', '#9B59B6', '#E8734A', '#4AE8D4']
 const EMOJIS = ['✨', '🛍️', '🍜', '🎨', '🔧', '📸', '🌿', '🚀']
 
+// Shown when the API is unreachable (e.g. a static-only deploy with no
+// backend) or hasn't been seeded yet, so the rail is never empty in a demo.
+const FALLBACK_ADS = [
+  { id: 'fallback-1', businessName: 'Kola Foods', tagline: 'Snacks made from grandma’s recipes', ctaLabel: 'Order now', accent: '#E8734A', emoji: '🥟' },
+  { id: 'fallback-2', businessName: 'Adire by Funke', tagline: 'Modern cuts, hand-dyed textiles', ctaLabel: 'Shop the drop', accent: '#E84A8A', emoji: '🧵' },
+  { id: 'fallback-3', businessName: 'SunHome Solar', tagline: 'Off the generator in 3 weeks', ctaLabel: 'Get a quote', accent: '#F2C94C', emoji: '☀️' },
+  { id: 'fallback-4', businessName: 'Folake Bakes', tagline: 'Small-chops for every occasion', ctaLabel: 'See menu', accent: '#E8A24A', emoji: '🧁' },
+  { id: 'fallback-5', businessName: 'Naija Devs Bootcamp', tagline: 'Learn to code, get mentored, get hired', ctaLabel: 'Enroll now', accent: '#4AE8D4', emoji: '💻' },
+  { id: 'fallback-6', businessName: 'Green Lagos Nursery', tagline: 'Seedlings and soil for your balcony farm', ctaLabel: 'Visit us', accent: '#27AE60', emoji: '🌱' },
+]
+
 function AdvertiseForm({ onClose, onCreated }) {
   const [form, setForm] = useState({ businessName: '', tagline: '', ctaLabel: 'Learn more', accent: ACCENTS[0], emoji: EMOJIS[0] })
   const [step, setStep] = useState('form') // form | pay
@@ -84,7 +95,11 @@ export function AdsRail() {
   const [active, setActive] = useState(0)
   const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => { api.listAds().then(setAds).catch(() => {}) }, [])
+  useEffect(() => {
+    api.listAds()
+      .then((a) => setAds(a.length ? a : FALLBACK_ADS))
+      .catch(() => setAds(FALLBACK_ADS))
+  }, [])
   useEffect(() => {
     if (ads.length < 2) return
     const t = setInterval(() => setActive((i) => (i + 1) % ads.length), 5000)
