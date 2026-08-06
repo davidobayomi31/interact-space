@@ -61,7 +61,7 @@ export function Globe() {
   }, [size])
 
   return (
-    <div className="globe-section">
+    <div className="globe-block">
       <div className="globe-wrap" ref={wrapRef}>
         <div className="globe-sphere" />
         <div className="globe-grid" aria-hidden="true" />
@@ -78,7 +78,7 @@ export function Globe() {
           </button>
         ))}
       </div>
-      <div className="globe-side">
+      <div className="globe-caption">
         {selected ? (
           <div className="card globe-event-card">
             <div className="opp-type">via {selected.platform}</div>
@@ -87,10 +87,9 @@ export function Globe() {
             <div className="meta-dim"><Icon name="users" size={12} /> {selected.attending.toLocaleString()} attending</div>
           </div>
         ) : (
-          <div className="card ghost-card left">
-            <Icon name="globe" size={22} />
-            <p><strong>{WORLD_EVENTS.length} public events live on the network.</strong><br />Click a pin to see what’s happening, anywhere in the world.</p>
-          </div>
+          <p className="meta-dim globe-hint">
+            <strong>{WORLD_EVENTS.length} public events live on the network.</strong><br />Click a pin to see what’s happening, anywhere in the world.
+          </p>
         )}
       </div>
     </div>

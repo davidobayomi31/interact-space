@@ -25,33 +25,35 @@ export default function Arrival() {
       <section className="hero">
         <div className="hero-glow" aria-hidden="true" />
         <div className="hero-grid" aria-hidden="true" />
-        <div className="hero-content">
-          <div className="hero-badge">
-            <Icon name="map-pin" size={13} /> You’re looking at <strong>Lagos, Nigeria</strong> · World Network → Nigeria → Lagos
+        <div className="hero-main">
+          <div className="hero-content">
+            <div className="hero-badge">
+              <Icon name="map-pin" size={13} /> You’re looking at <strong>Lagos, Nigeria</strong> · World Network → Nigeria → Lagos
+            </div>
+            <h1>A connected world<br />of <span className="gold-text">communities</span></h1>
+            <p className="hero-sub">{PURPOSE}</p>
+            <div className="hero-actions">
+              {user && profile.onboarded ? (
+                <Link to="/space" className="btn primary large">Go to My Space <Icon name="arrow" size={17} /></Link>
+              ) : (
+                <Link to={enterTo} className="btn primary large">Enter the city <Icon name="arrow" size={17} /></Link>
+              )}
+              <button className="btn gold-outline large" onClick={() => setAssistantOpen(true)}>
+                <Icon name="sparkle" size={16} /> Ask the Companion
+              </button>
+            </div>
+            <div className="pillar-row">
+              <span><Icon name="users" size={14} /> People</span>
+              <span><Icon name="community" size={14} /> Communities</span>
+              <span><Icon name="sparkle" size={14} /> Opportunities</span>
+            </div>
           </div>
-          <h1>A connected world<br />of <span className="gold-text">communities</span></h1>
-          <p className="hero-sub">{PURPOSE}</p>
-          <div className="hero-actions">
-            {user && profile.onboarded ? (
-              <Link to="/space" className="btn primary large">Go to My Space <Icon name="arrow" size={17} /></Link>
-            ) : (
-              <Link to={enterTo} className="btn primary large">Enter the city <Icon name="arrow" size={17} /></Link>
-            )}
-            <button className="btn gold-outline large" onClick={() => setAssistantOpen(true)}>
-              <Icon name="sparkle" size={16} /> Ask the Companion
-            </button>
-          </div>
-          <div className="pillar-row">
-            <span><Icon name="users" size={14} /> People</span>
-            <span><Icon name="community" size={14} /> Communities</span>
-            <span><Icon name="sparkle" size={14} /> Opportunities</span>
+
+          <div className="hero-globe-col">
+            <div className="hero-globe-label"><Icon name="globe" size={13} /> The world, live</div>
+            <Globe />
           </div>
         </div>
-      </section>
-
-      <section className="section">
-        <SectionHead icon="globe" title="The world, live" sub="Public events happening right now, pulled in from around the network" />
-        <Globe />
       </section>
 
       <LiveNowRow />

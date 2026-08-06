@@ -256,7 +256,7 @@ a.card-title:hover { color: var(--gold-bright); }
   background-size: 44px 44px;
   mask-image: radial-gradient(ellipse 75% 70% at 50% 35%, black, transparent);
 }
-.hero-content { position: relative; max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.hero-content { position: relative; flex: 1 1 480px; max-width: 640px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 12.5px; color: var(--text-dim);
@@ -598,7 +598,7 @@ a.card-title:hover { color: var(--gold-bright); }
   .chat-layout.has-active .chat-pane { display: flex; }
   .chat-back { display: inline-flex !important; }
   .live-row { padding-bottom: 8px; }
-  .globe-section { flex-direction: column; align-items: center; text-align: center; }
+  .hero-main { flex-direction: column; }
   .job-form-row { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -849,8 +849,8 @@ a.post-stat:hover { color: var(--text); }
 
 /* ── Ads rail ── */
 .ads-rail {
-  position: fixed; right: 18px; top: 92px; z-index: 40;
-  width: 190px; display: flex; flex-direction: column; gap: 10px;
+  position: fixed; right: 14px; top: 92px; z-index: 40;
+  width: 174px; display: flex; flex-direction: column; gap: 10px;
 }
 .ads-rail-label { display: flex; align-items: center; gap: 5px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
 .ads-stack { display: flex; flex-direction: column; gap: 8px; }
@@ -866,12 +866,25 @@ a.post-stat:hover { color: var(--text); }
 .ad-card.enlarged .ad-emoji { font-size: 28px; }
 .ad-cta { align-self: flex-start; margin-top: 4px; pointer-events: none; }
 .ads-rail-cta { align-self: stretch; justify-content: center; }
-@media (max-width: 1500px) { .ads-rail { display: none; } }
+@media (max-width: 1080px) { .ads-rail { display: none; } }
+
+/* ── Hero two-column layout: pitch left, live globe right ── */
+.hero-main {
+  position: relative; max-width: var(--maxw); margin: 0 auto;
+  display: flex; align-items: center; justify-content: center; gap: 52px; flex-wrap: wrap;
+}
+.hero-globe-col { flex: 0 1 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.hero-globe-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.hero-globe-label .icon { color: var(--gold); }
 
 /* ── Globe ── */
-.globe-section { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+.globe-block { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .globe-wrap {
-  position: relative; width: min(360px, 90vw); aspect-ratio: 1; flex-shrink: 0;
+  position: relative; width: min(280px, 72vw); aspect-ratio: 1; flex-shrink: 0;
   border-radius: 50%; overflow: visible;
 }
 .globe-sphere {
@@ -896,8 +909,9 @@ a.post-stat:hover { color: var(--text); }
   background: var(--gold-bright); box-shadow: 0 0 8px rgba(240,194,92,0.9);
 }
 .globe-pin.active .globe-pin-dot { background: #5ed695; box-shadow: 0 0 10px rgba(94,214,149,0.9); width: 9px; height: 9px; }
-.globe-side { flex: 1; min-width: 240px; }
-.globe-event-card { border-top: 2px solid var(--gold); animation: drawer-in 0.2s ease-out; }
+.globe-caption { width: 100%; max-width: 300px; text-align: center; }
+.globe-hint { font-size: 12.5px; line-height: 1.5; }
+.globe-event-card { text-align: left; border-top: 2px solid var(--gold); animation: drawer-in 0.2s ease-out; width: 100%; }
 
 /* ── Mobile bottom nav ── */
 .mobile-nav {
