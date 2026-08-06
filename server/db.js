@@ -28,7 +28,10 @@ CREATE TABLE IF NOT EXISTS users (
   privacy TEXT DEFAULT 'neighborhood',
   onboarded INTEGER DEFAULT 0,
   is_seed INTEGER DEFAULT 0,
-  created_at INTEGER
+  created_at INTEGER,
+  id_verified INTEGER DEFAULT 0,
+  verified_at INTEGER,
+  job_skills TEXT DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS communities (
@@ -106,11 +109,106 @@ CREATE TABLE IF NOT EXISTS reports (
   resolver_id TEXT
 );
 
+CREATE TABLE IF NOT EXISTS jobs (
+  id TEXT PRIMARY KEY,
+  poster_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  area TEXT,
+  city TEXT DEFAULT 'Lagos',
+  budget TEXT,
+  verified_only INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'open',
+  created_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS job_interests (
+  job_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  created_at INTEGER,
+  PRIMARY KEY (job_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS dm_messages (
+  id TEXT PRIMARY KEY,
+  from_id TEXT NOT NULL,
+  to_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at INTEGER,
+  read INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS chats (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  community_id TEXT,
+  creator_id TEXT NOT NULL,
+  accent TEXT DEFAULT '#4A90E8',
+  created_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS chat_members (
+  chat_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  created_at INTEGER,
+  PRIMARY KEY (chat_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  chat_id TEXT NOT NULL,
+  sender_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS ratings (
+  user_id TEXT NOT NULL,
+  community_id TEXT NOT NULL,
+  stars INTEGER NOT NULL,
+  review TEXT DEFAULT '',
+  created_at INTEGER,
+  PRIMARY KEY (user_id, community_id)
+);
+
+CREATE TABLE IF NOT EXISTS ads (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  business_name TEXT NOT NULL,
+  tagline TEXT DEFAULT '',
+  cta_label TEXT DEFAULT 'Learn more',
+  accent TEXT DEFAULT '#D8A63A',
+  emoji TEXT DEFAULT '✨',
+  active INTEGER DEFAULT 0,
+  created_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS live_streams (
+  id TEXT PRIMARY KEY,
+  community_id TEXT NOT NULL,
+  host_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  started_at INTEGER,
+  ended_at INTEGER,
+  viewer_count INTEGER DEFAULT 0
+);
+
 CREATE INDEX IF NOT EXISTS idx_posts_community ON posts(community_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_votes_target ON votes(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_members_user ON memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category);
+CREATE INDEX IF NOT EXISTS idx_dm_pair ON dm_messages(from_id, to_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id);
 `)
+
+// Migration: existing DBs created before these columns existed.
+const userCols = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name)
+if (!userCols.includes('id_verified')) db.exec('ALTER TABLE users ADD COLUMN id_verified INTEGER DEFAULT 0')
+if (!userCols.includes('verified_at')) db.exec('ALTER TABLE users ADD COLUMN verified_at INTEGER')
+if (!userCols.includes('job_skills')) db.exec("ALTER TABLE users ADD COLUMN job_skills TEXT DEFAULT '[]'")
 
 const json = (v, fallback = []) => { try { return JSON.parse(v) } catch { return fallback } }
 
@@ -131,6 +229,7 @@ export function publicUser(row) {
     id: row.id, name: row.name, handle: row.handle, title: row.title,
     city: row.city, area: row.area, color: row.color, bio: row.bio,
     interests: json(row.interests), goals: json(row.goals), skills: json(row.skills),
+    idVerified: !!row.id_verified,
   }
 }
 
@@ -146,6 +245,7 @@ export function selfUser(row) {
     communities: communities.map((c) => c.id),
     moderatorOf: communities.filter((c) => c.role === 'moderator').map((c) => c.id),
     connections,
+    jobSkills: json(row.job_skills),
   }
 }
 
@@ -203,16 +303,76 @@ export function threadForPost(postId, viewerId) {
   return roots
 }
 
+const ratingAgg = db.prepare('SELECT COUNT(*) AS n, COALESCE(AVG(stars),0) AS avg FROM ratings WHERE community_id = ?')
+const myRating = db.prepare('SELECT stars, review FROM ratings WHERE user_id = ? AND community_id = ?')
+
 export function serializeCommunity(row, viewerId) {
   const membership = viewerId
     ? db.prepare('SELECT role FROM memberships WHERE user_id = ? AND community_id = ?').get(viewerId, row.id)
     : null
+  const agg = ratingAgg.get(row.id)
+  const live = db.prepare('SELECT COUNT(*) AS n FROM live_streams WHERE community_id = ? AND ended_at IS NULL').get(row.id).n
   return {
     id: row.id, name: row.name, tagline: row.tagline, description: row.description,
     scope: row.scope, city: row.city, accent: row.accent, icon: row.icon,
     tags: json(row.tags), rules: json(row.rules), memberCount: row.member_count,
     trending: !!row.trending,
     joined: !!membership, role: membership?.role ?? null,
+    rating: { avg: Math.round(agg.avg * 10) / 10, count: agg.n, mine: viewerId ? (myRating.get(viewerId, row.id)?.stars ?? 0) : 0 },
+    live: live > 0,
+  }
+}
+
+// ── Jobs ─────────────────────────────────────────────────────────────
+export function serializeJob(row, viewerId) {
+  const poster = publicUser(getUserById(row.poster_id)) || { id: row.poster_id, name: 'Unknown', color: '#888' }
+  const interested = db.prepare('SELECT COUNT(*) AS n FROM job_interests WHERE job_id = ?').get(row.id).n
+  const mine = viewerId ? !!db.prepare('SELECT 1 FROM job_interests WHERE job_id = ? AND user_id = ?').get(row.id, viewerId) : false
+  return {
+    id: row.id, title: row.title, category: row.category, description: row.description,
+    area: row.area, city: row.city, budget: row.budget, verifiedOnly: !!row.verified_only,
+    status: row.status, poster, interested, iInterested: mine,
+    createdAt: row.created_at, ago: timeAgo(row.created_at),
+  }
+}
+
+// ── Chats (group chats, distinct from public Communities) ─────────────
+export function serializeChat(row, viewerId) {
+  const memberCount = db.prepare('SELECT COUNT(*) AS n FROM chat_members WHERE chat_id = ?').get(row.id).n
+  const joined = viewerId ? !!db.prepare('SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?').get(row.id, viewerId) : false
+  const last = db.prepare('SELECT body, created_at FROM chat_messages WHERE chat_id = ? ORDER BY created_at DESC LIMIT 1').get(row.id)
+  return {
+    id: row.id, name: row.name, description: row.description, communityId: row.community_id,
+    accent: row.accent, memberCount, joined, createdAt: row.created_at,
+    lastMessage: last?.body ?? null, lastAt: last?.created_at ?? row.created_at,
+  }
+}
+
+export function serializeChatMessage(row) {
+  const author = publicUser(getUserById(row.sender_id)) || { id: row.sender_id, name: 'Unknown', color: '#888' }
+  return { id: row.id, chatId: row.chat_id, body: row.body, author, createdAt: row.created_at, ago: timeAgo(row.created_at) }
+}
+
+export function serializeDm(row) {
+  return { id: row.id, fromId: row.from_id, toId: row.to_id, body: row.body, createdAt: row.created_at, ago: timeAgo(row.created_at), read: !!row.read }
+}
+
+// ── Ads ──────────────────────────────────────────────────────────────
+export function serializeAd(row) {
+  return {
+    id: row.id, businessName: row.business_name, tagline: row.tagline,
+    ctaLabel: row.cta_label, accent: row.accent, emoji: row.emoji,
+    active: !!row.active, ownerId: row.owner_id, createdAt: row.created_at,
+  }
+}
+
+// ── Live streams ─────────────────────────────────────────────────────
+export function serializeLive(row) {
+  const host = publicUser(getUserById(row.host_id)) || { id: row.host_id, name: 'Unknown', color: '#888' }
+  const community = db.prepare('SELECT id, name, accent FROM communities WHERE id = ?').get(row.community_id)
+  return {
+    id: row.id, title: row.title, host, community,
+    startedAt: row.started_at, viewerCount: row.viewer_count,
   }
 }
 

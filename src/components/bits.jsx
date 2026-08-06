@@ -1,11 +1,19 @@
 // Small shared building blocks: avatars, trace chips, tag pills, cards.
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from './Icons.jsx'
 import { COMMUNITIES } from '../data/seed.js'
 import { tagLabel } from '../ai.js'
 import { useApp } from '../state.jsx'
+import * as api from '../api.js'
 import { Vote } from './Vote.jsx'
 import { ReportButton } from './ReportButton.jsx'
+import { RatingSummary } from './Rating.jsx'
+
+// Local, dependency-free copy of the live badge markup — Live.jsx imports
+// Avatar from this file, so importing LiveBadge back from Live.jsx here
+// would create a circular module dependency.
+const LiveBadge = () => <span className="live-badge"><span className="live-dot" /> LIVE</span>
 
 export function Avatar({ user, size = 40 }) {
   const color = user.color || '#888'
@@ -52,6 +60,8 @@ export function CommunityCard({ community, shared = [], source, because, compact
   const navigate = useNavigate()
   const joined = profile.communities.includes(community.id)
   const onJoin = () => (user ? joinCommunity(community.id) : navigate('/auth'))
+  const [meta, setMeta] = useState(null)
+  useEffect(() => { api.getCommunity(community.id).then(setMeta).catch(() => {}) }, [community.id])
   return (
     <div className={`card community-card ${compact ? 'compact' : ''}`} style={{ '--accent': community.accent }}>
       <div className="community-card-head">
@@ -66,6 +76,8 @@ export function CommunityCard({ community, shared = [], source, because, compact
               {community.scope === 'global' ? 'Global' : community.city}
             </span>
             <span className="meta-dim">{community.memberCount.toLocaleString()} members</span>
+            {meta && <RatingSummary rating={meta.rating} />}
+            {meta?.live && <LiveBadge />}
           </div>
         </div>
       </div>

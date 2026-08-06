@@ -484,11 +484,51 @@ export const GOAL_OPTIONS = [
   { id: 'events', label: 'Attend events', icon: 'calendar' },
 ]
 
+// ── Quick Jobs categories — local trade & gig work ────────────────────
+export const JOB_CATEGORIES = [
+  { id: 'plumbing', label: 'Plumbing', icon: 'wrench' },
+  { id: 'electrical', label: 'Electrical', icon: 'zap' },
+  { id: 'cleaning', label: 'Cleaning', icon: 'sparkle' },
+  { id: 'moving', label: 'Moving & Hauling', icon: 'truck' },
+  { id: 'painting', label: 'Painting', icon: 'store' },
+  { id: 'carpentry', label: 'Carpentry', icon: 'wrench' },
+  { id: 'appliance-repair', label: 'Appliance Repair', icon: 'wrench' },
+  { id: 'gardening', label: 'Gardening & Landscaping', icon: 'leaf' },
+  { id: 'delivery', label: 'Delivery & Errands', icon: 'truck' },
+  { id: 'tutoring', label: 'Tutoring', icon: 'book' },
+  { id: 'photography-gig', label: 'Photography', icon: 'camera' },
+  { id: 'event-help', label: 'Event Help', icon: 'calendar' },
+  { id: 'tech-support', label: 'Tech Support', icon: 'code' },
+  { id: 'catering-gig', label: 'Catering', icon: 'store' },
+  { id: 'auto-repair', label: 'Auto Repair', icon: 'wrench' },
+]
+
 export const CHARTER = [
   'Safety first — no harassment, threats, or harmful activity.',
   'Respect every member, in every community, in every country.',
   'Privacy is protected — location sharing is always in your control.',
   'Communities are independent, but the Charter applies everywhere.',
+]
+
+// ── Globe — public events happening around the world right now ───────
+// Demo data styled as if aggregated from public event platforms.
+export const WORLD_EVENTS = [
+  { id: 'we1', city: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, title: 'First-Cheque Pitch Night', platform: 'Interact Space', attending: 87 },
+  { id: 'we2', city: 'Nairobi', country: 'Kenya', lat: -1.2921, lon: 36.8219, title: 'Silicon Savannah Founders Meetup', platform: 'Meetup', attending: 214 },
+  { id: 'we3', city: 'Accra', country: 'Ghana', lat: 5.6037, lon: -0.1870, title: 'West Africa Fintech Summit', platform: 'Eventbrite', attending: 640 },
+  { id: 'we4', city: 'London', country: 'UK', lat: 51.5072, lon: -0.1276, title: 'Diaspora Tech Founders Night', platform: 'Eventbrite', attending: 312 },
+  { id: 'we5', city: 'New York', country: 'USA', lat: 40.7128, lon: -74.0060, title: 'Global Creators Marketplace', platform: 'Ticketmaster', attending: 1204 },
+  { id: 'we6', city: 'São Paulo', country: 'Brazil', lat: -23.5505, lon: -46.6333, title: 'LatAm x Africa Trade Forum', platform: 'Meetup', attending: 455 },
+  { id: 'we7', city: 'Dubai', country: 'UAE', lat: 25.2048, lon: 55.2708, title: 'Cross-Border Commerce Expo', platform: 'Eventbrite', attending: 980 },
+  { id: 'we8', city: 'Mumbai', country: 'India', lat: 19.0760, lon: 72.8777, title: 'Urban Farming Collective Fair', platform: 'Meetup', attending: 173 },
+  { id: 'we9', city: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, title: 'Renewable Energy Innovators Night', platform: 'Eventbrite', attending: 288 },
+  { id: 'we10', city: 'Cape Town', country: 'South Africa', lat: -33.9249, lon: 18.4241, title: 'Green Cities Symposium', platform: 'Interact Space', attending: 340 },
+  { id: 'we11', city: 'Toronto', country: 'Canada', lat: 43.6532, lon: -79.3832, title: 'African Diaspora Business Expo', platform: 'Ticketmaster', attending: 502 },
+  { id: 'we12', city: 'Paris', country: 'France', lat: 48.8566, lon: 2.3522, title: 'Creative Makers Salon', platform: 'Meetup', attending: 197 },
+  { id: 'we13', city: 'Nairobi', country: 'Kenya', lat: -1.2921, lon: 36.8219, title: 'Community Health Screening Day', platform: 'Interact Space', attending: 88 },
+  { id: 'we14', city: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, title: 'Pan-Asia Startup Demo Day', platform: 'Eventbrite', attending: 720 },
+  { id: 'we15', city: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, title: 'Weekend Makers Pop-Up Market', platform: 'Interact Space', attending: 210 },
+  { id: 'we16', city: 'Mexico City', country: 'Mexico', lat: 19.4326, lon: -99.1332, title: 'Sustainable Cities Workshop', platform: 'Meetup', attending: 265 },
 ]
 
 export const PURPOSE =

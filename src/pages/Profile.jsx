@@ -32,7 +32,10 @@ export default function Profile() {
       <section className="profile-hero">
         <Avatar user={user} size={84} />
         <div className="profile-hero-text">
-          <h1>{user.name} {isMe && <span className="you-badge">You</span>}</h1>
+          <h1>
+            {user.name} {isMe && <span className="you-badge">You</span>}
+            {user.idVerified && <span className="verified-tag"><Icon name="badge-check" size={13} /> Verified</span>}
+          </h1>
           <div className="meta-dim">{user.title}</div>
           <div className="meta-row">
             <span className="meta-dim"><Icon name="map-pin" size={13} /> {locationText}</span>
@@ -44,9 +47,12 @@ export default function Profile() {
           {isMe ? (
             <Link to="/space" className="btn ghost"><Icon name="home" size={15} /> My Space</Link>
           ) : (
-            <button className={connected ? 'btn ghost' : 'btn primary'} onClick={() => connect(user.id)} disabled={connected}>
-              {connected ? <><Icon name="check" size={15} /> Connected</> : 'Connect'}
-            </button>
+            <>
+              <Link to={`/chats?dm=${user.id}`} className="btn gold-outline"><Icon name="message-circle" size={15} /> Message</Link>
+              <button className={connected ? 'btn ghost' : 'btn primary'} onClick={() => connect(user.id)} disabled={connected}>
+                {connected ? <><Icon name="check" size={15} /> Connected</> : 'Connect'}
+              </button>
+            </>
           )}
         </div>
       </section>

@@ -1,25 +1,32 @@
 // Community page — independent identity (accent color, glyph, rules) over
 // a shared layout: discussions (real posts + votes), events, members.
-import { useParams, Link, Navigate } from 'react-router-dom'
+import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { COMMUNITIES, USERS, EVENTS, CHARTER } from '../data/seed.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, EventCard, PostCard } from '../components/bits.jsx'
+import { LiveTab, LiveBadge } from '../components/Live.jsx'
+import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
 
 export default function Community() {
   const { id } = useParams()
   const { user, profile, joinCommunity, leaveCommunity } = useApp()
-  const [tab, setTab] = useState('discussions')
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState(params.get('tab') === 'live' ? 'live' : 'discussions')
   const [posts, setPosts] = useState([])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [posting, setPosting] = useState(false)
+  const [live, setLive] = useState(null)
+  const [meta, setMeta] = useState(null)
 
   const community = COMMUNITIES.find((c) => c.id === id)
 
   useEffect(() => { if (community) api.listPosts({ community: id }).then(setPosts).catch(() => setPosts([])) }, [id]) // eslint-disable-line
+  useEffect(() => { if (community) api.getCommunityLive(id).then(setLive).catch(() => {}) }, [id])
+  useEffect(() => { if (community) api.getCommunity(id).then(setMeta).catch(() => {}) }, [id])
 
   if (!community) return <Navigate to="/" replace />
 
@@ -60,6 +67,8 @@ export default function Community() {
                 {community.scope === 'global' ? 'Global community' : community.city}
               </span>
               <span className="meta-dim"><Icon name="users" size={13} /> {community.memberCount.toLocaleString()} members</span>
+              {meta && <RatingSummary rating={meta.rating} />}
+              {live && <LiveBadge />}
               {isMod && <Link to="/mod" className="mod-badge-link"><Icon name="shield" size={12} /> You moderate this</Link>}
             </div>
           </div>
@@ -79,7 +88,7 @@ export default function Community() {
       <div className="community-body">
         <div className="community-main">
           <div className="tabs" role="tablist">
-            {['discussions', 'events', 'members'].map((t) => (
+            {['discussions', 'events', 'live', 'members'].map((t) => (
               <button
                 key={t} role="tab" aria-selected={tab === t}
                 className={`tab ${tab === t ? 'active' : ''}`}
@@ -87,6 +96,7 @@ export default function Community() {
               >
                 {t === 'discussions' && <><Icon name="chat" size={15} /> Discussions ({posts.length})</>}
                 {t === 'events' && <><Icon name="calendar" size={15} /> Events ({events.length})</>}
+                {t === 'live' && <><Icon name="radio" size={15} /> Live {live && <span className="live-dot" />}</>}
                 {t === 'members' && <><Icon name="users" size={15} /> Members</>}
               </button>
             ))}
@@ -123,6 +133,8 @@ export default function Community() {
             </div>
           )}
 
+          {tab === 'live' && <LiveTab community={community} isMember={joined} />}
+
           {tab === 'members' && (
             <div className="member-grid">
               {members.map((u) => (
@@ -143,6 +155,8 @@ export default function Community() {
         </div>
 
         <aside className="community-side">
+          {meta && <RatingWidget community={meta} onRated={setMeta} />}
+
           <div className="card side-card">
             <div className="side-card-head"><Icon name="book" size={15} /> About</div>
             <p className="card-desc">{community.description}</p>

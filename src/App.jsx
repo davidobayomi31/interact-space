@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './state.jsx'
 import { Icon } from './components/Icons.jsx'
 import { Avatar } from './components/bits.jsx'
 import Assistant from './components/Assistant.jsx'
+import { AdsRail } from './components/AdsRail.jsx'
 import Arrival from './pages/Arrival.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import MySpace from './pages/MySpace.jsx'
@@ -12,6 +13,8 @@ import Profile from './pages/Profile.jsx'
 import Thread from './pages/Thread.jsx'
 import Auth from './pages/Auth.jsx'
 import Moderation from './pages/Moderation.jsx'
+import Jobs from './pages/Jobs.jsx'
+import Chats from './pages/Chats.jsx'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
@@ -31,6 +34,8 @@ function Header() {
         <NavLink to="/" end><Icon name="globe" size={16} /> The City</NavLink>
         {profile.onboarded && <NavLink to="/space"><Icon name="home" size={16} /> My Space</NavLink>}
         <NavLink to="/discover"><Icon name="compass" size={16} /> Discover</NavLink>
+        <NavLink to="/jobs"><Icon name="wrench" size={16} /> Jobs</NavLink>
+        {profile.onboarded && <NavLink to="/chats"><Icon name="message-circle" size={16} /> Chats</NavLink>}
         {user?.moderatorOf?.length > 0 && <NavLink to="/mod"><Icon name="shield" size={16} /> Moderate</NavLink>}
       </nav>
 
@@ -52,6 +57,25 @@ function Header() {
         )}
       </div>
     </header>
+  )
+}
+
+function MobileNav() {
+  const { user, profile } = useApp()
+  const location = useLocation()
+  if (IMMERSIVE.includes(location.pathname)) return null
+  return (
+    <nav className="mobile-nav" aria-label="Primary (mobile)">
+      <NavLink to="/" end><Icon name="globe" size={19} /><span>City</span></NavLink>
+      <NavLink to="/discover"><Icon name="compass" size={19} /><span>Discover</span></NavLink>
+      <NavLink to="/jobs"><Icon name="wrench" size={19} /><span>Jobs</span></NavLink>
+      {profile.onboarded
+        ? <NavLink to="/chats"><Icon name="message-circle" size={19} /><span>Chats</span></NavLink>
+        : <NavLink to="/discover"><Icon name="message-circle" size={19} /><span>Chats</span></NavLink>}
+      {user
+        ? <NavLink to={profile.onboarded ? '/space' : '/welcome'}><Icon name="home" size={19} /><span>Space</span></NavLink>
+        : <NavLink to="/auth"><Icon name="user" size={19} /><span>Sign in</span></NavLink>}
+    </nav>
   )
 }
 
@@ -86,10 +110,14 @@ export default function App() {
               <Route path="/discover" element={<Discover />} />
               <Route path="/mod" element={<Moderation />} />
               <Route path="/profile/:id" element={<Profile />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/chats" element={<Chats />} />
             </Routes>
           </main>
           <Footer />
+          <AdsRail />
           <Assistant />
+          <MobileNav />
         </div>
       </BrowserRouter>
     </AppProvider>

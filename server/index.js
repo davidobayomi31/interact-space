@@ -9,12 +9,15 @@ import { fileURLToPath } from 'url'
 import db, {
   selfUser, publicUser, getUserByEmail, getUserById,
   serializeCommunity, serializePost, threadForPost,
+  serializeJob, serializeChat, serializeChatMessage, serializeDm,
+  serializeAd, serializeLive, parseJson,
 } from './db.js'
-import { seedIfEmpty } from './seed.js'
+import { seedIfEmpty, seedExtras } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
 
 seedIfEmpty()
+seedExtras()
 
 const app = express()
 app.use(express.json())
@@ -63,7 +66,7 @@ app.patch('/api/auth/me', requireAuth, (req, res) => {
   const b = req.body || {}
   const cur = req.userRow
   const arr = (v, fallbackJson) => JSON.stringify(Array.isArray(v) ? v : JSON.parse(fallbackJson))
-  db.prepare(`UPDATE users SET name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, onboarded=? WHERE id=?`)
+  db.prepare(`UPDATE users SET name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, job_skills=?, onboarded=? WHERE id=?`)
     .run(
       b.name?.trim() || cur.name,
       b.title ?? cur.title,
@@ -73,10 +76,19 @@ app.patch('/api/auth/me', requireAuth, (req, res) => {
       arr(b.interests, cur.interests),
       arr(b.goals, cur.goals),
       arr(b.skills, cur.skills),
+      arr(b.jobSkills, cur.job_skills),
       b.onboarded != null ? (b.onboarded ? 1 : 0) : cur.onboarded,
       cur.id,
     )
   res.json({ user: selfUser(getUserById(cur.id)) })
+})
+
+// Simulated ID verification — instant demo "badge", no real KYC provider.
+app.post('/api/auth/verify-id', requireAuth, (req, res) => {
+  const { idNumber } = req.body || {}
+  if (!idNumber || String(idNumber).trim().length < 6) return err(res, 400, 'Enter a valid ID number.')
+  db.prepare('UPDATE users SET id_verified = 1, verified_at = ? WHERE id = ?').run(now(), req.userId)
+  res.json({ user: selfUser(getUserById(req.userId)) })
 })
 
 // ── Communities ──────────────────────────────────────────────────────
@@ -112,6 +124,19 @@ app.post('/api/communities/:id/leave', requireAuth, (req, res) => {
   if (existed.changes) db.prepare('UPDATE communities SET member_count = MAX(0, member_count - 1) WHERE id = ?').run(req.params.id)
   const row = db.prepare('SELECT * FROM communities WHERE id = ?').get(req.params.id)
   res.json({ community: row ? serializeCommunity(row, req.userId) : null, user: selfUser(getUserById(req.userId)) })
+})
+
+// Community ratings — a light trust signal so members can vouch that a
+// community is real and active, not just a claimed member count.
+app.post('/api/communities/:id/rate', requireAuth, (req, res) => {
+  const community = db.prepare('SELECT * FROM communities WHERE id = ?').get(req.params.id)
+  if (!community) return err(res, 404, 'Community not found.')
+  const stars = Number(req.body?.stars)
+  if (![1, 2, 3, 4, 5].includes(stars)) return err(res, 400, 'Rating must be 1-5 stars.')
+  db.prepare(`INSERT INTO ratings (user_id, community_id, stars, review, created_at) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, community_id) DO UPDATE SET stars = excluded.stars, review = excluded.review`)
+    .run(req.userId, community.id, stars, (req.body?.review || '').trim(), now())
+  res.json({ community: serializeCommunity(community, req.userId) })
 })
 
 // ── Connections ──────────────────────────────────────────────────────
@@ -261,6 +286,196 @@ app.post('/api/reports/:id/resolve', requireAuth, (req, res) => {
   }
   db.prepare("UPDATE reports SET status = ?, action = ?, resolved_at = ?, resolver_id = ? WHERE id = ?")
     .run(action === 'remove' ? 'resolved' : 'dismissed', action, now(), req.userId, report.id)
+  res.json({ ok: true })
+})
+
+// ── Quick Jobs ───────────────────────────────────────────────────────
+// Local trade/gig work with an "ID verified" trust signal. Posting a job
+// notifies (via poll) anyone whose job_skills include that category.
+app.get('/api/jobs', (req, res) => {
+  const { category, matchMine } = req.query
+  let rows
+  if (matchMine === '1' && req.userId) {
+    const mySkills = parseJson(req.userRow.job_skills)
+    if (!mySkills.length) rows = []
+    else {
+      const placeholders = mySkills.map(() => '?').join(',')
+      rows = db.prepare(`SELECT * FROM jobs WHERE status = 'open' AND category IN (${placeholders}) ORDER BY created_at DESC`).all(...mySkills)
+    }
+  } else if (category) {
+    rows = db.prepare("SELECT * FROM jobs WHERE status = 'open' AND category = ? ORDER BY created_at DESC").all(category)
+  } else {
+    rows = db.prepare("SELECT * FROM jobs WHERE status = 'open' ORDER BY created_at DESC").all()
+  }
+  res.json({ jobs: rows.map((j) => serializeJob(j, req.userId)) })
+})
+
+app.post('/api/jobs', requireAuth, (req, res) => {
+  const { title, category, description, area, budget, verifiedOnly } = req.body || {}
+  if (!title?.trim()) return err(res, 400, 'Give the job a title.')
+  if (!category?.trim()) return err(res, 400, 'Pick a category.')
+  const id = uid('j')
+  db.prepare(`INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'Lagos', ?, ?, ?)`)
+    .run(id, req.userId, title.trim(), category, (description || '').trim(), (area || '').trim(), (budget || '').trim(), verifiedOnly ? 1 : 0, now())
+  res.json({ job: serializeJob(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id), req.userId) })
+})
+
+app.post('/api/jobs/:id/interest', requireAuth, (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id)
+  if (!job) return err(res, 404, 'Job not found.')
+  if (job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
+  const existing = db.prepare('SELECT 1 FROM job_interests WHERE job_id = ? AND user_id = ?').get(job.id, req.userId)
+  if (existing) db.prepare('DELETE FROM job_interests WHERE job_id = ? AND user_id = ?').run(job.id, req.userId)
+  else db.prepare('INSERT INTO job_interests (job_id, user_id, created_at) VALUES (?, ?, ?)').run(job.id, req.userId, now())
+  res.json({ job: serializeJob(job, req.userId) })
+})
+
+// ── Direct messages ──────────────────────────────────────────────────
+app.get('/api/messages', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT other_id, MAX(created_at) AS last_at FROM (
+      SELECT to_id AS other_id, created_at FROM dm_messages WHERE from_id = ?
+      UNION ALL
+      SELECT from_id AS other_id, created_at FROM dm_messages WHERE to_id = ?
+    ) GROUP BY other_id ORDER BY last_at DESC
+  `).all(req.userId, req.userId)
+  const conversations = rows.map((r) => {
+    const other = publicUser(getUserById(r.other_id))
+    const last = db.prepare(`SELECT body, created_at FROM dm_messages
+      WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)
+      ORDER BY created_at DESC LIMIT 1`).get(req.userId, r.other_id, r.other_id, req.userId)
+    const unread = db.prepare('SELECT COUNT(*) AS n FROM dm_messages WHERE from_id = ? AND to_id = ? AND read = 0').get(r.other_id, req.userId).n
+    return { other, lastMessage: last?.body ?? '', lastAt: last?.created_at ?? r.last_at, unread }
+  }).filter((c) => c.other)
+  res.json({ conversations })
+})
+
+app.get('/api/messages/:userId', requireAuth, (req, res) => {
+  const other = getUserById(req.params.userId)
+  if (!other) return err(res, 404, 'Person not found.')
+  db.prepare('UPDATE dm_messages SET read = 1 WHERE from_id = ? AND to_id = ?').run(other.id, req.userId)
+  const rows = db.prepare(`SELECT * FROM dm_messages WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?) ORDER BY created_at ASC`)
+    .all(req.userId, other.id, other.id, req.userId)
+  res.json({ other: publicUser(other), messages: rows.map(serializeDm) })
+})
+
+app.post('/api/messages/:userId', requireAuth, (req, res) => {
+  const other = getUserById(req.params.userId)
+  if (!other) return err(res, 404, 'Person not found.')
+  const body = (req.body?.body || '').trim()
+  if (!body) return err(res, 400, 'Write something first.')
+  const id = uid('dm')
+  db.prepare('INSERT INTO dm_messages (id, from_id, to_id, body, created_at) VALUES (?, ?, ?, ?, ?)').run(id, req.userId, other.id, body, now())
+  res.json({ message: serializeDm(db.prepare('SELECT * FROM dm_messages WHERE id = ?').get(id)) })
+})
+
+// ── Group chats — private, real-time-style chat rooms. Structurally
+// distinct from Communities: no posts/votes/threads, just a member list
+// and a message stream. May be scoped to a community or standalone. ────
+app.get('/api/chats', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT * FROM chats ORDER BY created_at DESC').all()
+  res.json({ chats: rows.map((c) => serializeChat(c, req.userId)) })
+})
+
+app.post('/api/chats', requireAuth, (req, res) => {
+  const { name, description, communityId } = req.body || {}
+  if (!name?.trim()) return err(res, 400, 'Give the group chat a name.')
+  const id = uid('gc')
+  db.prepare('INSERT INTO chats (id, name, description, community_id, creator_id, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, name.trim(), (description || '').trim(), communityId || null, req.userId, now())
+  db.prepare('INSERT INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?)').run(id, req.userId, now())
+  res.json({ chat: serializeChat(db.prepare('SELECT * FROM chats WHERE id = ?').get(id), req.userId) })
+})
+
+app.post('/api/chats/:id/join', requireAuth, (req, res) => {
+  const chat = db.prepare('SELECT * FROM chats WHERE id = ?').get(req.params.id)
+  if (!chat) return err(res, 404, 'Group chat not found.')
+  db.prepare('INSERT OR IGNORE INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?)').run(chat.id, req.userId, now())
+  res.json({ chat: serializeChat(chat, req.userId) })
+})
+
+app.get('/api/chats/:id/messages', requireAuth, (req, res) => {
+  const member = db.prepare('SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?').get(req.params.id, req.userId)
+  if (!member) return err(res, 403, 'Join this group chat to read it.')
+  const rows = db.prepare('SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY created_at ASC').all(req.params.id)
+  res.json({ messages: rows.map(serializeChatMessage) })
+})
+
+app.post('/api/chats/:id/messages', requireAuth, (req, res) => {
+  const member = db.prepare('SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?').get(req.params.id, req.userId)
+  if (!member) return err(res, 403, 'Join this group chat to post in it.')
+  const body = (req.body?.body || '').trim()
+  if (!body) return err(res, 400, 'Write something first.')
+  const id = uid('gm')
+  db.prepare('INSERT INTO chat_messages (id, chat_id, sender_id, body, created_at) VALUES (?, ?, ?, ?, ?)').run(id, req.params.id, req.userId, body, now())
+  res.json({ message: serializeChatMessage(db.prepare('SELECT * FROM chat_messages WHERE id = ?').get(id)) })
+})
+
+// ── Ads — businesses pay to post a rotating promo in the ads rail.
+// Payment is simulated (no real processor wired up in this demo). ──────
+app.get('/api/ads', (_req, res) => {
+  const rows = db.prepare('SELECT * FROM ads WHERE active = 1 ORDER BY created_at DESC').all()
+  res.json({ ads: rows.map(serializeAd) })
+})
+
+app.get('/api/ads/mine', requireAuth, (req, res) => {
+  const rows = db.prepare('SELECT * FROM ads WHERE owner_id = ? ORDER BY created_at DESC').all(req.userId)
+  res.json({ ads: rows.map(serializeAd) })
+})
+
+app.post('/api/ads', requireAuth, (req, res) => {
+  const { businessName, tagline, ctaLabel, accent, emoji } = req.body || {}
+  if (!businessName?.trim()) return err(res, 400, 'Enter your business name.')
+  const id = uid('ad')
+  db.prepare(`INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, req.userId, businessName.trim(), (tagline || '').trim(), (ctaLabel || 'Learn more').trim(), accent || '#D8A63A', emoji || '✨', now())
+  res.json({ ad: serializeAd(db.prepare('SELECT * FROM ads WHERE id = ?').get(id)) })
+})
+
+app.post('/api/ads/:id/pay', requireAuth, (req, res) => {
+  const ad = db.prepare('SELECT * FROM ads WHERE id = ?').get(req.params.id)
+  if (!ad) return err(res, 404, 'Ad not found.')
+  if (ad.owner_id !== req.userId) return err(res, 403, 'Not your ad.')
+  db.prepare('UPDATE ads SET active = 1 WHERE id = ?').run(ad.id)
+  res.json({ ad: serializeAd(db.prepare('SELECT * FROM ads WHERE id = ?').get(ad.id)) })
+})
+
+// ── Live streaming ───────────────────────────────────────────────────
+// A real "who's live" signal backed by the DB. The video itself is a
+// local camera self-preview in this demo — broadcasting to other viewers
+// would need real media-server infrastructure, so viewer counts here are
+// simulated for the walkthrough rather than pulled from real connections.
+app.get('/api/live', (_req, res) => {
+  const rows = db.prepare('SELECT * FROM live_streams WHERE ended_at IS NULL ORDER BY started_at DESC').all()
+  res.json({ streams: rows.map(serializeLive) })
+})
+
+app.get('/api/communities/:id/live', (req, res) => {
+  const row = db.prepare('SELECT * FROM live_streams WHERE community_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1').get(req.params.id)
+  if (row) db.prepare('UPDATE live_streams SET viewer_count = viewer_count + ? WHERE id = ?').run(Math.floor(Math.random() * 3), row.id)
+  res.json({ stream: row ? serializeLive(db.prepare('SELECT * FROM live_streams WHERE id = ?').get(row.id)) : null })
+})
+
+app.post('/api/communities/:id/live/start', requireAuth, (req, res) => {
+  const community = db.prepare('SELECT id FROM communities WHERE id = ?').get(req.params.id)
+  if (!community) return err(res, 404, 'Community not found.')
+  const member = db.prepare('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?').get(req.userId, community.id)
+  if (!member) return err(res, 403, 'Join the community to go live in it.')
+  db.prepare('UPDATE live_streams SET ended_at = ? WHERE host_id = ? AND ended_at IS NULL').run(now(), req.userId)
+  const id = uid('live')
+  const title = (req.body?.title || '').trim() || 'Live now'
+  db.prepare('INSERT INTO live_streams (id, community_id, host_id, title, started_at, viewer_count) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, community.id, req.userId, title, now(), Math.floor(Math.random() * 6) + 1)
+  res.json({ stream: serializeLive(db.prepare('SELECT * FROM live_streams WHERE id = ?').get(id)) })
+})
+
+app.post('/api/live/:id/stop', requireAuth, (req, res) => {
+  const stream = db.prepare('SELECT * FROM live_streams WHERE id = ?').get(req.params.id)
+  if (!stream) return err(res, 404, 'Stream not found.')
+  if (stream.host_id !== req.userId) return err(res, 403, 'Not your stream.')
+  db.prepare('UPDATE live_streams SET ended_at = ? WHERE id = ?').run(now(), stream.id)
   res.json({ ok: true })
 })
 

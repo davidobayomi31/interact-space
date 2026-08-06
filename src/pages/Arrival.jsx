@@ -6,6 +6,8 @@ import { CommunityCard, EventCard, PostCard, SectionHead } from '../components/b
 import { Icon } from '../components/Icons.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
+import { LiveNowRow } from '../components/Live.jsx'
+import { Globe } from '../components/Globe.jsx'
 
 export default function Arrival() {
   const { user, profile, setAssistantOpen } = useApp()
@@ -46,6 +48,13 @@ export default function Arrival() {
           </div>
         </div>
       </section>
+
+      <section className="section">
+        <SectionHead icon="globe" title="The world, live" sub="Public events happening right now, pulled in from around the network" />
+        <Globe />
+      </section>
+
+      <LiveNowRow />
 
       <section className="section">
         <SectionHead icon="map-pin" title="Trending in Lagos" sub="Local communities with the most life this week" />
