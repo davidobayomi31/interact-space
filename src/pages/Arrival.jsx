@@ -28,7 +28,7 @@ export default function Arrival() {
         <div className="hero-main">
           <div className="hero-content">
             <div className="hero-badge">
-              <Icon name="map-pin" size={13} /> You’re looking at <strong>Lagos, Nigeria</strong> · World Network → Nigeria → Lagos
+              <Icon name="map-pin" size={13} /> You’re looking at <strong>Lagos, Nigeria</strong> · Local Network → Nigeria → Lagos
             </div>
             <h1>A connected world<br />of <span className="gold-text">communities</span></h1>
             <p className="hero-sub">{PURPOSE}</p>
@@ -50,7 +50,6 @@ export default function Arrival() {
           </div>
 
           <div className="hero-globe-col">
-            <div className="hero-globe-label"><Icon name="globe" size={13} /> The world, live</div>
             <Globe />
           </div>
         </div>
@@ -66,12 +65,12 @@ export default function Arrival() {
       </section>
 
       <section className="section">
-        <SectionHead icon="globe" title="Trending across the World Network" sub="Global communities connecting cities and countries" />
+        <SectionHead icon="globe" title="Trending beyond Lagos" sub="Communities connecting Nigerian cities and the wider region" />
         <div className="card-grid two">
           {globalTrending.map((c) => <CommunityCard key={c.id} community={c} />)}
           <div className="card ghost-card">
             <Icon name="globe" size={26} />
-            <p><strong>54 countries. Thousands of cities.</strong><br />
+            <p><strong>Starting in Lagos. Built to grow.</strong><br />
             Every community is independent — all share one Charter.</p>
             <ul className="charter-list">
               {CHARTER.slice(0, 3).map((c) => <li key={c}><Icon name="shield" size={12} /> {c}</li>)}

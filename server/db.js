@@ -7,7 +7,10 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 
 const dir = path.dirname(fileURLToPath(import.meta.url))
-const db = new Database(path.join(dir, 'interact.db'))
+// DB_PATH lets a host mount a persistent volume somewhere else (e.g. /data/interact.db).
+// Locally it stays right here next to the server code.
+const dbFile = process.env.DB_PATH || path.join(dir, 'interact.db')
+const db = new Database(dbFile)
 db.pragma('journal_mode = WAL')
 
 db.exec(`

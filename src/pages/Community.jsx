@@ -55,7 +55,7 @@ export default function Community() {
           <div className="community-glyph large"><Icon name={community.icon} size={30} /></div>
           <div className="community-banner-text">
             <div className="breadcrumb">
-              <Link to="/">World Network</Link> <span>/</span>
+              <Link to="/">Local Network</Link> <span>/</span>
               <span>{community.scope === 'global' ? 'Global' : 'Nigeria / Lagos'}</span> <span>/</span>
               <strong>{community.name}</strong>
             </div>
