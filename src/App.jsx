@@ -15,6 +15,7 @@ import Auth from './pages/Auth.jsx'
 import Moderation from './pages/Moderation.jsx'
 import Jobs from './pages/Jobs.jsx'
 import Chats from './pages/Chats.jsx'
+import ProfileVision from './pages/ProfileVision.jsx'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
@@ -112,6 +113,7 @@ export default function App() {
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/chats" element={<Chats />} />
+              <Route path="/vision" element={<ProfileVision />} />
             </Routes>
           </main>
           <Footer />

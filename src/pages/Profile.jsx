@@ -94,6 +94,15 @@ export default function Profile() {
         </div>
       </div>
 
+      <Link to="/vision" className="card vision-teaser">
+        <div className="vision-banner-tag"><Icon name="sparkle" size={13} /> Coming in V1</div>
+        <div>
+          <strong>See what profiles become with the AI Identity Builder</strong>
+          <p className="meta-dim">What you offer, what you need, verified badges, reputation — built by the AI in conversation, not a form.</p>
+        </div>
+        <Icon name="arrow" size={18} />
+      </Link>
+
       <section className="section">
         <div className="section-head">
           <h2 className="section-title"><Icon name="community" size={18} /> Communities</h2>
