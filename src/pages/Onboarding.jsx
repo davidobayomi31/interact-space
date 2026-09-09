@@ -103,10 +103,12 @@ export default function Onboarding() {
 
   const pickPrivacy = (p) => {
     setMessages((m) => [...m, { role: 'user', text: p.label }])
-    const finalTags = collected.tags.length ? collected.tags : ['community', 'networking']
     const newProfile = {
       name: collected.name, area: collected.area, privacy: p.id,
-      interests: finalTags, goals: GOAL_OPTIONS.filter((g) => goals.includes(g.id)).map((g) => g.label),
+      // Only what they actually told us. An empty list is honest; the companion
+      // fills it in as they talk (see Assistant.jsx), and the reveal below falls
+      // back to popular communities rather than inventing interests for them.
+      interests: collected.tags, goals: GOAL_OPTIONS.filter((g) => goals.includes(g.id)).map((g) => g.label),
       onboarded: true,
       bio: collected.rawInterest ? `“${collected.rawInterest}”` : 'New citizen of Interact Space.',
     }
@@ -124,7 +126,13 @@ export default function Onboarding() {
     navigate('/space')
   }
 
-  const tagsForReveal = collected.tags.length ? collected.tags : ['community', 'networking']
+  // When we understood nothing, we still show a starting map — but it is
+  // explicitly "popular here", never "because you said" something they didn't.
+  const understood = collected.tags.length > 0
+  const tagsForReveal = understood ? collected.tags : ['community', 'networking']
+  const fallbackBecause = understood
+    ? undefined
+    : 'Popular in Lagos right now — tell me more and I’ll retune this'
   const revealCommunities = matchCommunities(tagsForReveal, { communities: [] }, 3)
   const revealPeople = matchPeople(tagsForReveal, { connections: [] }, 3)
   const revealEvents = matchEvents(tagsForReveal, null, 2)
@@ -194,13 +202,13 @@ export default function Onboarding() {
                   <div className="assistant-section-label">Communities for you</div>
                   <div className="card-grid three tight">
                     {revealCommunities.map(({ item, shared }) => (
-                      <CommunityCard key={item.id} community={item} shared={shared} source="said" />
+                      <CommunityCard key={item.id} community={item} shared={shared} source="said" because={fallbackBecause} />
                     ))}
                   </div>
                   <div className="assistant-section-label">People you should meet</div>
                   <div className="card-grid three tight">
                     {revealPeople.map(({ item, shared }) => (
-                      <PersonCard key={item.id} user={item} shared={shared} source="said" />
+                      <PersonCard key={item.id} user={item} shared={shared} source="said" because={fallbackBecause} />
                     ))}
                   </div>
                   {revealEvents.length > 0 && (
@@ -208,7 +216,7 @@ export default function Onboarding() {
                       <div className="assistant-section-label">Events near you</div>
                       <div className="card-grid two tight">
                         {revealEvents.map(({ item, shared }) => (
-                          <EventCard key={item.id} event={item} shared={shared} source="said" />
+                          <EventCard key={item.id} event={item} shared={shared} source="said" because={fallbackBecause} />
                         ))}
                       </div>
                     </>

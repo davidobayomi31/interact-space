@@ -27,7 +27,15 @@ export default function MySpace() {
   const myEvents = EVENTS
     .filter((e) => profile.communities.includes(e.communityId) || e.tags.some((t) => profile.interests.includes(t)))
     .sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3)
-  const suggestedCommunities = matchCommunities(profile.interests, profile, 2)
+  // A member who hasn't told us an interest yet still deserves a starting
+  // point — trending communities, labelled as exactly that rather than
+  // dressed up as a match against a profile that is still empty.
+  const noInterests = !profile.interests?.length
+  const trendingBecause = 'Trending in Lagos — tell the companion what you’re into to tune this'
+  const suggestedCommunities = noInterests
+    ? COMMUNITIES.filter((c) => c.trending && !profile.communities.includes(c.id))
+        .slice(0, 2).map((item) => ({ item, shared: [] }))
+    : matchCommunities(profile.interests, profile, 2)
   const suggestedPeople = matchPeople(profile.interests, profile, 2)
   const first = profile.name.split(' ')[0]
 
@@ -64,7 +72,7 @@ export default function MySpace() {
             ) : (
               <div className="card-grid two">
                 {suggestedCommunities.map(({ item, shared }) => (
-                  <CommunityCard key={item.id} community={item} shared={shared} source="profile" />
+                  <CommunityCard key={item.id} community={item} shared={shared} source="profile" because={noInterests ? trendingBecause : undefined} />
                 ))}
               </div>
             )}

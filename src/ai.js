@@ -37,6 +37,7 @@ const KEYWORD_TAGS = {
   data: ['data', 'coding'],
   design: ['design', 'tech'],
   photo: ['photography', 'art'],
+  photography: ['photography', 'art'],
   camera: ['photography'],
   film: ['photography', 'art'],
   art: ['art', 'photography'],
@@ -56,13 +57,62 @@ const KEYWORD_TAGS = {
   writ: ['writing'],
   network: ['networking', 'community'],
   volunteer: ['community', 'sustainability'],
+  speak: ['learning', 'mentorship'],
+  speech: ['learning', 'mentorship'],
+  presentation: ['learning', 'mentorship'],
+  present: ['learning', 'mentorship'],
+  pitch: ['entrepreneurship', 'startups', 'learning'],
+  communicat: ['learning', 'mentorship'],
+  confidence: ['learning', 'mentorship'],
+  debate: ['learning', 'writing'],
+  storytell: ['writing', 'learning'],
+  leadership: ['mentorship', 'community'],
+  interview: ['learning', 'mentorship'],
+}
+
+// Words shorter than this aren't worth spell-correcting — too many collisions.
+const FUZZY_MIN = 5
+
+// Levenshtein distance with adjacent transposition ("leanr" → "learn"),
+// abandoned as soon as it exceeds `max` so this stays cheap.
+function editDistance(a, b, max = 1) {
+  if (Math.abs(a.length - b.length) > max) return max + 1
+  let prev2 = null
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i]
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      let d = Math.min(row[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d = Math.min(d, prev2[j - 2] + 1) // swapped pair counts as one slip
+      }
+      row.push(d)
+    }
+    if (Math.min(...row) > max) return max + 1
+    prev2 = prev
+    prev = row
+  }
+  return prev[b.length]
 }
 
 export function extractTags(text) {
   const lower = text.toLowerCase()
   const found = new Set()
-  for (const [kw, tags] of Object.entries(KEYWORD_TAGS)) {
+  const vocab = Object.entries(KEYWORD_TAGS)
+  for (const [kw, tags] of vocab) {
     if (lower.includes(kw)) tags.forEach((t) => found.add(t))
+  }
+  // Second pass: people mistype ("arming" for farming). Any word that matched
+  // nothing literally gets one spell-correction attempt against the vocabulary,
+  // so a single slipped letter doesn't silently erase what someone told us.
+  for (const word of lower.split(/[^a-z]+/)) {
+    if (word.length < FUZZY_MIN) continue
+    if (vocab.some(([kw]) => word.includes(kw))) continue // already understood
+    for (const [kw, tags] of vocab) {
+      if (kw.length < FUZZY_MIN || kw.includes(' ')) continue
+      if (editDistance(word, kw) <= 1) tags.forEach((t) => found.add(t))
+    }
   }
   return [...found]
 }
