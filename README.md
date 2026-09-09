@@ -95,3 +95,24 @@ Vite · React · React Router · Express · better-sqlite3 · bcrypt · JWT · @
 No infinite home feed, no global karma leaderboard, no algorithmic scroll — the absence is
 the product. Multi-city, user-created communities, notifications, and the immersive
 "digital city" layer are future phases.
+
+## Deploy a shareable link (Render, free)
+
+`render.yaml` defines one free web service that runs the whole app — Vite builds
+the frontend into `dist/`, and the Express server serves that build *and* `/api`
+on a single port, so there is no separate frontend host to configure.
+
+1. Push this repo to GitHub.
+2. At [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**,
+   pick this repo. Render reads `render.yaml` and fills in the settings.
+3. **Apply**. First build takes ~3–5 minutes; you get
+   `https://<name>.onrender.com`.
+
+Optional: add `ANTHROPIC_API_KEY` in the service's **Environment** tab to switch
+the companion from the rule-based fallback to the real LLM.
+
+**Free-tier limits, so nothing surprises you:** the service sleeps after ~15
+minutes of inactivity and takes ~50 seconds to wake on the next visit, and the
+disk is ephemeral — `server/interact.db` is rebuilt from the seed on every
+deploy or restart, so visitor-created accounts and posts are not permanent.
+Good for demos; migrate to Postgres (see ROADMAP.md) before real users.
