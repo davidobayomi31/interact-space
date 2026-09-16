@@ -33,8 +33,7 @@ npm run dev
 Open http://localhost:5173. `npm run dev` starts **both** the API (`server/`, port 8787)
 and the web app (Vite, port 5173) together.
 
-> First run seeds the database (`server/interact.db`) from the Lagos data. Delete that file
-> to reseed from scratch.
+
 
 ### Turn on the real AI companion (optional)
 
@@ -74,8 +73,8 @@ Browser (React + Vite, port 5173)
    ▼
 Express API (server/, port 8787)
    │
-   ├── better-sqlite3  →  server/interact.db   (accounts, memberships, posts,
-   │                                             comments, votes, reports)
+   ├── pg  →  Postgres  (accounts, memberships, posts, comments,
+   │                       votes, reports, jobs, chats, ads)
    └── Claude (optional) →  grounded companion  (falls back to rule engine)
 ```
 
@@ -88,7 +87,7 @@ Express API (server/, port 8787)
 
 ## Stack
 
-Vite · React · React Router · Express · better-sqlite3 · bcrypt · JWT · @anthropic-ai/sdk.
+Vite · React · React Router · Express · Postgres (`pg`) · bcrypt · JWT · @anthropic-ai/sdk.
 
 ## Not in V1 (deliberately)
 
@@ -96,23 +95,49 @@ No infinite home feed, no global karma leaderboard, no algorithmic scroll — th
 the product. Multi-city, user-created communities, notifications, and the immersive
 "digital city" layer are future phases.
 
-## Deploy a shareable link (Render, free)
+## Deploy (Vercel + Neon, free)
 
-`render.yaml` defines one free web service that runs the whole app — Vite builds
-the frontend into `dist/`, and the Express server serves that build *and* `/api`
-on a single port, so there is no separate frontend host to configure.
+The frontend is served as static files from Vercel's CDN; everything under
+`/api/*` runs as one serverless function (`api/index.js`, which is just the
+Express app). Data lives in Postgres, so it survives deploys and restarts.
 
-1. Push this repo to GitHub.
-2. At [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**,
-   pick this repo. Render reads `render.yaml` and fills in the settings.
-3. **Apply**. First build takes ~3–5 minutes; you get
-   `https://<name>.onrender.com`.
+**1. Create the database.** At [neon.tech](https://neon.tech), create a free
+project and copy the connection string (it looks like
+`postgres://user:pass@ep-something.neon.tech/neondb?sslmode=require`).
 
-Optional: add `ANTHROPIC_API_KEY` in the service's **Environment** tab to switch
-the companion from the rule-based fallback to the real LLM.
+**2. Import the repo at [vercel.com/new](https://vercel.com/new).** Vercel reads
+`vercel.json`; no build settings need changing.
 
-**Free-tier limits, so nothing surprises you:** the service sleeps after ~15
-minutes of inactivity and takes ~50 seconds to wake on the next visit, and the
-disk is ephemeral — `server/interact.db` is rebuilt from the seed on every
-deploy or restart, so visitor-created accounts and posts are not permanent.
-Good for demos; migrate to Postgres (see ROADMAP.md) before real users.
+**3. Add environment variables** (Vercel → Settings → Environment Variables):
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | the Neon connection string |
+| `JWT_SECRET` | any long random string — signs login sessions |
+| `ANTHROPIC_API_KEY` | optional; turns on the real LLM companion |
+
+**4. Deploy.** The first request creates the schema and seeds the Lagos data.
+
+## Run it locally
+
+```bash
+npm install
+```
+
+You need a Postgres running locally. With Homebrew:
+
+```bash
+brew install postgresql@17 && brew services start postgresql@17 && createdb interact
+```
+
+Then point the app at it:
+
+```bash
+cp .env.example .env
+# set DATABASE_URL=postgres://<your-mac-username>@127.0.0.1:5432/interact
+npm run dev
+```
+
+Open http://localhost:5173. `npm run dev` starts both the API (`server/`, port
+8787) and the web app (Vite, port 5173). The first request creates the tables
+and seeds them; to start over, `dropdb interact && createdb interact`.

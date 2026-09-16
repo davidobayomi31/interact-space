@@ -6,7 +6,7 @@
 // (or the call fails), it falls back to the keyword-ranking engine so the
 // app always works out of the box.
 import Anthropic from '@anthropic-ai/sdk'
-import db, { selfUser, publicUser, serializeCommunity, serializePost, getUserById } from './db.js'
+import q, { selfUser, publicUser, serializeCommunity, serializePost, getUserById } from './db.js'
 import { extractTags, tagLabel } from '../src/ai.js'
 
 const MODEL = process.env.COMPANION_MODEL || 'claude-sonnet-5'
@@ -30,15 +30,15 @@ Respond with ONLY a JSON object, no prose around it, in this exact shape:
 }
 Any array may be empty. If nothing fits, return empty arrays and a helpful message inviting them to tell you more.`
 
-function buildCatalog(viewerId) {
-  const communities = db.prepare('SELECT * FROM communities').all().map((c) => ({
+async function buildCatalog(viewerId) {
+  const communities = (await q.all('SELECT * FROM communities')).map((c) => ({
     id: c.id, name: c.name, scope: c.scope, city: c.city, tagline: c.tagline,
     tags: JSON.parse(c.tags),
   }))
-  const people = db.prepare('SELECT * FROM users WHERE is_seed = 1').all()
+  const people = (await q.all('SELECT * FROM users WHERE is_seed = 1'))
     .filter((u) => u.id !== viewerId)
     .map((u) => ({ id: u.id, name: u.name, title: u.title, area: u.area, interests: JSON.parse(u.interests) }))
-  const posts = db.prepare('SELECT * FROM posts WHERE hidden = 0 ORDER BY created_at DESC LIMIT 20').all()
+  const posts = (await q.all('SELECT * FROM posts WHERE hidden = 0 ORDER BY created_at DESC LIMIT 20'))
     .map((p) => ({ id: p.id, communityId: p.community_id, title: p.title, snippet: p.body.slice(0, 120) }))
   return { communities, people, posts }
 }
@@ -46,38 +46,38 @@ function buildCatalog(viewerId) {
 const firstName = (name) => (name || 'there').split(' ')[0]
 
 // Resolve validated ids from the model into full card items + reason.
-function resolve(kind, picks, viewerId) {
+async function resolve(kind, picks, viewerId) {
   const out = []
   for (const pick of picks || []) {
     if (kind === 'communities') {
-      const row = db.prepare('SELECT * FROM communities WHERE id = ?').get(pick.id)
-      if (row) out.push({ item: serializeCommunity(row, viewerId), because: pick.because })
+      const row = await q.get('SELECT * FROM communities WHERE id = ?', pick.id)
+      if (row) out.push({ item: await serializeCommunity(row, viewerId), because: pick.because })
     } else if (kind === 'people') {
-      const row = getUserById(pick.id)
+      const row = await getUserById(pick.id)
       if (row && row.is_seed) out.push({ item: publicUser(row), because: pick.because })
     } else if (kind === 'posts') {
-      const row = db.prepare('SELECT * FROM posts WHERE id = ? AND hidden = 0').get(pick.id)
-      if (row) out.push({ item: serializePost(row, viewerId), because: pick.because })
+      const row = await q.get('SELECT * FROM posts WHERE id = ? AND hidden = 0', pick.id)
+      if (row) out.push({ item: await serializePost(row, viewerId), because: pick.because })
     }
     if (out.length >= 3) break
   }
   return out
 }
 
-function toSections(parsed, viewerId) {
+async function toSections(parsed, viewerId) {
   const sections = []
-  const push = (kind, label) => {
-    const results = resolve(kind, parsed[kind], viewerId)
+  const push = async (kind, label) => {
+    const results = await resolve(kind, parsed[kind], viewerId)
     if (results.length) sections.push({ kind, label, results })
   }
-  push('communities', 'Communities')
-  push('people', 'People to meet')
-  push('posts', 'Discussions worth reading')
+  await push('communities', 'Communities')
+  await push('people', 'People to meet')
+  await push('posts', 'Discussions worth reading')
   return sections
 }
 
 // ── Rule-based fallback (no API key or LLM error) ────────────────────
-function ruleFallback(message, self, viewerId) {
+async function ruleFallback(message, self, viewerId) {
   const typed = extractTags(message)
   const tags = typed.length ? typed : (self.interests || [])
   const name = firstName(self.name)
@@ -90,20 +90,20 @@ function ruleFallback(message, self, viewerId) {
 
   const becauseOf = (shared) => `Matches your interest in ${shared.map(tagLabel).join(', ')}`
 
-  const commRows = db.prepare('SELECT * FROM communities').all()
+  const commRows = (await q.all('SELECT * FROM communities'))
     .filter((c) => !self.communities.includes(c.id))
-  const communities = rank(commRows, (c) => JSON.parse(c.tags))
-    .map(({ r, shared }) => ({ item: serializeCommunity(r, viewerId), because: becauseOf(shared) }))
+  const communities = await Promise.all(rank(commRows, (c) => JSON.parse(c.tags))
+    .map(async ({ r, shared }) => ({ item: await serializeCommunity(r, viewerId), because: becauseOf(shared) })))
 
-  const peopleRows = db.prepare('SELECT * FROM users WHERE is_seed = 1').all()
+  const peopleRows = (await q.all('SELECT * FROM users WHERE is_seed = 1'))
     .filter((u) => u.id !== viewerId && !self.connections.includes(u.id))
   const people = rank(peopleRows, (u) => JSON.parse(u.interests))
     .map(({ r, shared }) => ({ item: publicUser(r), because: becauseOf(shared) }))
 
   const commTags = Object.fromEntries(commRows.map((c) => [c.id, JSON.parse(c.tags)]))
-  const postRows = db.prepare('SELECT * FROM posts WHERE hidden = 0').all()
-  const posts = rank(postRows, (p) => commTags[p.community_id] || [])
-    .map(({ r, shared }) => ({ item: serializePost(r, viewerId), because: becauseOf(shared) }))
+  const postRows = await q.all('SELECT * FROM posts WHERE hidden = 0')
+  const posts = await Promise.all(rank(postRows, (p) => commTags[p.community_id] || [])
+    .map(async ({ r, shared }) => ({ item: await serializePost(r, viewerId), because: becauseOf(shared) })))
 
   const sections = []
   if (communities.length) sections.push({ kind: 'communities', label: 'Communities', results: communities })
@@ -117,14 +117,14 @@ function ruleFallback(message, self, viewerId) {
 }
 
 export async function companionReply(message, userRow) {
-  const self = selfUser(userRow) || { name: 'there', interests: [], communities: [], connections: [] }
+  const self = (await selfUser(userRow)) || { name: 'there', interests: [], communities: [], connections: [] }
   const viewerId = userRow?.id ?? null
   const learnedTags = extractTags(message)
 
-  if (!client) return ruleFallback(message, self, viewerId)
+  if (!client) return await ruleFallback(message, self, viewerId)
 
   try {
-    const catalog = buildCatalog(viewerId)
+    const catalog = await buildCatalog(viewerId)
     const context = {
       user: { firstName: firstName(self.name), interests: self.interests, goals: self.goals, memberOf: self.communities },
       catalog,
@@ -141,12 +141,12 @@ export async function companionReply(message, userRow) {
     const parsed = JSON.parse(json)
     return {
       reply: parsed.message || `Here's what I found, ${firstName(self.name)}:`,
-      sections: toSections(parsed, viewerId),
+      sections: await toSections(parsed, viewerId),
       learnedTags,
       source: 'llm',
     }
   } catch (err) {
     console.warn('[companion] LLM call failed, falling back to rules:', err.message)
-    return ruleFallback(message, self, viewerId)
+    return await ruleFallback(message, self, viewerId)
   }
 }

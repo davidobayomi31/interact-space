@@ -151,7 +151,7 @@ Phase 3 is what stops it being copied. Phases 4 to 6 are what make it a business
 
 ## Where the project actually is today
 
-**Real and working (SQLite + Express + React, ~4,700 lines):**
+**Real and working (Postgres + Express + React, ~4,700 lines):**
 
 | Area | Status |
 |---|---|
@@ -286,7 +286,7 @@ Rebuild `Profile.jsx` to render facets as sections in the vision's exact shape �
 
 The pitch is "one place to search for needs, opportunities, services, groups, events." Right now there is no search endpoint at all.
 
-- Add SQLite **FTS5** virtual tables over: `profile_entries`, `posts`, `communities`, `jobs`, `events`. Sync via triggers.
+- Add Postgres **full-text search** (`tsvector` columns + GIN indexes) over: `profile_entries`, `posts`, `communities`, `jobs`, `events`. Sync via triggers.
 - `GET /api/search?q=&type=&area=&verified=` returning typed, mixed results.
 - Rebuild `Discover.jsx` as the unified search surface: one input, faceted result rails (People · Services · Jobs · Communities · Events · Discussions), filters for area/verification/rating.
 - **AI-assisted search:** route natural-language queries ("someone who can fix a leaking pipe in Yaba this weekend") through the companion, which turns them into structured filters *and* explains each result with its `because` line. The infrastructure for this — catalog building, id validation, `because` traces — already exists in `companion.js`; it needs the new entry types added to `buildCatalog()`.
@@ -375,7 +375,7 @@ Only after Phase 4's agreements exist, because escrow attaches to an agreement.
 
 ## Phase 7 — Production
 
-- **Database:** migrate SQLite → **Postgres**. `better-sqlite3` is synchronous and single-file; it will not survive concurrent users or a horizontally scaled deploy. Do this before launch, not after. Keep SQLite for local dev via a thin query layer, or just run Postgres in dev too (simpler).
+- **Database:** ~~migrate SQLite → **Postgres**~~ — **done.** `server/db.js` now talks to Postgres via `pg`, and Postgres runs in local dev too. The former blocker (a synchronous, single-file database that could not survive concurrent users or a horizontally scaled deploy) is gone.
 - **Media:** avatars are currently a hex color. Add image upload (S3/R2 + signed URLs) for avatars, community banners, listing photos, portfolio items. The Identity Builder is much weaker without it.
 - **Security:** rate limiting (`express-rate-limit`), Helmet, CSRF on cookie-auth mutations, Zod validation on every endpoint (currently mostly unvalidated), secrets management, `JWT_SECRET` required in production rather than defaulted.
 - **Ops:** structured logging, Sentry, health checks, automated backups, staging environment.

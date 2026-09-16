@@ -4,7 +4,7 @@
 // couple of open reports so the moderation queue isn't empty.
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
-import db from './db.js'
+import q, { transaction } from './db.js'
 import { COMMUNITIES, USERS, POSTS } from '../src/data/seed.js'
 
 const uid = (p) => `${p}-${crypto.randomUUID().slice(0, 8)}`
@@ -54,119 +54,105 @@ const COMMENT_SEED = {
   ],
 }
 
-export function seedIfEmpty() {
-  const count = db.prepare('SELECT COUNT(*) AS n FROM communities').get().n
+export async function seedIfEmpty() {
+  const count = (await q.get('SELECT COUNT(*) AS n FROM communities')).n
   if (count > 0) return { seeded: false }
 
-  const tx = db.transaction(() => {
+  // ON CONFLICT DO NOTHING throughout: two cold starts can race to seed an
+  // empty database, and neither should fail or duplicate rows.
+  await transaction(async (t) => {
     // Communities
-    const insCommunity = db.prepare(`INSERT INTO communities
+    const COMMUNITY_SQL = `INSERT INTO communities
       (id, name, tagline, description, scope, city, accent, icon, tags, rules, member_count, trending)
-      VALUES (@id, @name, @tagline, @description, @scope, @city, @accent, @icon, @tags, @rules, @member_count, @trending)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`
     for (const c of COMMUNITIES) {
-      insCommunity.run({
-        id: c.id, name: c.name, tagline: c.tagline, description: c.description,
-        scope: c.scope, city: c.city, accent: c.accent, icon: c.icon,
-        tags: JSON.stringify(c.tags), rules: JSON.stringify(c.rules),
-        member_count: c.memberCount, trending: c.trending ? 1 : 0,
-      })
+      await t.run(COMMUNITY_SQL,
+        c.id, c.name, c.tagline, c.description, c.scope, c.city, c.accent, c.icon,
+        JSON.stringify(c.tags), JSON.stringify(c.rules), c.memberCount, c.trending ? 1 : 0)
     }
 
     // Persona accounts (authors + members). Not login-able: random hash.
-    const insUser = db.prepare(`INSERT INTO users
+    const USER_SQL = `INSERT INTO users
       (id, email, password_hash, name, handle, title, city, area, color, bio, interests, goals, skills, onboarded, is_seed, created_at)
-      VALUES (@id, @email, @password_hash, @name, @handle, @title, @city, @area, @color, @bio, @interests, @goals, @skills, 1, 1, @created_at)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?) ON CONFLICT DO NOTHING`
     const randomHash = bcrypt.hashSync(crypto.randomUUID(), 8)
     for (const u of USERS) {
-      insUser.run({
-        id: u.id, email: `${u.handle.replace('@', '')}@seed.interact.local`,
-        password_hash: randomHash, name: u.name, handle: u.handle, title: u.title,
-        city: u.city, area: u.area, color: u.color, bio: u.bio,
-        interests: JSON.stringify(u.interests || []),
-        goals: JSON.stringify(u.goals || []),
-        skills: JSON.stringify(u.skills || []),
-        created_at: now - 30 * DAY,
-      })
+      await t.run(USER_SQL,
+        u.id, `${u.handle.replace('@', '')}@seed.interact.local`, randomHash,
+        u.name, u.handle, u.title, u.city, u.area, u.color, u.bio,
+        JSON.stringify(u.interests || []), JSON.stringify(u.goals || []),
+        JSON.stringify(u.skills || []), now - 30 * DAY)
     }
 
     // Memberships (moderator role wins over member)
-    const insMember = db.prepare('INSERT OR REPLACE INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, ?, ?)')
+    const MEMBER_SQL = `INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT (user_id, community_id) DO UPDATE SET role = excluded.role`
     for (const c of COMMUNITIES) {
-      for (const m of c.memberIds) insMember.run(m, c.id, 'member', now - 20 * DAY)
-      for (const m of c.moderators) insMember.run(m, c.id, 'moderator', now - 25 * DAY)
+      for (const m of c.memberIds) await t.run(MEMBER_SQL, m, c.id, 'member', now - 20 * DAY)
+      // Moderators are applied second so the upsert promotes them over 'member'.
+      for (const m of c.moderators) await t.run(MEMBER_SQL, m, c.id, 'moderator', now - 25 * DAY)
     }
 
     // Posts
-    const insPost = db.prepare(`INSERT INTO posts
+    const POST_SQL = `INSERT INTO posts
       (id, community_id, author_id, title, body, pinned, base_score, created_at)
-      VALUES (@id, @community_id, @author_id, @title, @body, @pinned, @base_score, @created_at)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`
     for (const p of POSTS) {
-      insPost.run({
-        id: p.id, community_id: p.communityId, author_id: p.authorId,
-        title: p.title, body: p.body, pinned: p.pinned ? 1 : 0,
-        base_score: p.likes ?? 0, created_at: agoToTs(p.ago),
-      })
+      await t.run(POST_SQL, p.id, p.communityId, p.authorId, p.title, p.body,
+        p.pinned ? 1 : 0, p.likes ?? 0, agoToTs(p.ago))
     }
 
     // Threaded comments
-    const insComment = db.prepare(`INSERT INTO comments
+    const COMMENT_SQL = `INSERT INTO comments
       (id, post_id, parent_id, author_id, body, base_score, created_at)
-      VALUES (@id, @post_id, @parent_id, @author_id, @body, @base_score, @created_at)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`
     const seededComments = {}
     let tick = 0
-    const addComment = (postId, parentId, c) => {
+    const addComment = async (postId, parentId, c) => {
       const id = uid('c')
-      insComment.run({
-        id, post_id: postId, parent_id: parentId, author_id: c.by,
-        body: c.body, base_score: c.score ?? 0, created_at: now - (DAY - tick++ * 90 * 1000),
-      })
+      await t.run(COMMENT_SQL, id, postId, parentId, c.by, c.body,
+        c.score ?? 0, now - (DAY - tick++ * 90 * 1000))
       seededComments[postId] = seededComments[postId] || []
       seededComments[postId].push(id)
-      ;(c.replies || []).forEach((r) => addComment(postId, id, r))
+      // Sequential, not parallel: a reply's parent row must exist first.
+      for (const r of c.replies || []) await addComment(postId, id, r)
       return id
     }
     for (const [postId, comments] of Object.entries(COMMENT_SEED)) {
-      comments.forEach((c) => addComment(postId, null, c))
+      for (const c of comments) await addComment(postId, null, c)
     }
 
     // Open reports so the moderation queue is demonstrable in whichever
     // community the new user ends up moderating: one per community on its
     // first post, plus one flagged comment in Naija Devs.
-    const insReport = db.prepare(`INSERT INTO reports
+    const REPORT_SQL = `INSERT INTO reports
       (id, reporter_id, target_type, target_id, community_id, reason, status, created_at)
-      VALUES (@id, @reporter_id, @target_type, @target_id, @community_id, @reason, 'open', @created_at)`)
+      VALUES (?, ?, ?, ?, ?, ?, 'open', ?) ON CONFLICT DO NOTHING`
     for (const c of COMMUNITIES) {
       const post = POSTS.find((p) => p.communityId === c.id)
       if (!post) continue
       const reporter = c.memberIds.find((m) => m !== post.authorId) || c.memberIds[0]
-      insReport.run({
-        id: uid('r'), reporter_id: reporter, target_type: 'post',
-        target_id: post.id, community_id: c.id,
-        reason: 'Flagged for moderator review (demo)', created_at: now - 6 * HOUR,
-      })
+      await t.run(REPORT_SQL, uid('r'), reporter, 'post', post.id, c.id,
+        'Flagged for moderator review (demo)', now - 6 * HOUR)
     }
     if (seededComments.p8?.[1]) {
-      insReport.run({
-        id: uid('r'), reporter_id: 'u-obi', target_type: 'comment',
-        target_id: seededComments.p8[1], community_id: 'naija-devs',
-        reason: 'Off-topic self-promotion', created_at: now - 3 * HOUR,
-      })
+      await t.run(REPORT_SQL, uid('r'), 'u-obi', 'comment', seededComments.p8[1],
+        'naija-devs', 'Off-topic self-promotion', now - 3 * HOUR)
     }
   })
 
-  tx()
   return { seeded: true }
 }
 
 // Seeds for the newer feature areas — kept separate from seedIfEmpty()
 // (and gated per-table) so it also backfills a DB that was already
 // seeded before these tables existed, without ever duplicating rows.
-export function seedExtras() {
+export async function seedExtras() {
   const uid2 = (p) => `${p}-${crypto.randomUUID().slice(0, 8)}`
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM jobs').get().n === 0) {
-    const insJob = db.prepare(`INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, created_at)
-      VALUES (@id, @poster_id, @title, @category, @description, @area, 'Lagos', @budget, @verified_only, @created_at)`)
+  if ((await q.get('SELECT COUNT(*) AS n FROM jobs')).n === 0) {
+    const JOB_SQL = `INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'Lagos', ?, ?, ?) ON CONFLICT DO NOTHING`
     const JOBS = [
       { poster_id: 'u-adaeze', title: 'Fix a leaking kitchen pipe', category: 'plumbing', description: 'Pipe under the sink has been dripping for two days. Need someone today or tomorrow.', area: 'Lekki', budget: '₦12,000', verified_only: 1 },
       { poster_id: 'u-bisi', title: 'Install 3 ceiling fans', category: 'electrical', description: 'Fans are bought, just need wiring and mounting. Half-day job.', area: 'Victoria Island', budget: '₦25,000', verified_only: 0 },
@@ -177,23 +163,29 @@ export function seedExtras() {
       { poster_id: 'u-rekia', title: 'Repaint a small studio office', category: 'painting', description: 'Two coats, walls only, paint provided.', area: 'Ilupeju', budget: '₦22,000', verified_only: 0 },
       { poster_id: 'u-amina', title: 'Weekend math tutor for SS2 student', category: 'tutoring', description: 'Two hours every Saturday, WAEC prep.', area: 'Marina', budget: '₦10,000/session', verified_only: 1 },
     ]
-    for (const j of JOBS) insJob.run({ id: uid2('j'), created_at: now - Math.floor(Math.random() * 4) * HOUR, ...j })
+    for (const j of JOBS) {
+      await q.run(JOB_SQL, uid2('j'), j.poster_id, j.title, j.category, j.description,
+        j.area, j.budget, j.verified_only, now - Math.floor(Math.random() * 4) * HOUR)
+    }
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM ads').get().n === 0) {
-    const insAd = db.prepare(`INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, active, created_at)
-      VALUES (@id, @owner_id, @business_name, @tagline, @cta_label, @accent, @emoji, 1, @created_at)`)
+  if ((await q.get('SELECT COUNT(*) AS n FROM ads')).n === 0) {
+    const AD_SQL = `INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING`
     const ADS = [
       { owner_id: 'u-adaeze', business_name: 'Kola Foods', tagline: 'Snacks made from grandma’s recipes', cta_label: 'Order now', accent: '#E8734A', emoji: '🥟' },
       { owner_id: 'u-funke', business_name: 'Adire by Funke', tagline: 'Modern cuts, hand-dyed textiles', cta_label: 'Shop the drop', accent: '#E84A8A', emoji: '🧵' },
       { owner_id: 'u-emeka', business_name: 'SunHome Solar', tagline: 'Off the generator in 3 weeks', cta_label: 'Get a quote', accent: '#F2C94C', emoji: '☀️' },
       { owner_id: 'u-folake', business_name: 'Folake Bakes', tagline: 'Small-chops for every occasion', cta_label: 'See menu', accent: '#E8A24A', emoji: '🧁' },
     ]
-    for (const a of ADS) insAd.run({ id: uid2('ad'), created_at: now - DAY, ...a })
+    for (const a of ADS) {
+      await q.run(AD_SQL, uid2('ad'), a.owner_id, a.business_name, a.tagline,
+        a.cta_label, a.accent, a.emoji, now - DAY)
+    }
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM ratings').get().n === 0) {
-    const insRating = db.prepare('INSERT INTO ratings (user_id, community_id, stars, review, created_at) VALUES (?, ?, ?, ?, ?)')
+  if ((await q.get('SELECT COUNT(*) AS n FROM ratings')).n === 0) {
+    const RATING_SQL = 'INSERT INTO ratings (user_id, community_id, stars, review, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING'
     const RATINGS = [
       ['u-tunde', 'lagos-entrepreneurs', 5], ['u-bisi', 'lagos-entrepreneurs', 5], ['u-seun', 'lagos-entrepreneurs', 4],
       ['u-david', 'african-startup-network', 5], ['u-amina', 'african-startup-network', 4], ['u-yemi', 'african-startup-network', 5],
@@ -201,18 +193,20 @@ export function seedExtras() {
       ['u-halima', 'balogun-market-hub', 4], ['u-adaeze', 'balogun-market-hub', 5],
       ['u-ngozi', 'green-lagos', 5], ['u-emeka', 'green-lagos', 5], ['u-rekia', 'green-lagos', 4],
     ]
-    for (const [user_id, community_id, stars] of RATINGS) insRating.run(user_id, community_id, stars, '', now - 5 * DAY)
+    for (const [user_id, community_id, stars] of RATINGS) {
+      await q.run(RATING_SQL, user_id, community_id, stars, '', now - 5 * DAY)
+    }
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM live_streams').get().n === 0) {
-    const insLive = db.prepare('INSERT INTO live_streams (id, community_id, host_id, title, started_at, viewer_count) VALUES (?, ?, ?, ?, ?, ?)')
-    insLive.run(uid2('live'), 'naija-devs', 'u-tunde', 'Live code review: your PRs, roasted kindly', now - 8 * 60 * 1000, 34)
+  if ((await q.get('SELECT COUNT(*) AS n FROM live_streams')).n === 0) {
+    await q.run('INSERT INTO live_streams (id, community_id, host_id, title, started_at, viewer_count) VALUES (?, ?, ?, ?, ?, ?)',
+      uid2('live'), 'naija-devs', 'u-tunde', 'Live code review: your PRs, roasted kindly', now - 8 * 60 * 1000, 34)
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM chats').get().n === 0) {
-    const insChat = db.prepare('INSERT INTO chats (id, name, description, community_id, creator_id, accent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    const insMember = db.prepare('INSERT OR IGNORE INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?)')
-    const insMsg = db.prepare('INSERT INTO chat_messages (id, chat_id, sender_id, body, created_at) VALUES (?, ?, ?, ?, ?)')
+  if ((await q.get('SELECT COUNT(*) AS n FROM chats')).n === 0) {
+    const CHAT_SQL = 'INSERT INTO chats (id, name, description, community_id, creator_id, accent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING'
+    const CHAT_MEMBER_SQL = 'INSERT INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING'
+    const CHAT_MSG_SQL = 'INSERT INTO chat_messages (id, chat_id, sender_id, body, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING'
     const CHATS = [
       { id: uid2('gc'), name: 'Pitch Night Organizers', description: 'Coordinating the next First-Cheque Pitch Night', community_id: 'lagos-entrepreneurs', creator_id: 'u-yemi', accent: '#E8B14A',
         members: ['u-yemi', 'u-adaeze', 'u-amina'],
@@ -225,9 +219,11 @@ export function seedExtras() {
         messages: [['u-obi', 'Closures finally clicked for me, thanks to Tunde’s danfo analogy 😂'], ['u-seun', 'Same. Doing the exercises tonight.']] },
     ]
     for (const c of CHATS) {
-      insChat.run(c.id, c.name, c.description, c.community_id, c.creator_id, c.accent, now - 6 * DAY)
-      c.members.forEach((m) => insMember.run(c.id, m, now - 6 * DAY))
-      c.messages.forEach(([by, body], i) => insMsg.run(uid2('gm'), c.id, by, body, now - (2 * HOUR - i * 4 * 60 * 1000)))
+      await q.run(CHAT_SQL, c.id, c.name, c.description, c.community_id, c.creator_id, c.accent, now - 6 * DAY)
+      for (const m of c.members) await q.run(CHAT_MEMBER_SQL, c.id, m, now - 6 * DAY)
+      for (const [i, [by, body]] of c.messages.entries()) {
+        await q.run(CHAT_MSG_SQL, uid2('gm'), c.id, by, body, now - (2 * HOUR - i * 4 * 60 * 1000))
+      }
     }
   }
 }
