@@ -6,6 +6,7 @@
 // function no persistent disk, so the data had to move somewhere that
 // outlives a single request. Every read below is therefore async.
 import pg from 'pg'
+import { SUPABASE_ROOT_CA } from './supabase-ca.js'
 
 // pg hands back BIGINT and NUMERIC as strings, to protect values too large
 // for a JS number. Here they are only millisecond timestamps, counts and a
@@ -22,14 +23,25 @@ if (!url) {
 }
 
 const isLocal = /@(localhost|127\.0\.0\.1|\[::1\])/.test(url)
+const isSupabase = /@[^/@]*\.supabase\.(com|co)[:/]/.test(url)
+
+// Managed Postgres requires TLS; a local cluster has none. Supabase signs its
+// certificates with a private root, so Node needs that root handed to it or
+// the connection dies with SELF_SIGNED_CERT_IN_CHAIN — supplying it keeps
+// full verification on, which turning verification off would not.
+const sslOptions = () => {
+  if (isLocal) return false
+  if (process.env.PGSSL_NO_VERIFY === '1') return { rejectUnauthorized: false }
+  if (isSupabase) return { ca: SUPABASE_ROOT_CA, rejectUnauthorized: true }
+  return { rejectUnauthorized: true }
+}
 
 export const pool = new pg.Pool({
   connectionString: url,
-  // Managed Postgres (Neon, Supabase, RDS) requires TLS; a local cluster has
-  // none. PGSSL_NO_VERIFY=1 is the escape hatch for a host whose certificate
-  // chain Node doesn't recognise — it keeps the connection encrypted but stops
-  // verifying who is on the other end, so only use it if a deploy demands it.
-  ssl: isLocal ? false : { rejectUnauthorized: process.env.PGSSL_NO_VERIFY !== '1' },
+  // See sslOptions above. PGSSL_NO_VERIFY=1 remains the escape hatch for a
+  // host whose chain Node still doesn't recognise — it keeps the connection
+  // encrypted but stops verifying who is on the other end.
+  ssl: sslOptions(),
   // Serverless functions come and go; don't hold a large idle pool open.
   max: Number(process.env.PG_POOL_MAX || 5),
   idleTimeoutMillis: 10_000,

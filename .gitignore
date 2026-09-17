@@ -9,3 +9,5 @@ dist/
 .DS_Store
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+.vercel
+.env*
