@@ -532,4 +532,4 @@ export const WORLD_EVENTS = [
 ]
 
 export const PURPOSE =
-  'Interact Space exists to connect people, empower communities, and unlock opportunities by creating a trusted digital environment where individuals can discover their place, share their value, and build meaningful connections that improve lives.'
+  'Voida exists to connect people, empower communities, and unlock opportunities by creating a trusted digital environment where individuals can discover their place, share their value, and build meaningful connections that improve lives.'
