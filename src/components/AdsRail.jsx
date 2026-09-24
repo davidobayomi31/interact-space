@@ -3,26 +3,33 @@
 // takes its turn, looping continuously. Businesses pay to post; payment
 // is simulated (no real processor wired up in this prototype).
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
 
-const ACCENTS = ['#D8A63A', '#4A90E8', '#27AE60', '#9B59B6', '#E8734A', '#4AE8D4']
-const EMOJIS = ['✨', '🛍️', '🍜', '🎨', '🔧', '📸', '🌿', '🚀']
+const ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E']
+
+// Advertisers give us a name, not a logo file, so the rail draws a
+// monogram from the name in their own accent colour.
+function AdMark({ ad }) {
+  const initials = ad.businessName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
+  return <span className="ad-mark" style={{ background: ad.accent }} aria-hidden="true">{initials}</span>
+}
 
 // Shown when the API is unreachable (e.g. a static-only deploy with no
 // backend) or hasn't been seeded yet, so the rail is never empty in a demo.
 const FALLBACK_ADS = [
-  { id: 'fallback-1', businessName: 'Kola Foods', tagline: 'Snacks made from grandma’s recipes', ctaLabel: 'Order now', accent: '#E8734A', emoji: '🥟' },
-  { id: 'fallback-2', businessName: 'Adire by Funke', tagline: 'Modern cuts, hand-dyed textiles', ctaLabel: 'Shop the drop', accent: '#E84A8A', emoji: '🧵' },
-  { id: 'fallback-3', businessName: 'SunHome Solar', tagline: 'Off the generator in 3 weeks', ctaLabel: 'Get a quote', accent: '#F2C94C', emoji: '☀️' },
-  { id: 'fallback-4', businessName: 'Folake Bakes', tagline: 'Small-chops for every occasion', ctaLabel: 'See menu', accent: '#E8A24A', emoji: '🧁' },
-  { id: 'fallback-5', businessName: 'Naija Devs Bootcamp', tagline: 'Learn to code, get mentored, get hired', ctaLabel: 'Enroll now', accent: '#4AE8D4', emoji: '💻' },
-  { id: 'fallback-6', businessName: 'Green Lagos Nursery', tagline: 'Seedlings and soil for your balcony farm', ctaLabel: 'Visit us', accent: '#27AE60', emoji: '🌱' },
+  { id: 'fallback-1', businessName: 'Kola Foods', tagline: 'Snacks made from grandma’s recipes', ctaLabel: 'Order now', accent: '#B4472A' },
+  { id: 'fallback-2', businessName: 'Adire by Funke', tagline: 'Modern cuts, hand-dyed textiles', ctaLabel: 'Shop the drop', accent: '#A8306A' },
+  { id: 'fallback-3', businessName: 'SunHome Solar', tagline: 'Off the generator in 3 weeks', ctaLabel: 'Get a quote', accent: '#7A5A0F' },
+  { id: 'fallback-4', businessName: 'Folake Bakes', tagline: 'Small-chops for every occasion', ctaLabel: 'See menu', accent: '#8F5513' },
+  { id: 'fallback-5', businessName: 'Naija Devs Bootcamp', tagline: 'Learn to code, get mentored, get hired', ctaLabel: 'Enroll now', accent: '#0F6E6E' },
+  { id: 'fallback-6', businessName: 'Green Lagos Nursery', tagline: 'Seedlings and soil for your balcony farm', ctaLabel: 'Visit us', accent: '#1B7F3B' },
 ]
 
 function AdvertiseForm({ onClose, onCreated }) {
-  const [form, setForm] = useState({ businessName: '', tagline: '', ctaLabel: 'Learn more', accent: ACCENTS[0], emoji: EMOJIS[0] })
+  const [form, setForm] = useState({ businessName: '', tagline: '', ctaLabel: 'Learn more', accent: ACCENTS[0] })
   const [step, setStep] = useState('form') // form | pay
   const [ad, setAd] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -54,9 +61,6 @@ function AdvertiseForm({ onClose, onCreated }) {
             <input className="job-input" value={form.tagline} onChange={set('tagline')} placeholder="One-line tagline" />
             <div className="job-form-row">
               <input className="job-input" value={form.ctaLabel} onChange={set('ctaLabel')} placeholder="Button text (e.g. Order now)" />
-              <select className="job-select" value={form.emoji} onChange={set('emoji')}>
-                {EMOJIS.map((e) => <option key={e} value={e}>{e}</option>)}
-              </select>
               <select className="job-select" value={form.accent} onChange={set('accent')}>
                 {ACCENTS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -72,7 +76,7 @@ function AdvertiseForm({ onClose, onCreated }) {
               Preview:
             </p>
             <div className="card ad-card enlarged" style={{ '--accent': ad.accent }}>
-              <span className="ad-emoji">{ad.emoji}</span>
+              <AdMark ad={ad} />
               <strong>{ad.businessName}</strong>
               <span className="meta-dim">{ad.tagline}</span>
               <span className="btn primary small ad-cta">{ad.ctaLabel}</span>
@@ -89,8 +93,65 @@ function AdvertiseForm({ onClose, onCreated }) {
   )
 }
 
+// Ads shouldn't be the first thing a visitor meets. On the landing page the
+// rail stays hidden until the visitor has actually scrolled AND Trending in
+// Lagos has risen into the upper part of the screen — then it fades in.
+// "Visible at all" wasn't enough: once the hero got shorter, the section
+// peeked in on load and the rail appeared with the hero still on screen.
+// Scrolling back up hides it again. Pages with no anchor show it at once.
+const AD_ANCHOR = '#trending-lagos'
+const REVEAL_LINE = 0.7   // anchor's top must pass 70% of the viewport height
+const MIN_SCROLL = 40     // and the visitor must have scrolled at least this far
+
+function useAnchorReached() {
+  const { pathname } = useLocation()
+  const [reached, setReached] = useState(false)
+
+  useEffect(() => {
+    let anchor = null
+    let frame = 0
+    const check = () => {
+      frame = 0
+      if (!anchor) return
+      const top = anchor.getBoundingClientRect().top
+      setReached(window.scrollY > MIN_SCROLL && top < window.innerHeight * REVEAL_LINE)
+    }
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check) }
+
+    // The route's own markup mounts alongside this effect, so look for the
+    // anchor on the next frame rather than racing it.
+    const boot = requestAnimationFrame(() => {
+      anchor = document.querySelector(AD_ANCHOR)
+      if (!anchor) { setReached(true); return }
+      check()
+      window.addEventListener('scroll', onScroll, { passive: true })
+      window.addEventListener('resize', onScroll)
+    })
+    return () => {
+      cancelAnimationFrame(boot)
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [pathname])
+
+  return reached
+}
+
 export function AdsRail() {
   const { user } = useApp()
+  const { pathname } = useLocation()
+  const anchorReached = useAnchorReached()
+  // On the landing page the hero hands off from the companion to the globe
+  // as you scroll; the rail arrives as that hand-off finishes.
+  const [heroDone, setHeroDone] = useState(false)
+  useEffect(() => {
+    const on = (e) => setHeroDone(e.detail >= 0.85)
+    window.addEventListener('voida:hero-progress', on)
+    return () => window.removeEventListener('voida:hero-progress', on)
+  }, [])
+  useEffect(() => { setHeroDone(false) }, [pathname])
+  const adsVisible = anchorReached || heroDone
   const [ads, setAds] = useState([])
   const [active, setActive] = useState(0)
   const [showForm, setShowForm] = useState(false)
@@ -106,6 +167,9 @@ export function AdsRail() {
     return () => clearInterval(t)
   }, [ads.length])
 
+  // No ads over private conversations.
+  if (!adsVisible || pathname.startsWith('/chats')) return null
+
   return (
     <aside className="ads-rail" aria-label="Sponsored">
       <div className="ads-rail-label"><Icon name="tag" size={12} /> Sponsored</div>
@@ -118,7 +182,7 @@ export function AdsRail() {
         )}
         {ads.map((ad, i) => (
           <div key={ad.id} className={`card ad-card ${i === active ? 'enlarged' : 'minimized'}`} style={{ '--accent': ad.accent }}>
-            <span className="ad-emoji">{ad.emoji}</span>
+            <AdMark ad={ad} />
             <strong>{ad.businessName}</strong>
             {i === active && <>
               <span className="meta-dim">{ad.tagline}</span>
@@ -127,8 +191,36 @@ export function AdsRail() {
           </div>
         ))}
       </div>
-      {user && <button className="btn gold-outline small ads-rail-cta" onClick={() => setShowForm(true)}><Icon name="plus" size={13} /> Advertise here</button>}
+      {user && <button className="btn brand-outline small ads-rail-cta" onClick={() => setShowForm(true)}><Icon name="plus" size={13} /> Advertise here</button>}
       {showForm && <AdvertiseForm onClose={() => setShowForm(false)} onCreated={(ad) => setAds((a) => [ad, ...a])} />}
     </aside>
+  )
+}
+
+// Phones have no room for the rail, so the landing page shows a single
+// sponsored card under the globe instead, cycling through the same ads.
+// It is placed inside the hero's caption, which only appears once the
+// companion has handed the globe over.
+export function PhoneHeroAd() {
+  const [ads, setAds] = useState(FALLBACK_ADS)
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    api.listAds().then((a) => { if (a.length) setAds(a) }).catch(() => {})
+  }, [])
+  useEffect(() => {
+    if (ads.length < 2) return
+    const t = setInterval(() => setI((n) => (n + 1) % ads.length), 5000)
+    return () => clearInterval(t)
+  }, [ads.length])
+  const ad = ads[i % ads.length]
+  return (
+    <div className="phone-ad" key={ad.id} style={{ '--accent': ad.accent }} aria-label="Sponsored">
+      <AdMark ad={ad} />
+      <div className="phone-ad-text">
+        <small>Sponsored</small>
+        <strong>{ad.businessName}</strong>
+        <span>{ad.tagline}</span>
+      </div>
+    </div>
   )
 }

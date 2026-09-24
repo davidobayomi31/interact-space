@@ -41,7 +41,7 @@ export const USERS = [
     interests: ['food', 'small-business', 'marketing'], skills: ['branding', 'retail operations'],
     goals: ['Scale my food brand across West Africa'],
     bio: 'Building a snack brand from my grandmother’s recipes. Always happy to talk retail.',
-    communities: ['lagos-entrepreneurs', 'balogun-market-hub'], color: '#E8734A',
+    communities: ['lagos-entrepreneurs', 'balogun-market-hub'], color: '#B4472A',
   },
   {
     id: 'u-tunde', name: 'Tunde Bakare', handle: '@tunde',
@@ -49,7 +49,7 @@ export const USERS = [
     interests: ['coding', 'web-development', 'mentorship'], skills: ['React', 'Node.js', 'teaching'],
     goals: ['Mentor 10 junior developers this year'],
     bio: 'Engineer at a fintech by day, coding mentor by night. Ask me about your first PR.',
-    communities: ['naija-devs', 'african-startup-network'], color: '#4A90E8',
+    communities: ['naija-devs', 'african-startup-network'], color: '#1F5FA8',
   },
   {
     id: 'u-zainab', name: 'Zainab Yusuf', handle: '@zainab',
@@ -57,7 +57,7 @@ export const USERS = [
     interests: ['photography', 'art', 'writing'], skills: ['portrait photography', 'photo editing'],
     goals: ['Publish a photo book on Lagos markets'],
     bio: 'I shoot the everyday poetry of Lagos streets. Leica in one hand, suya in the other.',
-    communities: ['lagos-lens-collective'], color: '#9B59B6',
+    communities: ['lagos-lens-collective'], color: '#6B3FA0',
   },
   {
     id: 'u-chidi', name: 'Chidi Nwosu', handle: '@chidi',
@@ -65,7 +65,7 @@ export const USERS = [
     interests: ['farming', 'agriculture', 'sustainability', 'startups'], skills: ['hydroponics', 'operations'],
     goals: ['Bring vertical farming to 100 Lagos homes'],
     bio: 'Ex-banker turned farmer. I grow vegetables in shipping containers and I’m not sorry.',
-    communities: ['green-lagos', 'lagos-entrepreneurs'], color: '#27AE60',
+    communities: ['green-lagos', 'lagos-entrepreneurs'], color: '#1B7F3B',
   },
   {
     id: 'u-funke', name: 'Funke Alabi', handle: '@funke',
@@ -89,7 +89,7 @@ export const USERS = [
     interests: ['design', 'tech', 'learning'], skills: ['UI/UX', 'Figma', 'user research'],
     goals: ['Move from agency work to a product startup'],
     bio: 'I design interfaces people don’t have to think about. Currently thinking about yours.',
-    communities: ['naija-devs', 'african-startup-network'], color: '#4AE8D4',
+    communities: ['naija-devs', 'african-startup-network'], color: '#0F6E6E',
   },
   {
     id: 'u-yemi', name: 'Yemi Ogunleye', handle: '@yemi',
@@ -137,7 +137,7 @@ export const USERS = [
     interests: ['marketing', 'startups', 'writing'], skills: ['growth marketing', 'copywriting'],
     goals: ['Build a personal brand in African fintech'],
     bio: 'Growth marketer. I believe distribution beats product — fight me in the comments.',
-    communities: ['african-startup-network', 'lagos-entrepreneurs'], color: '#E8B14A',
+    communities: ['african-startup-network', 'lagos-entrepreneurs'], color: '#8A5D0B',
   },
   {
     id: 'u-obi', name: 'Obi Ikenna', handle: '@obi',
@@ -180,7 +180,7 @@ export const DEFAULT_PROFILE = {
   interests: [], skills: [], goals: [],
   bio: 'Just arrived in the city.',
   communities: [], connections: [], color: '#D8A63A',
-  privacy: 'neighborhood', // exact | neighborhood | city-only
+  privacy: 'city-only', // exact | city-only | hidden
   onboarded: false,
 }
 
@@ -192,7 +192,7 @@ export const COMMUNITIES = [
     description: 'A community of founders, side-hustlers and operators building businesses in Lagos. Weekly meetups, honest pitch feedback, and members who actually reply.',
     tags: ['entrepreneurship', 'business', 'startups', 'mentorship', 'networking'],
     memberCount: 2418, memberIds: ['u-adaeze', 'u-chidi', 'u-yemi', 'u-amina', 'u-rekia'],
-    moderators: ['u-yemi', 'u-amina'], accent: '#E8B14A', icon: 'briefcase',
+    moderators: ['u-yemi', 'u-amina'], accent: '#8A5D0B', icon: 'briefcase',
     trending: true,
     rules: [
       'Give feedback before you ask for it.',
@@ -207,7 +207,7 @@ export const COMMUNITIES = [
     description: 'The global home for African founders, operators and investors on Interact Space. Cross-border intros, funding announcements, and city chapters from Lagos to Nairobi to Accra.',
     tags: ['startups', 'tech', 'finance', 'networking', 'entrepreneurship'],
     memberCount: 18452, memberIds: ['u-tunde', 'u-bisi', 'u-yemi', 'u-amina', 'u-david'],
-    moderators: ['u-david'], accent: '#4A90E8', icon: 'globe',
+    moderators: ['u-david'], accent: '#1F5FA8', icon: 'globe',
     trending: true,
     rules: [
       'Intros must be double opt-in.',
@@ -222,7 +222,7 @@ export const COMMUNITIES = [
     description: 'Street photographers, portrait shooters and filmmakers documenting Lagos. Monthly photo walks, critique circles, and an annual open-air exhibition.',
     tags: ['photography', 'art', 'community'],
     memberCount: 684, memberIds: ['u-zainab', 'u-kunle'],
-    moderators: ['u-zainab'], accent: '#9B59B6', icon: 'camera',
+    moderators: ['u-zainab'], accent: '#6B3FA0', icon: 'camera',
     trending: false,
     rules: [
       'Critique the work, never the person.',
@@ -237,7 +237,7 @@ export const COMMUNITIES = [
     description: 'A learning-first coding community. Weekly study groups, code reviews from senior engineers, and a no-stupid-questions policy that is actually enforced.',
     tags: ['coding', 'web-development', 'learning', 'mentorship', 'tech', 'data'],
     memberCount: 3127, memberIds: ['u-tunde', 'u-bisi', 'u-seun', 'u-obi'],
-    moderators: ['u-tunde'], accent: '#4AE8D4', icon: 'code',
+    moderators: ['u-tunde'], accent: '#0F6E6E', icon: 'code',
     trending: true,
     rules: [
       'No question is too basic — mockery gets you removed.',
@@ -252,7 +252,7 @@ export const COMMUNITIES = [
     description: 'Makers, bakers, tailors and traders supporting each other’s hustle. Weekend pop-up markets, bulk-buying groups, and honest advice on pricing your work.',
     tags: ['small-business', 'marketplace', 'food', 'fashion', 'business'],
     memberCount: 1893, memberIds: ['u-adaeze', 'u-funke', 'u-halima', 'u-folake'],
-    moderators: ['u-funke'], accent: '#E8734A', icon: 'store',
+    moderators: ['u-funke'], accent: '#B4472A', icon: 'store',
     trending: false,
     rules: [
       'Buy from members first when you can.',
@@ -267,7 +267,7 @@ export const COMMUNITIES = [
     description: 'Urban farmers, solar engineers and sustainability advocates making Lagos livable. Community gardens, cleanup days, and practical workshops on growing food in small spaces.',
     tags: ['sustainability', 'farming', 'agriculture', 'urban-farming', 'renewable-energy', 'community'],
     memberCount: 1156, memberIds: ['u-chidi', 'u-emeka', 'u-ngozi', 'u-halima', 'u-rekia'],
-    moderators: ['u-rekia'], accent: '#27AE60', icon: 'leaf',
+    moderators: ['u-rekia'], accent: '#1B7F3B', icon: 'leaf',
     trending: true,
     rules: [
       'Practical over performative — share what you actually did.',

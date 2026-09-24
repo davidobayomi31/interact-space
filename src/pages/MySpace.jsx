@@ -8,6 +8,7 @@ import { matchCommunities, matchPeople, tagLabel } from '../ai.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, CommunityCard, PersonCard, EventCard, PostCard, SectionHead, TagPills } from '../components/bits.jsx'
+import { LiveNowRow } from '../components/Live.jsx'
 
 export default function MySpace() {
   const { user, profile, loading, setAssistantOpen } = useApp()
@@ -48,15 +49,14 @@ export default function MySpace() {
           <div>
             <h1>{first}’s Space</h1>
             <div className="meta-dim">
-              <Icon name="map-pin" size={13} /> {profile.privacy === 'city-only' ? 'Lagos' : `${profile.area}, Lagos`}
-              <span className="privacy-note"><Icon name="eye" size={12} /> {profile.privacy === 'exact' ? 'exact area shown' : profile.privacy === 'neighborhood' ? 'neighborhood only' : 'city only'}</span>
+              <Icon name="map-pin" size={13} /> {profile.privacy === 'hidden' ? 'Location hidden' : profile.privacy === 'city-only' ? 'Lagos' : `${profile.area}, Lagos`}
+              <span className="privacy-note"><Icon name="eye" size={12} /> {profile.privacy === 'hidden' ? 'hidden from members' : profile.privacy === 'city-only' ? 'city only' : 'exact area shown'}</span>
             </div>
             {profile.interests.length > 0 && <TagPills tags={profile.interests} max={5} />}
           </div>
         </div>
         <div className="space-hero-actions">
           <Link to="/" className="btn ghost"><Icon name="globe" size={15} /> Step out into the city</Link>
-          <Link to="/discover" className="btn gold-outline"><Icon name="compass" size={15} /> Discover</Link>
         </div>
       </section>
 
@@ -94,6 +94,9 @@ export default function MySpace() {
             </section>
           )}
 
+          {/* Live now — renders nothing unless someone is streaming */}
+          <LiveNowRow />
+
           {/* My events */}
           <section className="section">
             <SectionHead icon="calendar" title="My events" sub="From your communities and interests" />
@@ -101,7 +104,7 @@ export default function MySpace() {
               {myEvents.length ? myEvents.map((e) => {
                 const shared = e.tags.filter((t) => profile.interests.includes(t))
                 return <EventCard key={e.id} event={e} shared={shared} source="profile" />
-              }) : <p className="meta-dim">Nothing on your calendar yet — check Discover.</p>}
+              }) : <p className="meta-dim">Nothing on your calendar yet — <Link to="/">see what’s on in the city</Link>.</p>}
             </div>
           </section>
 
@@ -111,7 +114,7 @@ export default function MySpace() {
             <div className="card ghost-card left">
               <Icon name="plus-circle" size={22} />
               <p><strong>No projects yet.</strong><br />Projects grow out of communities — ask your companion to help you start one with people who share your goals.</p>
-              <button className="btn gold-outline small" onClick={() => setAssistantOpen(true)}>
+              <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}>
                 <Icon name="sparkle" size={14} /> Start with the Companion
               </button>
             </div>

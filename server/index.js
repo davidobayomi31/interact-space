@@ -82,11 +82,30 @@ app.post('/api/auth/logout', async (req, res) => { clearSession(res); res.json({
 
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.userId ? await selfUser(req.userRow) : null }))
 
+const PRIVACY_LEVELS = ['exact', 'city-only', 'hidden']
+
+// Portfolio pieces: capped, trimmed, and only http(s) links survive.
+function cleanPortfolio(v) {
+  if (!Array.isArray(v)) return null
+  return v.slice(0, 12).map((p) => {
+    const link = String(p?.link || '').trim()
+    return {
+      title: String(p?.title || '').trim().slice(0, 80),
+      description: String(p?.description || '').trim().slice(0, 280),
+      link: /^https?:\/\//i.test(link) ? link.slice(0, 300) : '',
+    }
+  }).filter((p) => p.title)
+}
+
 app.patch('/api/auth/me', requireAuth, async (req, res) => {
   const b = req.body || {}
   const cur = req.userRow
+  if (b.privacy != null && !PRIVACY_LEVELS.includes(b.privacy)) return err(res, 400, 'Unknown privacy setting.')
+  const portfolio = cleanPortfolio(b.portfolio)
   const arr = (v, fallbackJson) => JSON.stringify(Array.isArray(v) ? v : JSON.parse(fallbackJson))
-  await q.run(`UPDATE users SET name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, job_skills=?, onboarded=? WHERE id=?`, b.name?.trim() || cur.name,
+  await q.run(`UPDATE users SET portfolio=?, name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, job_skills=?, onboarded=? WHERE id=?`,
+      portfolio ? JSON.stringify(portfolio) : (cur.portfolio || '[]'),
+      b.name?.trim() || cur.name,
       b.title ?? cur.title,
       b.area ?? cur.area,
       b.bio ?? cur.bio,
@@ -334,6 +353,161 @@ app.post('/api/jobs/:id/interest', requireAuth, async (req, res) => {
   if (existing) await q.run('DELETE FROM job_interests WHERE job_id = ? AND user_id = ?', job.id, req.userId)
   else await q.run('INSERT INTO job_interests (job_id, user_id, created_at) VALUES (?, ?, ?)', job.id, req.userId, now())
   res.json({ job: await serializeJob(job, req.userId) })
+})
+
+// ── Job history: an applicant's own tracker ─────────────────────────
+// "applied" reads as "waiting to hear back" in the UI.
+const APPLICATION_STATUSES = ['applied', 'talking', 'hired', 'declined', 'withdrawn']
+
+app.get('/api/me/jobs', requireAuth, async (req, res) => {
+  const [interests, postedRows] = await Promise.all([
+    q.all('SELECT * FROM job_interests WHERE user_id = ? ORDER BY created_at DESC', req.userId),
+    q.all('SELECT * FROM jobs WHERE poster_id = ? ORDER BY created_at DESC', req.userId),
+  ])
+  const applied = (await Promise.all(interests.map(async (i) => {
+    const row = await q.get('SELECT * FROM jobs WHERE id = ?', i.job_id)
+    if (!row) return null
+    return {
+      job: await serializeJob(row, req.userId),
+      status: i.status || 'applied',
+      appliedAt: i.created_at,
+      statusAt: i.status_at || i.created_at,
+      note: i.note || '',
+    }
+  }))).filter(Boolean)
+  const posted = await Promise.all(postedRows.map((r) => serializeJob(r, req.userId)))
+  res.json({ applied, posted })
+})
+
+app.patch('/api/jobs/:id/application', requireAuth, async (req, res) => {
+  const { status, note } = req.body || {}
+  if (status != null && !APPLICATION_STATUSES.includes(status)) return err(res, 400, 'Unknown status.')
+  const cur = await q.get('SELECT * FROM job_interests WHERE job_id = ? AND user_id = ?', req.params.id, req.userId)
+  if (!cur) return err(res, 404, 'You haven\u2019t applied to that job.')
+  await q.run('UPDATE job_interests SET status = ?, status_at = ?, note = ? WHERE job_id = ? AND user_id = ?',
+    status ?? cur.status, status && status !== cur.status ? now() : cur.status_at,
+    note != null ? String(note).trim().slice(0, 280) : cur.note, req.params.id, req.userId)
+  res.json({ ok: true })
+})
+
+// ── Voices: extra, separately shareable versions of a profile ──────────
+// A member has their main profile plus up to three voices (four in all).
+// Each voice has its own handle and shows only the sections picked for it;
+// the public view never reveals which account it belongs to.
+const MAX_PROFILES = 4
+const VOICE_SECTIONS = ['about', 'interests', 'skills', 'work', 'communities', 'posts', 'offers', 'portfolio']
+const HANDLE_RE = /^[a-z0-9][a-z0-9._]{1,28}[a-z0-9]$/
+
+const text = (v, max) => String(v ?? '').trim().slice(0, max)
+const tags = (v) => (Array.isArray(v) ? v : []).map((t) => text(t, 40)).filter(Boolean).slice(0, 20)
+const items = (v, shape) => (Array.isArray(v) ? v : []).slice(0, 12)
+  .map((it) => Object.fromEntries(Object.entries(shape).map(([k, max]) => [k, text(it?.[k], max)])))
+  .filter((it) => Object.values(it).some(Boolean))
+
+function cleanVoiceContent(sections, c = {}) {
+  const out = {}
+  if (sections.includes('about')) out.about = { text: text(c.about?.text, 600) }
+  if (sections.includes('interests')) out.interests = { tags: tags(c.interests?.tags) }
+  if (sections.includes('skills')) out.skills = { tags: tags(c.skills?.tags) }
+  if (sections.includes('work')) out.work = { items: items(c.work?.items, { role: 80, org: 80, years: 40 }) }
+  // Posts are drawn from the chosen communities, so keep the ids for either section.
+  if (sections.includes('communities') || sections.includes('posts')) out.communities = { ids: tags(c.communities?.ids) }
+  if (sections.includes('offers')) out.offers = { items: items(c.offers?.items, { title: 80, detail: 200, rate: 40 }) }
+  if (sections.includes('portfolio')) {
+    out.portfolio = { items: items(c.portfolio?.items, { title: 80, description: 280, link: 300 })
+      .map((p) => ({ ...p, link: /^https?:\/\//i.test(p.link) ? p.link : '' })) }
+  }
+  return out
+}
+
+const voiceOut = (row) => ({
+  id: row.id, name: row.name, handle: row.handle, headline: row.headline,
+  sections: parseJson(row.sections), content: parseJson(row.content, {}), createdAt: row.created_at,
+})
+
+async function handleTaken(handle, exceptVoiceId) {
+  const v = await q.get('SELECT id FROM voices WHERE handle = ?', handle)
+  if (v && v.id !== exceptVoiceId) return true
+  const u = await q.get("SELECT id FROM users WHERE LOWER(REPLACE(handle, '@', '')) = ?", handle)
+  return !!u
+}
+
+async function readVoiceBody(req, res, existing) {
+  const b = req.body || {}
+  const name = text(b.name ?? existing?.name, 40)
+  const handle = text(b.handle ?? existing?.handle, 30).toLowerCase().replace(/^@/, '')
+  const sections = (Array.isArray(b.sections) ? b.sections : parseJson(existing?.sections))
+    .filter((s, i, a) => VOICE_SECTIONS.includes(s) && a.indexOf(s) === i)
+  if (!name) return err(res, 400, 'Give this profile a name, like \u201cWork\u201d.')
+  if (!HANDLE_RE.test(handle)) return err(res, 400, 'Usernames are 3\u201330 characters: letters, numbers, dots or underscores.')
+  if (!sections.length) return err(res, 400, 'Pick at least one section for people to see.')
+  if (await handleTaken(handle, existing?.id)) return err(res, 409, `@${handle} is taken. Try another.`)
+  // Communities can only be ones the member actually belongs to.
+  const content = cleanVoiceContent(sections, b.content ?? parseJson(existing?.content, {}))
+  if (content.communities) {
+    const mine = new Set((await q.all('SELECT community_id FROM memberships WHERE user_id = ?', req.userId)).map((r) => r.community_id))
+    content.communities.ids = content.communities.ids.filter((id) => mine.has(id))
+  }
+  return { name, handle, headline: text(b.headline ?? existing?.headline, 120), sections, content }
+}
+
+app.get('/api/voices', requireAuth, async (req, res) => {
+  const rows = await q.all('SELECT * FROM voices WHERE user_id = ? ORDER BY created_at ASC', req.userId)
+  res.json({ voices: rows.map(voiceOut), max: MAX_PROFILES })
+})
+
+app.post('/api/voices', requireAuth, async (req, res) => {
+  const { n } = await q.get('SELECT COUNT(*)::int AS n FROM voices WHERE user_id = ?', req.userId)
+  if (n + 1 >= MAX_PROFILES) return err(res, 400, `You can have up to ${MAX_PROFILES} profiles, including your main one.`)
+  const v = await readVoiceBody(req, res)
+  if (!v || res.headersSent) return
+  const id = uid('v')
+  await q.run('INSERT INTO voices (id, user_id, name, handle, headline, sections, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    id, req.userId, v.name, v.handle, v.headline, JSON.stringify(v.sections), JSON.stringify(v.content), now())
+  res.json({ voice: voiceOut(await q.get('SELECT * FROM voices WHERE id = ?', id)) })
+})
+
+app.patch('/api/voices/:id', requireAuth, async (req, res) => {
+  const existing = await q.get('SELECT * FROM voices WHERE id = ? AND user_id = ?', req.params.id, req.userId)
+  if (!existing) return err(res, 404, 'Profile not found.')
+  const v = await readVoiceBody(req, res, existing)
+  if (!v || res.headersSent) return
+  await q.run('UPDATE voices SET name = ?, handle = ?, headline = ?, sections = ?, content = ? WHERE id = ?',
+    v.name, v.handle, v.headline, JSON.stringify(v.sections), JSON.stringify(v.content), existing.id)
+  res.json({ voice: voiceOut(await q.get('SELECT * FROM voices WHERE id = ?', existing.id)) })
+})
+
+app.delete('/api/voices/:id', requireAuth, async (req, res) => {
+  const { changes } = await q.run('DELETE FROM voices WHERE id = ? AND user_id = ?', req.params.id, req.userId)
+  if (!changes) return err(res, 404, 'Profile not found.')
+  res.json({ ok: true })
+})
+
+// Public view of one voice. Deliberately omits the owner's id, handle and
+// main-profile link: a work voice shouldn't lead back to the personal one.
+app.get('/api/v/:handle', async (req, res) => {
+  const row = await q.get('SELECT * FROM voices WHERE handle = ?', String(req.params.handle).toLowerCase())
+  if (!row) return err(res, 404, 'No profile with that username.')
+  const owner = await getUserById(row.user_id)
+  const voice = voiceOut(row)
+  const resolved = { ...voice.content }
+  if (voice.sections.includes('communities') || voice.sections.includes('posts')) {
+    const ids = voice.content.communities?.ids || []
+    const comms = ids.length
+      ? await q.all(`SELECT id, name, tagline, accent FROM communities WHERE id IN (${ids.map(() => '?').join(',')})`, ...ids)
+      : []
+    if (voice.sections.includes('communities')) resolved.communities = { list: comms }
+    if (voice.sections.includes('posts')) {
+      const postRows = ids.length
+        ? await q.all(`SELECT * FROM posts WHERE author_id = ? AND hidden = 0 AND community_id IN (${ids.map(() => '?').join(',')}) ORDER BY created_at DESC LIMIT 5`, row.user_id, ...ids)
+        : []
+      resolved.posts = { list: await Promise.all(postRows.map((p) => serializePost(p, req.userId))) }
+    }
+  }
+  res.json({
+    voice: { ...voice, content: resolved },
+    owner: owner ? { name: owner.name, color: owner.color, idVerified: !!owner.id_verified } : null,
+  })
 })
 
 // ── Direct messages ──────────────────────────────────────────────────

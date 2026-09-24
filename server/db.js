@@ -262,6 +262,33 @@ CREATE INDEX IF NOT EXISTS idx_members_user ON memberships(user_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category);
 CREATE INDEX IF NOT EXISTS idx_dm_pair ON dm_messages(from_id, to_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id);
+
+-- Location privacy: 'exact' | 'city-only' | 'hidden'. 'neighborhood' is a
+-- retired option; rows that still hold it are treated as 'exact'.
+ALTER TABLE users ALTER COLUMN privacy SET DEFAULT 'city-only';
+
+-- Public portfolio on the main profile.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS portfolio TEXT DEFAULT '[]';
+
+-- Applicants track where each application stands.
+ALTER TABLE job_interests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'applied';
+ALTER TABLE job_interests ADD COLUMN IF NOT EXISTS status_at BIGINT;
+ALTER TABLE job_interests ADD COLUMN IF NOT EXISTS note TEXT DEFAULT '';
+
+-- Voices: extra, separately shareable versions of a member's profile
+-- (a work voice, a creative voice...). The main profile is the first voice;
+-- these rows are the additional ones.
+CREATE TABLE IF NOT EXISTS voices (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  handle TEXT UNIQUE NOT NULL,
+  headline TEXT DEFAULT '',
+  sections TEXT DEFAULT '[]',
+  content TEXT DEFAULT '{}',
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS idx_voices_user ON voices(user_id);
 `
 
 // Run once per cold start, and only once even if several requests race to
@@ -307,13 +334,22 @@ export function timeAgo(ts) {
 }
 
 // ── User serialization ───────────────────────────────────────────────
+// What location a member has agreed to show others.
+export function visibleLocation(row) {
+  const privacy = row.privacy || 'city-only'
+  if (privacy === 'hidden') return { city: null, area: null }
+  if (privacy === 'city-only') return { city: row.city, area: null }
+  return { city: row.city, area: row.area } // 'exact', and retired 'neighborhood'
+}
+
 // Pure — no database access — so it stays synchronous.
 export function publicUser(row) {
   if (!row) return null
   return {
     id: row.id, name: row.name, handle: row.handle, title: row.title,
-    city: row.city, area: row.area, color: row.color, bio: row.bio,
+    ...visibleLocation(row), color: row.color, bio: row.bio,
     interests: json(row.interests), goals: json(row.goals), skills: json(row.skills),
+    portfolio: json(row.portfolio),
     idVerified: !!row.id_verified,
   }
 }
@@ -327,7 +363,8 @@ export async function selfUser(row) {
   ])
   return {
     ...publicUser(row),
-    privacy: row.privacy,
+    city: row.city, area: row.area,
+    privacy: row.privacy === 'neighborhood' ? 'exact' : row.privacy,
     onboarded: !!row.onboarded,
     communities: communities.map((c) => c.id),
     moderatorOf: communities.filter((c) => c.role === 'moderator').map((c) => c.id),

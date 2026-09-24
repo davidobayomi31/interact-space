@@ -274,7 +274,7 @@ export default function Jobs() {
               ) : (
                 <>
                   <p className="meta-dim">Verify your ID to unlock verified-only jobs and build trust with posters.</p>
-                  <button className="btn gold-outline small" onClick={() => setShowVerify(true)}>Get verified</button>
+                  <button className="btn brand-outline small" onClick={() => setShowVerify(true)}>Get verified</button>
                 </>
               )}
             </div>

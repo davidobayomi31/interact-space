@@ -57,6 +57,17 @@ export const listJobs = (params = {}) => {
 export const createJob = (body) => req('/jobs', { method: 'POST', body }).then((d) => d.job)
 export const toggleJobInterest = (id) => req(`/jobs/${id}/interest`, { method: 'POST' }).then((d) => d.job)
 
+// Job history — the applicant's own tracker
+export const myJobs = () => req('/me/jobs')
+export const updateApplication = (jobId, body) => req(`/jobs/${jobId}/application`, { method: 'PATCH', body })
+
+// Voices — extra, separately shareable versions of a profile
+export const listVoices = () => req('/voices')
+export const createVoice = (body) => req('/voices', { method: 'POST', body }).then((d) => d.voice)
+export const updateVoice = (id, body) => req(`/voices/${id}`, { method: 'PATCH', body }).then((d) => d.voice)
+export const deleteVoice = (id) => req(`/voices/${id}`, { method: 'DELETE' })
+export const getVoice = (handle) => req(`/v/${encodeURIComponent(handle)}`)
+
 // Direct messages
 export const listConversations = () => req('/messages').then((d) => d.conversations)
 export const getThread = (userId) => req(`/messages/${userId}`)

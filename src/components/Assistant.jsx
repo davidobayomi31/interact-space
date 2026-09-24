@@ -30,6 +30,30 @@ function AssistantSections({ sections }) {
   ))
 }
 
+// On the landing page the hero has its own "Ask" button right next to the
+// companion, so the floating one waits until the hero has scrolled away.
+function useHeroInView(pathname) {
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    if (pathname !== '/') { setInView(false); return }
+    let frame = 0
+    const check = () => {
+      frame = 0
+      const hero = document.querySelector('.hero')
+      setInView(!!hero && hero.getBoundingClientRect().bottom > window.innerHeight * 0.5)
+    }
+    const on = () => { if (!frame) frame = requestAnimationFrame(check) }
+    const boot = requestAnimationFrame(check)
+    window.addEventListener('scroll', on, { passive: true })
+    window.addEventListener('resize', on)
+    return () => {
+      cancelAnimationFrame(boot); cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', on); window.removeEventListener('resize', on)
+    }
+  }, [pathname])
+  return inView
+}
+
 export default function Assistant() {
   const { user, profile, saveProfile, assistantOpen, setAssistantOpen } = useApp()
   const location = useLocation()
@@ -38,6 +62,7 @@ export default function Assistant() {
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const scrollRef = useRef(null)
+  const heroInView = useHeroInView(location.pathname)
 
   useEffect(() => {
     if (assistantOpen && messages.length === 0) {
@@ -79,6 +104,8 @@ export default function Assistant() {
   if (location.pathname === '/welcome' || location.pathname === '/auth') return null
 
   if (!assistantOpen) {
+    // In the inbox the floating button would sit on the message box.
+    if (location.pathname.startsWith('/chats') || heroInView) return null
     return (
       <button className="assistant-fab" onClick={() => setAssistantOpen(true)} aria-label="Open AI companion">
         <Icon name="sparkle" size={22} />

@@ -9,7 +9,7 @@ const AppContext = createContext(null)
 
 const GUEST = {
   id: null, name: '', handle: '', title: '', city: 'Lagos', area: '', color: '#D8A63A',
-  bio: '', interests: [], goals: [], skills: [], privacy: 'neighborhood',
+  bio: '', interests: [], goals: [], skills: [], privacy: 'city-only',
   onboarded: false, communities: [], moderatorOf: [], connections: [],
 }
 

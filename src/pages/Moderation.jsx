@@ -33,7 +33,7 @@ export default function Moderation() {
         <div className="card empty-mod">
           <Icon name="shield" size={26} />
           <p><strong>No communities to moderate yet.</strong></p>
-          <p className="meta-dim">In this demo, the first community you join makes you its moderator so you can try these tools. <Link to="/discover" className="gold-text">Find a community →</Link></p>
+          <p className="meta-dim">In this demo, the first community you join makes you its moderator so you can try these tools. <Link to="/" className="brand-text">Find a community →</Link></p>
         </div>
       )}
 

@@ -6,12 +6,28 @@ import { CommunityCard, EventCard, PostCard, SectionHead } from '../components/b
 import { Icon } from '../components/Icons.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
-import { LiveNowRow } from '../components/Live.jsx'
 import { Globe } from '../components/Globe.jsx'
+import { HeroExtras } from '../components/HeroExtras.jsx'
+import { PhoneHeroAd } from '../components/AdsRail.jsx'
+
+// Phones get their own arrangement of the hero (see styles.css).
+const PHONE_QUERY = '(max-width: 699px)'
+function useIsPhone() {
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(PHONE_QUERY).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(PHONE_QUERY)
+    const on = () => setPhone(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return phone
+}
+const SHORT_PITCH = 'Find your people, share your voice, and see what’s happening around you.'
 
 export default function Arrival() {
   const { user, profile, setAssistantOpen } = useApp()
   const [discussions, setDiscussions] = useState([])
+  const phone = useIsPhone()
 
   useEffect(() => { api.listPosts({ pinned: 1, limit: 3 }).then(setDiscussions).catch(() => setDiscussions([])) }, [])
 
@@ -22,24 +38,25 @@ export default function Arrival() {
 
   return (
     <div className="page arrival">
-      <section className="hero">
+      <section className="hero scrolly">
+        <div className="hero-pin">
         <div className="hero-glow" aria-hidden="true" />
         <div className="hero-grid" aria-hidden="true" />
         <div className="hero-main">
           <div className="hero-content">
             <div className="hero-badge">
-              <Icon name="map-pin" size={13} /> You’re looking at <strong>Lagos, Nigeria</strong> · Local Network → Nigeria → Lagos
+              <Icon name="map-pin" size={13} /> You’re looking at <strong>Lagos, Nigeria</strong>
             </div>
-            <h1>A connected world<br />of <span className="gold-text">communities</span></h1>
-            <p className="hero-sub">{PURPOSE}</p>
+            <h1 className="hero-title"><span>Voices Of Individuals,</span> <span>Discovered Anywhere</span></h1>
+            <p className="hero-sub">{phone ? SHORT_PITCH : PURPOSE}</p>
             <div className="hero-actions">
               {user && profile.onboarded ? (
                 <Link to="/space" className="btn primary large">Go to My Space <Icon name="arrow" size={17} /></Link>
               ) : (
                 <Link to={enterTo} className="btn primary large">Enter the city <Icon name="arrow" size={17} /></Link>
               )}
-              <button className="btn gold-outline large" onClick={() => setAssistantOpen(true)}>
-                <Icon name="sparkle" size={16} /> Ask the Companion
+              <button className="btn brand-outline large" onClick={() => setAssistantOpen(true)}>
+                <Icon name="sparkle" size={16} /> {phone ? 'Ask' : 'Ask the Companion'}
               </button>
             </div>
             <div className="pillar-row">
@@ -47,17 +64,24 @@ export default function Arrival() {
               <span><Icon name="community" size={14} /> Communities</span>
               <span><Icon name="sparkle" size={14} /> Opportunities</span>
             </div>
+            {!phone && <HeroExtras onAsk={() => setAssistantOpen(true)} />}
           </div>
 
           <div className="hero-globe-col">
-            <Globe />
+            <Globe withCompanion footer={phone ? <PhoneHeroAd /> : null} />
           </div>
+        </div>
         </div>
       </section>
 
-      <LiveNowRow />
+      {phone && (
+        <section className="section hx-phone">
+          <div className="hx-phone-label">Start here · swipe <Icon name="arrow" size={12} /></div>
+          <HeroExtras swipe onAsk={() => setAssistantOpen(true)} />
+        </section>
+      )}
 
-      <section className="section">
+      <section className="section" id="trending-lagos">
         <SectionHead icon="map-pin" title="Trending in Lagos" sub="Local communities with the most life this week" />
         <div className="card-grid three">
           {localTrending.map((c) => <CommunityCard key={c.id} community={c} />)}
@@ -93,13 +117,6 @@ export default function Arrival() {
         </div>
       </section>
 
-      {!(user && profile.onboarded) && (
-        <section className="section cta-band">
-          <h2>Find your place in the city</h2>
-          <p className="meta-dim">A two-minute conversation with your AI companion — no forms, no feeds.</p>
-          <Link to={enterTo} className="btn primary large">Start the conversation <Icon name="arrow" size={16} /></Link>
-        </section>
-      )}
     </div>
   )
 }

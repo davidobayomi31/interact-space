@@ -12,7 +12,7 @@ const PERSON = {
   handle: '@david',
   area: 'Yaba',
   city: 'Lagos',
-  color: '#4A90E8',
+  color: '#1F5FA8',
   rating: { avg: 4.8, count: 34, reliability: 4.9, communication: 4.7, quality: 4.8 },
   trust: [
     { kind: 'Email', done: true },
@@ -112,9 +112,9 @@ const FACETS = [
 ]
 
 const COMMUNITIES = [
-  { name: 'Lagos Home Improvement', accent: '#E8B14A', icon: 'wrench' },
-  { name: 'Yaba Local Business', accent: '#4A90E8', icon: 'store' },
-  { name: 'Lagos Tradespeople', accent: '#27AE60', icon: 'users' },
+  { name: 'Lagos Home Improvement', accent: '#8A5D0B', icon: 'wrench' },
+  { name: 'Yaba Local Business', accent: '#1F5FA8', icon: 'store' },
+  { name: 'Lagos Tradespeople', accent: '#1B7F3B', icon: 'users' },
 ]
 
 const ACTIVITY = [
@@ -162,7 +162,7 @@ export default function ProfileVision() {
           </div>
         </div>
         <div className="vision-hero-actions">
-          <button className="btn gold-outline"><Icon name="message-circle" size={15} /> Message</button>
+          <button className="btn brand-outline"><Icon name="message-circle" size={15} /> Message</button>
           <button className="btn primary"><Icon name="briefcase" size={15} /> Request a job</button>
         </div>
       </section>

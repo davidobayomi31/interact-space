@@ -11,9 +11,9 @@ import { CommunityCard, PersonCard, EventCard } from '../components/bits.jsx'
 
 const AREAS = ['Yaba', 'Lekki', 'Ikeja', 'Surulere', 'Victoria Island', 'Ikorodu', 'Somewhere else in Lagos']
 const PRIVACY = [
-  { id: 'exact', label: 'Exact area', desc: 'Show my neighborhood to members' },
-  { id: 'neighborhood', label: 'Neighborhood only', desc: 'Rounded to my district' },
+  { id: 'exact', label: 'Exact area', desc: 'Show my neighbourhood to members' },
   { id: 'city-only', label: 'City only', desc: 'Just “Lagos” — nothing closer' },
+  { id: 'hidden', label: 'Don’t show my location', desc: 'Members won’t see where you are at all' },
 ]
 
 export default function Onboarding() {
@@ -25,7 +25,7 @@ export default function Onboarding() {
   const [step, setStep] = useState('intro') // intro → name → goals → interests → area → privacy → reveal
   const [draft, setDraft] = useState('')
   const [goals, setGoals] = useState([])
-  const [collected, setCollected] = useState({ name: '', tags: [], area: '', privacy: 'neighborhood' })
+  const [collected, setCollected] = useState({ name: '', tags: [], area: '', privacy: 'city-only' })
   const scrollRef = useRef(null)
   const timers = useRef([])
 

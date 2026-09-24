@@ -5,12 +5,28 @@ import { useApp } from '../state.jsx'
 import { USERS, COMMUNITIES } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, CommunityCard, TagPills } from '../components/bits.jsx'
+import { PortfolioSection } from '../components/Portfolio.jsx'
+import { JobHistory } from '../components/JobHistory.jsx'
+import { VoicesSection } from '../components/Voices.jsx'
 
 const PRIVACY_LEVELS = [
   { id: 'exact', label: 'Exact area' },
-  { id: 'neighborhood', label: 'Neighborhood' },
   { id: 'city-only', label: 'City only' },
+  { id: 'hidden', label: 'Hidden' },
 ]
+
+// What another member is allowed to see. The server already withholds
+// area/city according to the owner's setting, so for other people this
+// just renders whatever arrived; for yourself it previews your setting.
+function locationFor(user, isMe) {
+  if (isMe) {
+    if (user.privacy === 'hidden') return 'Location hidden'
+    if (user.privacy === 'city-only') return user.city
+    return `${user.area}, ${user.city}`
+  }
+  if (user.area) return `${user.area}, ${user.city}`
+  return user.city || 'Location hidden'
+}
 
 export default function Profile() {
   const { id } = useParams()
@@ -24,8 +40,7 @@ export default function Profile() {
   const communities = COMMUNITIES.filter((c) =>
     isMe ? profile.communities.includes(c.id) : user.communities.includes(c.id))
   const connected = !isMe && profile.connections.includes(user.id)
-  const locationText =
-    (isMe ? profile.privacy : 'neighborhood') === 'city-only' ? user.city : `${user.area}, ${user.city}`
+  const locationText = locationFor(user, isMe)
 
   return (
     <div className="page profile-page">
@@ -48,7 +63,7 @@ export default function Profile() {
             <Link to="/space" className="btn ghost"><Icon name="home" size={15} /> My Space</Link>
           ) : (
             <>
-              <Link to={`/chats?dm=${user.id}`} className="btn gold-outline"><Icon name="message-circle" size={15} /> Message</Link>
+              <Link to={`/chats?dm=${user.id}`} className="btn brand-outline"><Icon name="message-circle" size={15} /> Message</Link>
               <button className={connected ? 'btn ghost' : 'btn primary'} onClick={() => connect(user.id)} disabled={connected}>
                 {connected ? <><Icon name="check" size={15} /> Connected</> : 'Connect'}
               </button>
@@ -60,7 +75,7 @@ export default function Profile() {
       {isMe && (
         <section className="card privacy-card">
           <div className="side-card-head"><Icon name="eye" size={15} /> Location privacy</div>
-          <p className="meta-dim">Control what other members see. (Demo toggle — enforced visually, not cryptographically.)</p>
+          <p className="meta-dim">Control what other members see. The server only sends other people what this setting allows.</p>
           <div className="privacy-toggle" role="radiogroup" aria-label="Location privacy level">
             {PRIVACY_LEVELS.map((p) => (
               <button
@@ -93,6 +108,15 @@ export default function Profile() {
             : <p className="meta-dim">Not set yet.</p>}
         </div>
       </div>
+
+      <PortfolioSection
+        items={user.portfolio}
+        editable={isMe}
+        onSave={(portfolio) => saveProfile({ portfolio })}
+      />
+
+      {isMe && <VoicesSection profile={profile} />}
+      {isMe && <JobHistory profile={profile} />}
 
       <Link to="/vision" className="card vision-teaser">
         <div className="vision-banner-tag"><Icon name="sparkle" size={13} /> Coming in V1</div>
