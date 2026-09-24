@@ -32,6 +32,9 @@ const lerp = (a, b, t) => a + (b - a) * t
 // Phones run a vertical version of the hand-off (see styles.css).
 const PHONE = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(max-width: 699px)') : { matches: false }
 const DOCK_H = 112 // room under the grown globe for the caption and sponsored card
+const CAPTION_H = 70 // laptop: room under the grown globe for its caption
+const MAX_OPEN = 440
+const RAIL_MIN_VW = 1080, RAIL_W = 158 // the ads rail (styles.css .ads-rail)
 
 export function Globe({ withCompanion = false, footer = null }) {
   const stageRef = useRef(null)
@@ -87,6 +90,13 @@ export function Globe({ withCompanion = false, footer = null }) {
         // the caption and the sponsored card.
         const d = Math.max(from.d, Math.min(pin.clientWidth - 40, 330, H - DOCK_H))
         to = { x: (W - d) / 2, y: Math.max(0, (H - DOCK_H - d) / 2), d }
+      } else if (pinned) {
+        // Laptop: the globe grows past his frame to fill the column, but
+        // stops short of the ads rail that arrives on the right.
+        const left = stage.getBoundingClientRect().left
+        const railEdge = window.innerWidth > RAIL_MIN_VW ? window.innerWidth - RAIL_W - 18 : window.innerWidth - 24
+        const d = Math.max(from.d, Math.min(MAX_OPEN, H - CAPTION_H, 2 * (railEdge - left - W / 2)))
+        to = { x: (W - d) / 2, y: Math.max(0, (H - CAPTION_H - d) / 2), d }
       } else {
         to = { x: (GLOBE_OPEN.cx - GLOBE_OPEN.r - FRAME.x) * k, y: (GLOBE_OPEN.cy - GLOBE_OPEN.r - FRAME.y) * k, d: 2 * GLOBE_OPEN.r * k }
       }
@@ -100,6 +110,9 @@ export function Globe({ withCompanion = false, footer = null }) {
         const show = docked ? smooth(0.7, 0.9, p) : 1
         cap.style.opacity = String(show)
         cap.style.visibility = show > 0 ? 'visible' : 'hidden'
+        // Laptop: the caption rides up with the globe so it sits just
+        // under it, instead of staying down by his shoes.
+        cap.style.top = pinned && !docked ? `${lerp(H + 10, to.y + to.d + 14, grow)}px` : ''
       }
       for (const [el, fade] of [[backRef.current, bodyFade], [frontRef.current, armFade]]) {
         if (!el) continue

@@ -1517,13 +1517,16 @@ a.post-stat:hover { color: var(--text); }
     position: sticky; top: var(--topbar-h); height: calc(100vh - var(--topbar-h));
     display: flex; align-items: center;
   }
-  .hero.scrolly .hero-pin { align-items: flex-start; padding-top: 28px; }
+  .hero.scrolly .hero-pin { align-items: flex-start; padding-top: 14px; }
+  /* The caption is placed by Globe.jsx: under his shoes, then under the grown globe. */
+  .hero.scrolly .globe-block.with-companion { position: relative; }
+  .hero.scrolly .globe-block.with-companion .globe-caption { position: absolute; left: 0; right: 0; margin: 0 auto; max-width: 320px; }
   /* Text sits level with his head instead of floating mid-screen, and the
      two columns never wrap (a wrapped figure would be clipped off-screen). */
   .hero.scrolly .hero-main { width: 100%; align-items: flex-start; flex-wrap: nowrap; }
-  .hero.scrolly .hero-content { flex: 1 1 auto; min-width: 0; padding-top: 36px; }
+  .hero.scrolly .hero-content { flex: 1 1 auto; min-width: 0; padding-top: 14px; }
   .hero.scrolly .globe-block.with-companion .globe-stage {
-    width: auto; height: min(calc(100vh - var(--topbar-h) - 150px), 620px);
+    width: auto; height: min(calc(100vh - var(--topbar-h) - 100px), 640px);
   }
 }
 
