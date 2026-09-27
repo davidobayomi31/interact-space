@@ -319,7 +319,7 @@ export default function Chats() {
                   <Face user={dmUser} size={44} />
                   <span>
                     <strong>{dmUser.name}{dmUser.idVerified && <Icon name="badge-check" size={14} />}</strong>
-                    <span className="dm-muted">{dmUser.title || 'Voida member'}</span>
+                    <span className="dm-muted">{dmUser.title || 'Voidaj member'}</span>
                   </span>
                 </Link>
                 <Link to={`/profile/${dmUser.id}`} className="dm-icon-btn" aria-label="Profile details"><Icon name="info" size={24} /></Link>
@@ -330,7 +330,7 @@ export default function Chats() {
                   <div className="dm-intro">
                     <Face user={dmUser} size={96} />
                     <strong>{dmUser.name}</strong>
-                    <span className="dm-muted">{dmUser.title || 'Voida member'}{dmUser.city ? ` · ${dmUser.city}` : ''}</span>
+                    <span className="dm-muted">{dmUser.title || 'Voidaj member'}{dmUser.city ? ` · ${dmUser.city}` : ''}</span>
                     <Link to={`/profile/${dmUser.id}`} className="dm-intro-btn">View profile</Link>
                   </div>
                 )}

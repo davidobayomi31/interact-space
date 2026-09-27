@@ -69,6 +69,19 @@ function Body({ id, c }) {
   }
 }
 
+// The picked sections of a voice, skipping any with nothing in them. Also
+// used by the owner's own profile page when they switch to a voice.
+export function VoiceSections({ voice }) {
+  const c = voice.content
+  const filled = voice.sections.filter((id) => ({
+    about: !!c.about?.text, interests: !!c.interests?.tags?.length, skills: !!c.skills?.tags?.length,
+    work: !!c.work?.items?.length, offers: !!c.offers?.items?.length, portfolio: !!c.portfolio?.items?.length,
+    communities: !!c.communities?.list?.length, posts: !!c.posts?.list?.length,
+  })[id])
+  if (!filled.length) return <p className="meta-dim vv-empty">Nothing to show here yet.</p>
+  return filled.map((id) => <Section key={id} id={id}><Body id={id} c={c} /></Section>)
+}
+
 export default function Voice() {
   const { handle } = useParams()
   const [data, setData] = useState(null)
@@ -93,15 +106,6 @@ export default function Voice() {
   if (!data) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
 
   const { voice, owner } = data
-  // Only sections that actually have something in them.
-  const filled = voice.sections.filter((id) => {
-    const c = voice.content
-    return ({
-      about: !!c.about?.text, interests: !!c.interests?.tags?.length, skills: !!c.skills?.tags?.length,
-      work: !!c.work?.items?.length, offers: !!c.offers?.items?.length, portfolio: !!c.portfolio?.items?.length,
-      communities: !!c.communities?.list?.length, posts: !!c.posts?.list?.length,
-    })[id]
-  })
 
   return (
     <div className="page vv-page">
@@ -115,11 +119,9 @@ export default function Voice() {
         </div>
       </header>
 
-      {filled.length === 0
-        ? <p className="meta-dim vv-empty">Nothing to show here yet.</p>
-        : filled.map((id) => <Section key={id} id={id}><Body id={id} c={voice.content} /></Section>)}
+      <VoiceSections voice={voice} />
 
-      <p className="meta-dim vv-foot"><Icon name="layers" size={12} /> One of {owner?.name?.split(' ')[0] ?? 'this person'}’s voices on Voida.</p>
+      <p className="meta-dim vv-foot"><Icon name="layers" size={12} /> One of {owner?.name?.split(' ')[0] ?? 'this person'}’s voices on Voidaj.</p>
     </div>
   )
 }

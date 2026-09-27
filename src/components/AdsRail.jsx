@@ -1,9 +1,11 @@
-// Ads rail — a stationary panel pinned to the far right of the screen.
+// Ads rail — its own bar down the right side of the screen, top to bottom,
+// with "Advertise here" at its foot. The page makes room for it rather
+// than sliding under it.
 // One ad is enlarged at a time for 5s, then minimizes as the next ad
 // takes its turn, looping continuously. Businesses pay to post; payment
 // is simulated (no real processor wired up in this prototype).
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
@@ -167,13 +169,25 @@ export function AdsRail() {
     return () => clearInterval(t)
   }, [ads.length])
 
+  const navigate = useNavigate()
   // No ads over private conversations.
-  if (!adsVisible || pathname.startsWith('/chats')) return null
+  const hidden = pathname.startsWith('/chats')
 
+  // The bar is part of the layout, so the page needs to know to make room.
+  useEffect(() => {
+    if (hidden) return
+    document.body.classList.add('has-ads-rail')
+    return () => document.body.classList.remove('has-ads-rail')
+  }, [hidden])
+
+  if (hidden) return null
+
+  // The bar itself is always there; on the landing page the ads inside it
+  // wait until the visitor is past the hero.
   return (
     <aside className="ads-rail" aria-label="Sponsored">
       <div className="ads-rail-label"><Icon name="tag" size={12} /> Sponsored</div>
-      <div className="ads-stack">
+      <div className={`ads-stack ${adsVisible ? 'shown' : ''}`}>
         {ads.length === 0 && (
           <div className="card ad-card empty">
             <Icon name="tag" size={18} />
@@ -191,7 +205,12 @@ export function AdsRail() {
           </div>
         ))}
       </div>
-      {user && <button className="btn brand-outline small ads-rail-cta" onClick={() => setShowForm(true)}><Icon name="plus" size={13} /> Advertise here</button>}
+      <div className="ads-rail-foot">
+        <span className="meta-dim">Your business here</span>
+        <button className="btn brand-outline small ads-rail-cta" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>
+          <Icon name="plus" size={13} /> Advertise here
+        </button>
+      </div>
       {showForm && <AdvertiseForm onClose={() => setShowForm(false)} onCreated={(ad) => setAds((a) => [ad, ...a])} />}
     </aside>
   )

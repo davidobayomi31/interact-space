@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from './state.jsx'
 import { Icon } from './components/Icons.jsx'
-import { VoidaMark } from './components/VoidaMark.jsx'
+import { VoidajMark } from './components/VoidajMark.jsx'
 import { Avatar } from './components/bits.jsx'
 import Assistant from './components/Assistant.jsx'
 import { AdsRail } from './components/AdsRail.jsx'
@@ -29,8 +29,8 @@ function Header() {
   return (
     <header className="topbar">
       <Link to="/" className="brand">
-        <span className="brand-mark"><VoidaMark size={22} /></span>
-        <span className="brand-name">Voida <em>Interact Space</em></span>
+        <span className="brand-mark"><VoidajMark size={22} /></span>
+        <span className="brand-name">Voidaj <em>Interact Space</em></span>
       </Link>
 
       <nav className="topnav" aria-label="Primary">
@@ -83,9 +83,9 @@ function Footer() {
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <footer className="footer">
-      <span className="footer-mark"><VoidaMark size={30} /></span>
+      <span className="footer-mark"><VoidajMark size={30} /></span>
       <div className="footer-text">
-        <div className="footer-brand">Voida <em>Interact Space</em></div>
+        <div className="footer-brand">Voidaj <em>Interact Space</em></div>
         <div className="footer-line">People · Communities · Opportunities — the intelligent community network.</div>
       </div>
       <div className="footer-meta">A Mirac Inc prototype</div>

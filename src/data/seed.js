@@ -532,4 +532,4 @@ export const WORLD_EVENTS = [
 ]
 
 export const PURPOSE =
-  'Voida exists to connect people, empower communities, and unlock opportunities by creating a trusted digital environment where individuals can discover their place, share their value, and build meaningful connections that improve lives.'
+  'Voidaj exists to connect people, empower communities, and unlock opportunities by creating a trusted digital environment where individuals can discover their place, share their value, and build meaningful connections that improve lives.'

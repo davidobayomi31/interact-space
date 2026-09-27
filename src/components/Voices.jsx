@@ -1,5 +1,5 @@
 // Voices — different versions of one person for different audiences.
-// Voida is "Voices Of Individuals": your main profile is one voice, and you
+// Voidaj is "Voices Of Individuals": your main profile is one voice, and you
 // can add up to three more (a work voice, a creative voice…), each with its
 // own @username and only the sections you choose. Hand colleagues your work
 // voice; everyone else gets your main profile.
@@ -21,7 +21,7 @@ export const SECTION_CATALOG = [
 ]
 export const sectionMeta = (id) => SECTION_CATALOG.find((s) => s.id === id)
 
-function CopyLink({ handle }) {
+export function CopyLink({ handle }) {
   const [done, setDone] = useState(false)
   const copy = async () => {
     try { await navigator.clipboard.writeText(`${window.location.origin}/v/${handle}`); setDone(true); setTimeout(() => setDone(false), 1600) }

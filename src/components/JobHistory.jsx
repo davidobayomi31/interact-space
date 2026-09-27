@@ -1,4 +1,4 @@
-// Job history — a private tracker for someone using Voida to find work.
+// Job history — a private tracker for someone using Voidaj to find work.
 // Everything a job-seeker actually needs at a glance: what's still waiting,
 // what's gone quiet long enough to chase, who to message, and what they've
 // posted themselves. Only the member sees this; it never appears to others.

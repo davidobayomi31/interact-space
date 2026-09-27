@@ -1,4 +1,4 @@
-/* ── Voida design system ──────────────────────────────────────────────
+/* ── Voidaj design system ──────────────────────────────────────────────
    High-contrast utility: white ground, black rules, one rose accent.
    Tokens first; everything else derives from them. */
 
@@ -1655,4 +1655,75 @@ a.post-stat:hover { color: var(--text); }
   .hero.scrolly .globe-hint { margin: 0; font-size: 12.5px; }
   .hero.scrolly .globe-hint br { display: none; }
   .hero.scrolly .globe-hint .hint-short { margin-left: 4px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Hero extras float: the two cards under the pitch lift off the page —
+   rounded, softly shadowed, drifting a few pixels out of step.
+   ══════════════════════════════════════════════════════════════════════ */
+.hero-extras .hx-panel {
+  border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 20px; padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 14px 30px -10px rgba(0, 0, 0, 0.22), 0 30px 60px -30px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.25s, transform 0.25s;
+  animation: hx-float 6s ease-in-out infinite;
+}
+.hero-extras .hx-panel + .hx-panel { animation-delay: -3s; }
+.hero-extras .hx-panel:hover {
+  animation-play-state: paused; transform: translateY(-6px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 22px 40px -12px rgba(0, 0, 0, 0.28), 0 40px 70px -30px rgba(0, 0, 0, 0.28);
+}
+@keyframes hx-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .hero-extras .hx-panel { animation: none; } }
+.hero-extras .hx-input { border-radius: 12px; border-width: 1px; }
+.hero-extras .hx-input:focus-within { outline-offset: 2px; }
+.hero-extras .hx-tabs { border-radius: 12px; overflow: hidden; border-width: 1px; }
+.hero-extras .hx-tabs button + button { border-left-width: 1px; }
+.hero-extras .hx-ideas button, .hero-extras .hx-pill { border-radius: 999px; }
+.hero-extras .hx-pill { padding: 1px 9px; }
+.hero-extras .hx-avatar { border-radius: 10px; }
+.hero-extras .hx-label em { border-radius: 6px; }
+.hero-extras .hx-dot { border-radius: 50%; }
+/* In the phone swipe row the scroller would clip the shadow, so give it
+   room, and hold still while it's being swiped. */
+.hero-extras.swipe { padding-top: 8px; padding-bottom: 30px; }
+.hero-extras.swipe > .hx-panel { animation: none; }
+
+/* ── Voice tabs on your own profile (matches the hero demo) ── */
+.profile-voice-tabs {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; margin-top: 22px;
+  border: 2px solid var(--border-strong); width: fit-content; max-width: 100%;
+}
+.profile-voice-tabs button {
+  padding: 9px 22px; background: transparent; border: 0; border-radius: 0;
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text);
+}
+.profile-voice-tabs button + button { border-left: 2px solid var(--border-strong); }
+.profile-voice-tabs button.on { background: #111; color: #fff; }
+.profile-voice-tabs button:not(.on):hover { background: var(--surface-2); }
+.profile-voice-add {
+  display: flex; align-items: center; gap: 5px; padding: 9px 16px; border-left: 2px solid var(--border-strong);
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--brand);
+}
+.profile-voice-add:hover { background: var(--brand-soft); }
+.profile-voice-view { max-width: 760px; }
+.profile-voice-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 16px 0; border-bottom: 2px solid var(--border);
+}
+.profile-voice-bar .meta-dim { display: flex; align-items: center; gap: 6px; }
+
+/* ── Ads bar: its own column, top of the screen to the bottom ── */
+.ads-rail {
+  position: fixed; top: 0; bottom: 0; right: 0; z-index: 60;
+  width: 184px; max-height: none; overflow: hidden;
+  padding: 20px 14px 18px; gap: 14px;
+  background: var(--bg-raised); border-left: 2px solid var(--border);
+  animation: none;
+}
+.ads-stack { flex: 1; min-height: 0; overflow: hidden; opacity: 0; transform: translateY(10px); transition: opacity 0.4s ease-out, transform 0.4s ease-out; }
+.ads-stack.shown { opacity: 1; transform: none; }
+.ads-rail-foot { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px dashed var(--border-soft); text-align: center; font-size: 12px; }
+.ads-rail-cta { background: var(--surface); }
+@media (min-width: 1081px) {
+  body.has-ads-rail .app-shell { padding-right: 184px; }
 }

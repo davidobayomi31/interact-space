@@ -1,5 +1,5 @@
 // ── The Companion ────────────────────────────────────────────────────
-// Flat, outlined chibi figure: afro, black sweatshirt with VOIDA across
+// Flat, outlined chibi figure: afro, black sweatshirt with VOIDAJ across
 // the chest, stone shorts, plain dark low-tops, carrying the Earth against his
 // side. The globe between his body and his arm is the live, clickable
 // globe, so the figure is drawn as two layers — the body BEHIND the globe
@@ -23,12 +23,13 @@ const SHOE = '#2A2A2A'
 const CHEEK = '#D98C6A'
 const VIEWBOX = `${FRAME.x} ${FRAME.y} ${FRAME.w} ${FRAME.h}`
 
-// VOIDA in capitals. As in the header logo, the V's right (inner) arm runs
-// straight up into the bar that sits over O-I-D-A.
+// VOIDAJ in capitals. As in the header logo, the V's right (inner) arm runs
+// straight up into the bar that sits over O-I-D-A, and the bar drops at the
+// end to become the J.
 function Wordmark(props) {
   return (
     <g fill="none" stroke="#FFFFFF" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M10 30 L32 100 L54 10 H266" />
+      <path d="M10 30 L32 100 L54 10 H304 V82 Q304 104 282 104 Q266 104 262 90" />
       <ellipse cx="90" cy="65" rx="22" ry="35" />
       <path d="M136 30 V100" />
       <path d="M160 30 V100 H174 Q206 100 206 65 Q206 30 174 30 Z" />
@@ -69,7 +70,7 @@ export function CompanionBack({ className = '', style }) {
         <path d="M150 268 Q154 248 196 242 Q229 256 262 242 Q304 248 308 268 L312 426 L146 426 Z" fill={TEE} />
         <path d="M198 245 Q229 262 260 245" fill="none" stroke={SEAM} strokeWidth="5" />
         <path d="M150 408 H308" fill="none" stroke={SEAM} strokeWidth="4" />
-        <Wordmark transform="translate(191 259) scale(0.28)" />
+        <Wordmark transform="translate(189 259) scale(0.26)" />
 
         {/* his left arm, hanging relaxed */}
         <path d="M296 258 Q320 268 322 304 L324 402 L294 404 Z" fill={TEE} />

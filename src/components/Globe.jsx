@@ -34,7 +34,7 @@ const PHONE = typeof window !== 'undefined' && window.matchMedia ? window.matchM
 const DOCK_H = 112 // room under the grown globe for the caption and sponsored card
 const CAPTION_H = 70 // laptop: room under the grown globe for its caption
 const MAX_OPEN = 440
-const RAIL_MIN_VW = 1080, RAIL_W = 158 // the ads rail (styles.css .ads-rail)
+const RAIL_MIN_VW = 1080, RAIL_W = 184 // the ads rail (styles.css .ads-rail)
 
 export function Globe({ withCompanion = false, footer = null }) {
   const stageRef = useRef(null)
@@ -94,7 +94,7 @@ export function Globe({ withCompanion = false, footer = null }) {
         // Laptop: the globe grows past his frame to fill the column, but
         // stops short of the ads rail that arrives on the right.
         const left = stage.getBoundingClientRect().left
-        const railEdge = window.innerWidth > RAIL_MIN_VW ? window.innerWidth - RAIL_W - 18 : window.innerWidth - 24
+        const railEdge = window.innerWidth > RAIL_MIN_VW ? window.innerWidth - RAIL_W - 24 : window.innerWidth - 24
         const d = Math.max(from.d, Math.min(MAX_OPEN, H - CAPTION_H, 2 * (railEdge - left - W / 2)))
         to = { x: (W - d) / 2, y: Math.max(0, (H - CAPTION_H - d) / 2), d }
       } else {

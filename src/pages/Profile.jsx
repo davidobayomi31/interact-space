@@ -1,13 +1,16 @@
 // Profile — works for the current user (/profile/me, editable privacy
 // toggle) and any seeded member (/profile/:id).
+import { useEffect, useState } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
+import * as api from '../api.js'
 import { useApp } from '../state.jsx'
 import { USERS, COMMUNITIES } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, CommunityCard, TagPills } from '../components/bits.jsx'
 import { PortfolioSection } from '../components/Portfolio.jsx'
 import { JobHistory } from '../components/JobHistory.jsx'
-import { VoicesSection } from '../components/Voices.jsx'
+import { VoicesSection, CopyLink } from '../components/Voices.jsx'
+import { VoiceSections } from './Voice.jsx'
 
 const PRIVACY_LEVELS = [
   { id: 'exact', label: 'Exact area' },
@@ -28,10 +31,54 @@ function locationFor(user, isMe) {
   return user.city || 'Location hidden'
 }
 
+// Your own voices, as tabs across the top of your profile: Main is the
+// full profile, each other tab shows exactly what that voice's @username
+// shows. Voices are never listed on anyone else's profile — a work voice
+// shouldn't lead back to the personal one.
+function useMyVoices(enabled) {
+  const [voices, setVoices] = useState([])
+  const [max, setMax] = useState(4)
+  useEffect(() => {
+    if (!enabled) return
+    api.listVoices().then((d) => { setVoices(d.voices); setMax(d.max) }).catch(() => {})
+  }, [enabled])
+  return { voices, max }
+}
+
+function useResolvedVoice(handle) {
+  const [voice, setVoice] = useState(null)
+  useEffect(() => {
+    setVoice(null)
+    if (!handle) return
+    let live = true
+    api.getVoice(handle).then((d) => { if (live) setVoice(d.voice) }).catch(() => {})
+    return () => { live = false }
+  }, [handle])
+  return voice
+}
+
+function VoiceTabs({ voices, max, active, onPick }) {
+  return (
+    <div className="profile-voice-tabs" role="tablist" aria-label="Your voices">
+      <button type="button" role="tab" aria-selected={active === 'main'} className={active === 'main' ? 'on' : ''} onClick={() => onPick('main')}>Main</button>
+      {voices.map((v) => (
+        <button key={v.id} type="button" role="tab" aria-selected={active === v.id} className={active === v.id ? 'on' : ''} onClick={() => onPick(v.id)}>{v.name}</button>
+      ))}
+      {voices.length + 1 < max && (
+        <Link to="/voices/new" className="profile-voice-add"><Icon name="plus" size={12} /> Add a voice</Link>
+      )}
+    </div>
+  )
+}
+
 export default function Profile() {
   const { id } = useParams()
   const { profile, loading, saveProfile, connect } = useApp()
   const isMe = id === 'me' || id === profile.id
+  const { voices, max } = useMyVoices(isMe && !loading && profile.onboarded)
+  const [activeVoice, setActiveVoice] = useState('main')
+  const picked = isMe ? voices.find((v) => v.id === activeVoice) : null
+  const resolved = useResolvedVoice(picked?.handle)
   if (isMe && loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
   const user = isMe ? profile : USERS.find((u) => u.id === id)
   if (!user) return <Navigate to="/" replace />
@@ -54,9 +101,9 @@ export default function Profile() {
           <div className="meta-dim">{user.title}</div>
           <div className="meta-row">
             <span className="meta-dim"><Icon name="map-pin" size={13} /> {locationText}</span>
-            <span className="meta-dim">{user.handle ?? ''}</span>
+            <span className="meta-dim">{picked ? `@${picked.handle}` : user.handle ?? ''}</span>
           </div>
-          <p className="profile-bio">{user.bio}</p>
+          <p className="profile-bio">{picked ? picked.headline || user.bio : user.bio}</p>
         </div>
         <div className="profile-hero-actions">
           {isMe ? (
@@ -72,6 +119,21 @@ export default function Profile() {
         </div>
       </section>
 
+      {isMe && <VoiceTabs voices={voices} max={max} active={picked ? picked.id : 'main'} onPick={setActiveVoice} />}
+
+      {picked ? (
+        <section className="profile-voice-view" role="tabpanel">
+          <div className="profile-voice-bar">
+            <span className="meta-dim"><Icon name="eye" size={13} /> Seen by: anyone you give <strong>@{picked.handle}</strong></span>
+            <div className="voice-actions">
+              <Link to={`/v/${picked.handle}`} className="btn ghost small"><Icon name="eye" size={13} /> View as others</Link>
+              <CopyLink handle={picked.handle} />
+              <Link to={`/voices/${picked.id}`} className="btn ghost small"><Icon name="edit" size={13} /> Edit</Link>
+            </div>
+          </div>
+          {resolved ? <VoiceSections voice={resolved} /> : <p className="meta-dim vv-empty">Loading…</p>}
+        </section>
+      ) : <>
       {isMe && (
         <section className="card privacy-card">
           <div className="side-card-head"><Icon name="eye" size={15} /> Location privacy</div>
@@ -139,6 +201,7 @@ export default function Profile() {
           <p className="meta-dim">No communities yet.</p>
         )}
       </section>
+      </>}
     </div>
   )
 }
