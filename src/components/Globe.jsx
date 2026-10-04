@@ -44,6 +44,10 @@ export function Globe({ withCompanion = false, footer = null }) {
   const wrapRef = useRef(null)
   const pinRefs = useRef({})
   const rotRef = useRef(0)
+  // Tapping the globe in his arms opens it. Where the hero is pinned that
+  // means scrolling to the hand-off; elsewhere this drives it directly.
+  const forceRef = useRef(0)
+  const redrawRef = useRef(null)
   const [selected, setSelected] = useState(null)
   const [size, setSize] = useState(320)
 
@@ -72,6 +76,8 @@ export function Globe({ withCompanion = false, footer = null }) {
         const travel = hero.offsetHeight - pin.offsetHeight
         const into = pin.getBoundingClientRect().top - hero.getBoundingClientRect().top
         p = travel > 0 ? Math.min(1, Math.max(0, into / travel)) : 0
+      } else {
+        p = forceRef.current
       }
       // He goes quickly. The arm is its own layer over the globe, so it leaves
       // first — two half-faded layers on top of each other show the join
@@ -103,6 +109,7 @@ export function Globe({ withCompanion = false, footer = null }) {
       wrap.style.left = `${lerp(from.x, to.x, grow)}px`
       wrap.style.top = `${lerp(from.y, to.y, grow)}px`
       wrap.style.width = `${lerp(from.d, to.d, grow)}px`
+      wrap.classList.toggle('held', grow < 0.5)
       const cap = captionRef.current
       if (cap) {
         // Docked over his legs on a phone, so it only shows once he's gone.
@@ -123,6 +130,7 @@ export function Globe({ withCompanion = false, footer = null }) {
       if (Math.abs(p - lastP) > 0.002) { lastP = p; window.dispatchEvent(new CustomEvent(HERO_EVENT, { detail: p })) }
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(apply) }
+    redrawRef.current = schedule
     apply()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)
@@ -136,6 +144,28 @@ export function Globe({ withCompanion = false, footer = null }) {
       window.dispatchEvent(new CustomEvent(HERO_EVENT, { detail: 0 }))
     }
   }, [withCompanion])
+
+  const openGlobe = (e) => {
+    if (!withCompanion || e.target.closest?.('.globe-pin')) return
+    const stage = stageRef.current
+    const hero = stage?.closest('.hero'), pin = stage?.closest('.hero-pin')
+    if (!wrapRef.current?.classList.contains('held')) return
+    if (pin && hero && getComputedStyle(pin).position === 'sticky') {
+      const travel = hero.offsetHeight - pin.offsetHeight
+      const into = pin.getBoundingClientRect().top - hero.getBoundingClientRect().top
+      window.scrollTo({ top: window.scrollY + travel * 0.85 - into, behavior: 'smooth' })
+      return
+    }
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const start = performance.now(), from = forceRef.current, ms = reduced ? 1 : 900
+    const step = (t) => {
+      forceRef.current = lerp(from, 1, Math.min(1, (t - start) / ms))
+      redrawRef.current?.()
+      if (forceRef.current < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }
+  const onGlobeKey = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGlobe(e) } }
 
   useEffect(() => {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -163,7 +193,8 @@ export function Globe({ withCompanion = false, footer = null }) {
     <div className={`globe-block ${withCompanion ? 'with-companion' : ''}`}>
       <div className="globe-stage" ref={stageRef}>
       {withCompanion && <div className="companion-slot back" ref={backRef}><CompanionBack /></div>}
-      <div className="globe-wrap" ref={wrapRef}>
+      <div className="globe-wrap" ref={wrapRef}
+        {...(withCompanion ? { onClick: openGlobe, onKeyDown: onGlobeKey, tabIndex: 0, 'aria-label': 'Open the globe' } : {})}>
         <div className="globe-sphere" />
         <div className="globe-grid" aria-hidden="true" />
         {WORLD_EVENTS.map((ev) => (

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { COMMUNITIES } from '../data/seed.js'
 import { Icon } from './Icons.jsx'
+import { useAds, pickSearchAd, SearchAd } from './AdsRail.jsx'
 
 const IDEAS = ['photography', 'coding', 'food', 'startups']
 
@@ -25,6 +26,8 @@ export function FindYourPeople({ onAsk }) {
     .sort((a, b) => b.s - a.s || b.c.memberCount - a.c.memberCount)
     .slice(0, 3)
     .map((x) => x.c)), [term])
+  const ads = useAds()
+  const ad = pickSearchAd(ads, term)
 
   return (
     <div className="hx-panel hx-find">
@@ -52,6 +55,7 @@ export function FindYourPeople({ onAsk }) {
       ) : (
         <p className="hx-none">No group for that yet. <button type="button" onClick={onAsk}>Ask the Companion</button></p>
       )}
+      {ad && <SearchAd ad={ad} />}
       <div className="hx-who"><Icon name="community" size={11} /> Real groups in Lagos and beyond</div>
     </div>
   )

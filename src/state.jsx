@@ -33,7 +33,7 @@ export function AppProvider({ children }) {
   const connect = async (id) => { const u = await api.connect(id); setUser(u) }
 
   const value = {
-    user,
+    user, setUser,
     profile: user ?? GUEST,
     loading,
     assistantOpen, setAssistantOpen,

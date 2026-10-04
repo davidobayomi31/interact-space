@@ -14,14 +14,14 @@ const ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E
 
 // Advertisers give us a name, not a logo file, so the rail draws a
 // monogram from the name in their own accent colour.
-function AdMark({ ad }) {
+export function AdMark({ ad }) {
   const initials = ad.businessName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
   return <span className="ad-mark" style={{ background: ad.accent }} aria-hidden="true">{initials}</span>
 }
 
 // Shown when the API is unreachable (e.g. a static-only deploy with no
 // backend) or hasn't been seeded yet, so the rail is never empty in a demo.
-const FALLBACK_ADS = [
+export const FALLBACK_ADS = [
   { id: 'fallback-1', businessName: 'Kola Foods', tagline: 'Snacks made from grandma’s recipes', ctaLabel: 'Order now', accent: '#B4472A' },
   { id: 'fallback-2', businessName: 'Adire by Funke', tagline: 'Modern cuts, hand-dyed textiles', ctaLabel: 'Shop the drop', accent: '#A8306A' },
   { id: 'fallback-3', businessName: 'SunHome Solar', tagline: 'Off the generator in 3 weeks', ctaLabel: 'Get a quote', accent: '#7A5A0F' },
@@ -240,6 +240,41 @@ export function PhoneHeroAd() {
         <strong>{ad.businessName}</strong>
         <span>{ad.tagline}</span>
       </div>
+    </div>
+  )
+}
+
+// Ads in search. When someone searches, one sponsored result sits under the
+// real matches: an ad whose name or tagline matches the search if there is
+// one, otherwise one of the paying ads in turn. It is always labelled.
+let adsCache = null
+export function useAds() {
+  const [ads, setAds] = useState(adsCache || FALLBACK_ADS)
+  useEffect(() => {
+    if (adsCache) return
+    api.listAds().then((a) => { adsCache = a.length ? a : FALLBACK_ADS; setAds(adsCache) }).catch(() => {})
+  }, [])
+  return ads
+}
+
+export function pickSearchAd(ads, term) {
+  if (!ads.length || term.length < 2) return null
+  const words = term.toLowerCase().split(/\s+/).filter((w) => w.length > 1)
+  const hit = ads.find((a) => words.some((w) => `${a.businessName} ${a.tagline}`.toLowerCase().includes(w)))
+  if (hit) return hit
+  const n = [...term].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7)
+  return ads[n % ads.length]
+}
+
+export function SearchAd({ ad }) {
+  return (
+    <div className="search-ad" style={{ '--accent': ad.accent }}>
+      <AdMark ad={ad} />
+      <div className="search-ad-text">
+        <strong>{ad.businessName}</strong>
+        <span>{ad.tagline}</span>
+      </div>
+      <span className="search-ad-tag">Sponsored</span>
     </div>
   )
 }

@@ -21,6 +21,30 @@ const PRIVACY_LEVELS = [
 // What another member is allowed to see. The server already withholds
 // area/city according to the owner's setting, so for other people this
 // just renders whatever arrived; for yourself it previews your setting.
+// "Active now", or roughly when they were last around.
+function presenceText(user) {
+  if (user.active) return 'Active now'
+  if (!user.lastSeenAt) return null
+  const m = Math.floor((Date.now() - user.lastSeenAt) / 60000)
+  if (m < 60) return `Active ${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `Active ${h}h ago`
+  const d = Math.floor(h / 24)
+  return d < 7 ? `Active ${d}d ago` : null
+}
+
+// Other members' presence comes from the API; the seeded profile data
+// doesn't know when anyone was last around.
+function usePresence(id, skip) {
+  const [presence, setPresence] = useState(null)
+  useEffect(() => {
+    setPresence(null)
+    if (skip || !id) return
+    api.getUser(id).then((u) => setPresence({ active: u.active, lastSeenAt: u.lastSeenAt })).catch(() => {})
+  }, [id, skip])
+  return presence
+}
+
 function locationFor(user, isMe) {
   if (isMe) {
     if (user.privacy === 'hidden') return 'Location hidden'
@@ -79,9 +103,12 @@ export default function Profile() {
   const [activeVoice, setActiveVoice] = useState('main')
   const picked = isMe ? voices.find((v) => v.id === activeVoice) : null
   const resolved = useResolvedVoice(picked?.handle)
+  const presence = usePresence(id, isMe)
   if (isMe && loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
-  const user = isMe ? profile : USERS.find((u) => u.id === id)
-  if (!user) return <Navigate to="/" replace />
+  const seeded = isMe ? profile : USERS.find((u) => u.id === id)
+  if (!seeded) return <Navigate to="/" replace />
+  const user = presence ? { ...seeded, ...presence } : seeded
+  const seen = presenceText(user)
   if (isMe && !profile.onboarded) return <Navigate to="/welcome" replace />
 
   const communities = COMMUNITIES.filter((c) =>
@@ -102,6 +129,7 @@ export default function Profile() {
           <div className="meta-row">
             <span className="meta-dim"><Icon name="map-pin" size={13} /> {locationText}</span>
             <span className="meta-dim">{picked ? `@${picked.handle}` : user.handle ?? ''}</span>
+            {seen && <span className={`presence-text ${user.active ? 'on' : ''}`}>{user.active && <span className="presence-dot" aria-hidden="true" />}{seen}</span>}
           </div>
           <p className="profile-bio">{picked ? picked.headline || user.bio : user.bio}</p>
         </div>

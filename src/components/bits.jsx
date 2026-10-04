@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from './Icons.jsx'
-import { COMMUNITIES } from '../data/seed.js'
+import { findCommunity } from '../communities.js'
 import { tagLabel } from '../ai.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -15,6 +15,8 @@ import { RatingSummary } from './Rating.jsx'
 // would create a circular module dependency.
 const LiveBadge = () => <span className="live-badge"><span className="live-dot" /> LIVE</span>
 
+// A member who's been around in the last few minutes gets a blinking green
+// dot on their avatar. `active` comes from the API (see publicUser).
 export function Avatar({ user, size = 40 }) {
   const color = user.color || '#888'
   const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('')
@@ -26,9 +28,10 @@ export function Avatar({ user, size = 40 }) {
         background: `linear-gradient(135deg, ${color}33, ${color}18)`,
         color, borderColor: `${color}55`,
       }}
-      aria-label={user.name}
+      aria-label={user.active ? `${user.name}, active now` : user.name}
     >
       {initials}
+      {user.active && <span className="active-dot" style={{ '--dot': `${Math.max(8, Math.round(size * 0.24))}px` }} aria-hidden="true" />}
     </div>
   )
 }
@@ -121,7 +124,7 @@ export function PersonCard({ user: person, shared = [], source, because }) {
 }
 
 export function EventCard({ event, shared = [], source, because }) {
-  const community = COMMUNITIES.find((c) => c.id === event.communityId)
+  const community = findCommunity(event.communityId)
   const d = new Date(event.date + 'T00:00:00')
   const day = d.toLocaleDateString('en-GB', { day: 'numeric' })
   const month = d.toLocaleDateString('en-GB', { month: 'short' })
@@ -156,7 +159,7 @@ export function EventCard({ event, shared = [], source, because }) {
 // Post preview card — with voting, comment count, report, and a link to the
 // full thread. Resolves its community from the catalog when not given one.
 export function PostCard({ post, community, because }) {
-  const comm = community || COMMUNITIES.find((c) => c.id === post.communityId)
+  const comm = community || findCommunity(post.communityId)
   return (
     <div className="card post-card">
       <div className="post-card-row">
@@ -186,7 +189,7 @@ export function PostCard({ post, community, because }) {
 }
 
 export function OpportunityCard({ opp, shared = [], source, because }) {
-  const community = COMMUNITIES.find((c) => c.id === opp.via)
+  const community = findCommunity(opp.via)
   return (
     <div className="card opp-card">
       <div className="opp-type">{opp.type}</div>
@@ -214,6 +217,16 @@ export function SectionHead({ icon, title, sub, action }) {
         {sub && <p className="section-sub">{sub}</p>}
       </div>
       {action}
+    </div>
+  )
+}
+
+// A one-line statement of what the city stands for (see CITY_LINES).
+export function CityLine({ line, sub, icon = 'globe', className = '' }) {
+  return (
+    <div className={`city-line ${className}`}>
+      <span className="city-line-mark"><Icon name={icon} size={20} /></span>
+      <p><strong>{line}</strong>{sub && <span> {sub}</span>}</p>
     </div>
   )
 }

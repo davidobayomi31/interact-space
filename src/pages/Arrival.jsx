@@ -1,8 +1,9 @@
 // Stage 1 — Arrival. The open city: explorable without an account.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { COMMUNITIES, EVENTS, PURPOSE, CHARTER } from '../data/seed.js'
-import { CommunityCard, EventCard, PostCard, SectionHead } from '../components/bits.jsx'
+import { COMMUNITIES, EVENTS, PURPOSE, CHARTER, CITY_LINES } from '../data/seed.js'
+import { CommunityCard, EventCard, PostCard, SectionHead, CityLine } from '../components/bits.jsx'
+import { useCommunities } from '../communities.js'
 import { Icon } from '../components/Icons.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -27,14 +28,22 @@ const SHORT_PITCH = 'Find your people, share your voice, and see what’s happen
 export default function Arrival() {
   const { user, profile, setAssistantOpen } = useApp()
   const [discussions, setDiscussions] = useState([])
+  const [madeEvents, setMadeEvents] = useState([])
+  const { created } = useCommunities()
   const phone = useIsPhone()
 
   useEffect(() => { api.listPosts({ pinned: 1, limit: 3 }).then(setDiscussions).catch(() => setDiscussions([])) }, [])
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    api.listEvents().then((list) => setMadeEvents(list.filter((e) => e.date >= today))).catch(() => {})
+  }, [])
 
   const localTrending = COMMUNITIES.filter((c) => c.scope === 'local' && c.trending)
   const globalTrending = COMMUNITIES.filter((c) => c.scope === 'global')
-  const upcoming = [...EVENTS].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4)
+  // Events members have planned come first, then the demo calendar.
+  const upcoming = [...madeEvents.slice(0, 4), ...[...EVENTS].sort((a, b) => a.date.localeCompare(b.date))].slice(0, 4)
   const enterTo = !user ? '/auth' : '/welcome'
+  const startTo = user ? '/communities/new' : '/auth'
 
   return (
     <div className="page arrival">
@@ -82,7 +91,8 @@ export default function Arrival() {
       )}
 
       <section className="section" id="trending-lagos">
-        <SectionHead icon="map-pin" title="Trending in Lagos" sub="Local communities with the most life this week" />
+        <SectionHead icon="map-pin" title="Trending in Lagos" sub="Local communities with the most life this week"
+          action={<Link to={startTo} className="btn brand-outline small"><Icon name="plus" size={14} /> Start a community</Link>} />
         <div className="card-grid three">
           {localTrending.map((c) => <CommunityCard key={c.id} community={c} />)}
         </div>
@@ -103,6 +113,19 @@ export default function Arrival() {
         </div>
       </section>
 
+      {created.length > 0 && (
+        <section className="section">
+          <SectionHead icon="sparkle" title="New in the city" sub="Communities members started recently" />
+          <div className="card-grid three">
+            {created.slice(-3).reverse().map((c) => <CommunityCard key={c.id} community={c} />)}
+          </div>
+        </section>
+      )}
+
+      <section className="section">
+        <CityLine {...CITY_LINES.meet} />
+      </section>
+
       <section className="section">
         <SectionHead icon="calendar" title="Happening soon" sub="Real rooms, real people — the city meets in person" />
         <div className="card-grid two">
@@ -115,6 +138,12 @@ export default function Arrival() {
         <div className="stack">
           {discussions.map((p) => <PostCard key={p.id} post={p} />)}
         </div>
+      </section>
+
+      <section className="section city-lines">
+        <CityLine {...CITY_LINES.voice} />
+        <CityLine {...CITY_LINES.roots} />
+        <CityLine {...CITY_LINES.trust} />
       </section>
 
     </div>

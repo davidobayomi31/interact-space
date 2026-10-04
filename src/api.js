@@ -28,6 +28,15 @@ export const joinCommunity = (id) => req(`/communities/${id}/join`, { method: 'P
 export const leaveCommunity = (id) => req(`/communities/${id}/leave`, { method: 'POST' })
 export const connect = (id) => req(`/users/${id}/connect`, { method: 'POST' }).then((d) => d.user)
 export const getUser = (id) => req(`/users/${id}`).then((d) => d.user)
+export const createCommunity = (body) => req('/communities', { method: 'POST', body })
+export const setModRules = (id, rules) => req(`/communities/${id}/mod-rules`, { method: 'PUT', body: { rules } }).then((d) => d.community)
+
+// Events members create (the seeded demo events live in data/seed.js)
+export const listEvents = (params = {}) => {
+  const q = new URLSearchParams(params).toString()
+  return req('/events' + (q ? `?${q}` : '')).then((d) => d.events)
+}
+export const createEvent = (communityId, body) => req(`/communities/${communityId}/events`, { method: 'POST', body }).then((d) => d.event)
 
 // Posts, comments, votes
 export const listPosts = (params = {}) => {

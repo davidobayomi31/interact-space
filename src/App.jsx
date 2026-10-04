@@ -18,6 +18,7 @@ import Chats from './pages/Chats.jsx'
 import ProfileVision from './pages/ProfileVision.jsx'
 import Voice from './pages/Voice.jsx'
 import VoiceBuilder from './pages/VoiceBuilder.jsx'
+import NewCommunity from './pages/NewCommunity.jsx'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
@@ -105,6 +106,7 @@ export default function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/welcome" element={<Onboarding />} />
               <Route path="/space" element={<MySpace />} />
+              <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />
               <Route path="/v/:handle" element={<Voice />} />

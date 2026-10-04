@@ -7,7 +7,8 @@ import { useApp } from '../state.jsx'
 import { JOB_CATEGORIES } from '../data/seed.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar, SectionHead } from '../components/bits.jsx'
+import { Avatar, SectionHead, CityLine } from '../components/bits.jsx'
+import { CITY_LINES } from '../data/seed.js'
 
 const catInfo = (id) => JOB_CATEGORIES.find((c) => c.id === id) || { label: id, icon: 'briefcase' }
 const seenKey = (uid) => `is_jobs_seen_${uid}`
@@ -222,6 +223,7 @@ export default function Jobs() {
         <h1><Icon name="wrench" size={24} /> Quick Jobs</h1>
         <p className="meta-dim">Real local work — plumbing, moving, tutoring, deliveries and more. Verified pros get priority.</p>
       </section>
+      <CityLine {...CITY_LINES.work} className="compact" />
 
       {toast && (
         <div className="job-toast">

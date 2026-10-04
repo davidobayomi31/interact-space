@@ -10,7 +10,7 @@ import q, {
   init, selfUser, publicUser, getUserByEmail, getUserById,
   serializeCommunity, serializePost, threadForPost,
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
-  serializeAd, serializeLive, parseJson,
+  serializeAd, serializeLive, serializeEvent, parseJson,
 } from './db.js'
 import { seedIfEmpty, seedExtras } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
@@ -44,6 +44,18 @@ app.use(async (_req, _res, next) => {
   try { await ready(); next() } catch (e) { next(e) }
 })
 app.use(attachUser)
+
+// Presence. Any signed-in request counts as being around; the write is
+// skipped if we already noted them in the last minute.
+const SEEN_EVERY_MS = 60 * 1000
+app.use(async (req, _res, next) => {
+  const row = req.userRow
+  if (row && (!row.last_seen_at || Date.now() - row.last_seen_at > SEEN_EVERY_MS)) {
+    row.last_seen_at = Date.now()
+    await q.run('UPDATE users SET last_seen_at = ? WHERE id = ?', row.last_seen_at, row.id).catch(() => {})
+  }
+  next()
+})
 
 const uid = (p) => `${p}-${crypto.randomUUID().slice(0, 8)}`
 const now = () => Date.now()
@@ -137,6 +149,71 @@ app.get('/api/communities/:id', async (req, res) => {
   const row = await q.get('SELECT * FROM communities WHERE id = ?', req.params.id)
   if (!row) return err(res, 404, 'Community not found.')
   res.json({ community: await serializeCommunity(row, req.userId) })
+})
+
+// Start a community. Whoever starts it moderates it.
+const COMMUNITY_ICONS = ['community', 'users', 'briefcase', 'camera', 'code', 'store', 'leaf', 'book', 'megaphone', 'heart', 'globe', 'star', 'wrench', 'smile']
+const COMMUNITY_ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E', '#8A5D0B', '#A8306A']
+const cleanList = (v, max, len) => (Array.isArray(v) ? v : [])
+  .map((x) => String(x).trim().slice(0, len)).filter(Boolean).slice(0, max)
+
+app.post('/api/communities', requireAuth, async (req, res) => {
+  const b = req.body || {}
+  const name = String(b.name || '').trim().slice(0, 60)
+  if (name.length < 3) return err(res, 400, 'Give the community a name (at least 3 letters).')
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'community'
+  const id = `${slug}-${crypto.randomUUID().slice(0, 4)}`
+  const scope = b.scope === 'global' ? 'global' : 'local'
+  const city = scope === 'global' ? 'Global' : (String(b.city || req.userRow.city || 'Lagos').trim().slice(0, 40) || 'Lagos')
+  const accent = COMMUNITY_ACCENTS.includes(b.accent) ? b.accent : COMMUNITY_ACCENTS[0]
+  const icon = COMMUNITY_ICONS.includes(b.icon) ? b.icon : 'community'
+  const tags = cleanList(b.tags, 6, 24).map((t) => t.toLowerCase())
+  const rules = cleanList(b.rules, 8, 160)
+  if (!rules.some((r) => /charter/i.test(r))) rules.push('Follow the Interact Space Charter at all times.')
+  await q.run(`INSERT INTO communities (id, name, tagline, description, scope, city, accent, icon, tags, rules, member_count, trending, created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)`,
+    id, name, String(b.tagline || '').trim().slice(0, 120), String(b.description || '').trim().slice(0, 1000),
+    scope, city, accent, icon, JSON.stringify(tags), JSON.stringify(rules), req.userId, now())
+  await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'moderator', ?)", req.userId, id, now())
+  const row = await q.get('SELECT * FROM communities WHERE id = ?', id)
+  res.json({ community: await serializeCommunity(row, req.userId), user: await selfUser(await getUserById(req.userId)) })
+})
+
+// Moderators can add rules of their own. They sit beside the community's
+// standing rules rather than replacing them.
+app.put('/api/communities/:id/mod-rules', requireAuth, async (req, res) => {
+  const row = await q.get('SELECT * FROM communities WHERE id = ?', req.params.id)
+  if (!row) return err(res, 404, 'Community not found.')
+  const isMod = await q.get("SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ? AND role = 'moderator'", req.userId, row.id)
+  if (!isMod) return err(res, 403, 'Only moderators can change the rules.')
+  await q.run('UPDATE communities SET mod_rules = ? WHERE id = ?', JSON.stringify(cleanList(req.body?.rules, 10, 160)), row.id)
+  res.json({ community: await serializeCommunity(await q.get('SELECT * FROM communities WHERE id = ?', row.id), req.userId) })
+})
+
+// ── Events ───────────────────────────────────────────────────────────
+app.get('/api/events', async (req, res) => {
+  const { community } = req.query
+  const rows = community
+    ? await q.all('SELECT * FROM events WHERE community_id = ? ORDER BY date, created_at', community)
+    : await q.all('SELECT * FROM events ORDER BY date, created_at LIMIT 50')
+  res.json({ events: rows.map(serializeEvent) })
+})
+
+app.post('/api/communities/:id/events', requireAuth, async (req, res) => {
+  const community = await q.get('SELECT id FROM communities WHERE id = ?', req.params.id)
+  if (!community) return err(res, 404, 'Community not found.')
+  const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, community.id)
+  if (!member) return err(res, 403, 'Join the community to create an event in it.')
+  const b = req.body || {}
+  const title = String(b.title || '').trim().slice(0, 100)
+  if (title.length < 3) return err(res, 400, 'Give the event a title.')
+  const date = String(b.date || '')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return err(res, 400, 'Pick a date for the event.')
+  const id = uid('ev')
+  await q.run(`INSERT INTO events (id, community_id, creator_id, title, date, time, venue, description, attending, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`, id, community.id, req.userId, title, date,
+    String(b.time || '').trim().slice(0, 20), String(b.venue || '').trim().slice(0, 100), String(b.description || '').trim().slice(0, 600), now())
+  res.json({ event: serializeEvent(await q.get('SELECT * FROM events WHERE id = ?', id)) })
 })
 
 app.post('/api/communities/:id/join', requireAuth, async (req, res) => {

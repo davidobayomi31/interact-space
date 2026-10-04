@@ -2,7 +2,8 @@
 // a shared layout: discussions (real posts + votes), events, members.
 import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { COMMUNITIES, USERS, EVENTS, CHARTER } from '../data/seed.js'
+import { USERS, EVENTS, CHARTER } from '../data/seed.js'
+import { useCommunities, findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
@@ -21,20 +22,33 @@ export default function Community() {
   const [posting, setPosting] = useState(false)
   const [live, setLive] = useState(null)
   const [meta, setMeta] = useState(null)
+  const [madeEvents, setMadeEvents] = useState([])
+  const [creator, setCreator] = useState(null)
 
-  const community = COMMUNITIES.find((c) => c.id === id)
+  const { loaded } = useCommunities()
+  const community = findCommunity(id)
+  const known = !!community
 
-  useEffect(() => { if (community) api.listPosts({ community: id }).then(setPosts).catch(() => setPosts([])) }, [id]) // eslint-disable-line
-  useEffect(() => { if (community) api.getCommunityLive(id).then(setLive).catch(() => {}) }, [id])
-  useEffect(() => { if (community) api.getCommunity(id).then(setMeta).catch(() => {}) }, [id])
+  useEffect(() => { if (known) api.listPosts({ community: id }).then(setPosts).catch(() => setPosts([])) }, [id, known])
+  useEffect(() => { if (known) api.getCommunityLive(id).then(setLive).catch(() => {}) }, [id, known])
+  useEffect(() => { if (known) api.getCommunity(id).then(setMeta).catch(() => {}) }, [id, known])
+  useEffect(() => { api.listEvents({ community: id }).then(setMadeEvents).catch(() => setMadeEvents([])) }, [id])
+  useEffect(() => {
+    if (meta?.createdBy) api.getUser(meta.createdBy).then(setCreator).catch(() => {})
+  }, [meta?.createdBy])
 
-  if (!community) return <Navigate to="/" replace />
+  if (!community) {
+    if (!loaded) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
+    return <Navigate to="/" replace />
+  }
 
   const joined = profile.communities.includes(community.id)
   const isMod = user?.moderatorOf?.includes(community.id)
-  const events = EVENTS.filter((e) => e.communityId === community.id)
+  const events = [...EVENTS.filter((e) => e.communityId === community.id), ...madeEvents]
+    .sort((a, b) => a.date.localeCompare(b.date))
   const members = USERS.filter((u) => community.memberIds.includes(u.id))
   const moderators = USERS.filter((u) => community.moderators.includes(u.id))
+  if (creator && !moderators.some((u) => u.id === creator.id)) moderators.unshift(creator)
 
   const submitPost = async (e) => {
     e.preventDefault()
@@ -127,9 +141,19 @@ export default function Community() {
           )}
 
           {tab === 'events' && (
-            <div className="card-grid two">
-              {events.length ? events.map((e) => <EventCard key={e.id} event={e} />)
-                : <p className="meta-dim">No upcoming events — members can propose one.</p>}
+            <div className="stack">
+              {joined ? (
+                <NewEvent community={community} onCreated={(ev) => setMadeEvents((list) => [...list, ev])} />
+              ) : (
+                <div className="card sign-in-nudge">
+                  <span className="meta-dim">{user ? 'Join this community to create an event.' : 'Sign in and join to create an event here.'}</span>
+                  {!user && <Link to="/auth" className="btn primary small">Sign in</Link>}
+                </div>
+              )}
+              <div className="card-grid two">
+                {events.length ? events.map((e) => <EventCard key={e.id} event={e} />)
+                  : <p className="meta-dim">No upcoming events yet — be the first to plan one.</p>}
+              </div>
             </div>
           )}
 
@@ -167,6 +191,7 @@ export default function Community() {
             <ol className="rule-list">
               {community.rules.map((r) => <li key={r}>{r}</li>)}
             </ol>
+            <ModRules community={meta} isMod={isMod} onSaved={setMeta} />
             <div className="charter-note">
               <Icon name="shield" size={13} />
               <span>Independent culture, shared Charter: {CHARTER[0].toLowerCase()}</span>
@@ -189,6 +214,100 @@ export default function Community() {
           </div>
         </aside>
       </div>
+    </div>
+  )
+}
+
+// Any member can put an event on the community's calendar.
+function NewEvent({ community, onCreated }) {
+  const blank = { title: '', date: '', time: '', venue: '', description: '' }
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState(blank)
+  const [busy, setBusy] = useState(false)
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const today = new Date().toISOString().slice(0, 10)
+
+  if (!open) {
+    return (
+      <button className="card create-row" onClick={() => setOpen(true)}>
+        <Icon name="plus-circle" size={18} />
+        <span><strong>Create an event</strong><br /><span className="meta-dim">Meetups, workshops, walks — bring {community.name} together in person.</span></span>
+      </button>
+    )
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!form.title.trim() || !form.date || busy) return
+    setBusy(true)
+    try {
+      onCreated(await api.createEvent(community.id, form))
+      setForm(blank); setOpen(false)
+    } catch (err) { alert(err.message) }
+    setBusy(false)
+  }
+
+  return (
+    <form className="card composer-full" onSubmit={submit}>
+      <div className="side-card-head"><Icon name="calendar" size={15} /> New event in {community.name}</div>
+      <input className="composer-title" value={form.title} onChange={set('title')} placeholder="What’s happening?" maxLength={100} autoFocus aria-label="Event title" />
+      <div className="job-form-row two">
+        <input className="job-input" type="date" min={today} value={form.date} onChange={set('date')} aria-label="Date" required />
+        <input className="job-input" value={form.time} onChange={set('time')} placeholder="Time (e.g. 6:00 PM)" maxLength={20} aria-label="Time" />
+      </div>
+      <input className="job-input" value={form.venue} onChange={set('venue')} placeholder="Where? (venue, area, or Online)" maxLength={100} aria-label="Venue" />
+      <textarea className="composer-body" value={form.description} onChange={set('description')} placeholder="Tell people what to expect (optional)" rows={3} maxLength={600} />
+      <div className="composer-foot">
+        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Cancel</button>
+        <button className="btn primary small" disabled={!form.title.trim() || !form.date || busy}>{busy ? 'Creating…' : 'Create event'}</button>
+      </div>
+    </form>
+  )
+}
+
+// The community's standing rules stay put; moderators add their own
+// beneath them, marked as coming from the moderators.
+function ModRules({ community, isMod, onSaved }) {
+  const rules = community?.modRules ?? []
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState([])
+  const [busy, setBusy] = useState(false)
+  if (!community || (!rules.length && !isMod)) return null
+
+  const start = () => { setDraft(rules.length ? rules : ['']); setEditing(true) }
+  const save = async () => {
+    setBusy(true)
+    try { onSaved(await api.setModRules(community.id, draft.map((r) => r.trim()).filter(Boolean))); setEditing(false) }
+    catch (err) { alert(err.message) }
+    setBusy(false)
+  }
+
+  return (
+    <div className="mod-rules">
+      <div className="mod-rules-head">
+        <span><Icon name="sparkle" size={12} /> Added by moderators</span>
+        {isMod && !editing && <button className="link-btn" onClick={start}><Icon name="edit" size={12} /> {rules.length ? 'Edit' : 'Add a rule'}</button>}
+      </div>
+      {editing ? (
+        <div className="mod-rules-edit">
+          {draft.map((r, i) => (
+            <div key={i} className="mod-rule-row">
+              <input className="job-input" value={r} maxLength={160} placeholder="A rule for this community"
+                onChange={(e) => setDraft((d) => d.map((x, n) => (n === i ? e.target.value : x)))} aria-label={`Rule ${i + 1}`} />
+              <button type="button" className="icon-btn subtle" onClick={() => setDraft((d) => d.filter((_, n) => n !== i))} aria-label="Remove rule"><Icon name="x" size={14} /></button>
+            </div>
+          ))}
+          {draft.length < 10 && <button type="button" className="link-btn" onClick={() => setDraft((d) => [...d, ''])}><Icon name="plus" size={12} /> Another rule</button>}
+          <div className="composer-foot">
+            <button type="button" className="btn ghost small" onClick={() => setEditing(false)}>Cancel</button>
+            <button type="button" className="btn primary small" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save rules'}</button>
+          </div>
+        </div>
+      ) : rules.length ? (
+        <ul className="mod-rule-list">{rules.map((r) => <li key={r}>{r}</li>)}</ul>
+      ) : (
+        <p className="meta-dim">You moderate this community — add rules of your own here.</p>
+      )}
     </div>
   )
 }

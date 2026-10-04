@@ -289,6 +289,31 @@ CREATE TABLE IF NOT EXISTS voices (
   created_at BIGINT
 );
 CREATE INDEX IF NOT EXISTS idx_voices_user ON voices(user_id);
+
+-- Presence: when a member last did anything, for the green "active" dot.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at BIGINT;
+
+-- Members can start communities. Moderators can add rules of their own,
+-- which sit beside the community's standing rules.
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS created_at BIGINT;
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS mod_rules TEXT DEFAULT '[]';
+
+-- Events members create inside a community. The seeded demo events still
+-- live in the frontend catalog; these are the real ones.
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  community_id TEXT NOT NULL,
+  creator_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,
+  time TEXT DEFAULT '',
+  venue TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  attending INTEGER DEFAULT 1,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS idx_events_community ON events(community_id);
 `
 
 // Run once per cold start, and only once even if several requests race to
@@ -342,10 +367,15 @@ export function visibleLocation(row) {
   return { city: row.city, area: row.area } // 'exact', and retired 'neighborhood'
 }
 
+// Someone who did anything in the last few minutes counts as active.
+export const ACTIVE_WINDOW_MS = 5 * 60 * 1000
+export const isActive = (row) => !!row?.last_seen_at && Date.now() - row.last_seen_at < ACTIVE_WINDOW_MS
+
 // Pure — no database access — so it stays synchronous.
 export function publicUser(row) {
   if (!row) return null
   return {
+    active: isActive(row), lastSeenAt: row.last_seen_at ?? null,
     id: row.id, name: row.name, handle: row.handle, title: row.title,
     ...visibleLocation(row), color: row.color, bio: row.bio,
     interests: json(row.interests), goals: json(row.goals), skills: json(row.skills),
@@ -453,7 +483,8 @@ export async function serializeCommunity(row, viewerId) {
   return {
     id: row.id, name: row.name, tagline: row.tagline, description: row.description,
     scope: row.scope, city: row.city, accent: row.accent, icon: row.icon,
-    tags: json(row.tags), rules: json(row.rules), memberCount: row.member_count,
+    tags: json(row.tags), rules: json(row.rules), modRules: json(row.mod_rules), memberCount: row.member_count,
+    createdBy: row.created_by ?? null,
     trending: !!row.trending,
     joined: !!membership, role: membership?.role ?? null,
     rating: { avg: Math.round(agg.avg * 10) / 10, count: agg.n, mine: mine?.stars ?? 0 },
@@ -507,6 +538,14 @@ export function serializeDm(row) {
 
 // ── Ads ──────────────────────────────────────────────────────────────
 // Pure — no database access.
+export function serializeEvent(row) {
+  return {
+    id: row.id, communityId: row.community_id, creatorId: row.creator_id,
+    title: row.title, date: row.date, time: row.time, venue: row.venue,
+    description: row.description, attending: row.attending,
+  }
+}
+
 export function serializeAd(row) {
   return {
     id: row.id, businessName: row.business_name, tagline: row.tagline,

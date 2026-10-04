@@ -3,16 +3,18 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
-import { COMMUNITIES, USERS, EVENTS } from '../data/seed.js'
+import { COMMUNITIES, USERS, EVENTS, CITY_LINES } from '../data/seed.js'
+import { useCommunities, findCommunity } from '../communities.js'
 import { matchCommunities, matchPeople, tagLabel } from '../ai.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar, CommunityCard, PersonCard, EventCard, PostCard, SectionHead, TagPills } from '../components/bits.jsx'
+import { Avatar, CommunityCard, PersonCard, EventCard, PostCard, SectionHead, TagPills, CityLine } from '../components/bits.jsx'
 import { LiveNowRow } from '../components/Live.jsx'
 
 export default function MySpace() {
   const { user, profile, loading, setAssistantOpen } = useApp()
   const [digest, setDigest] = useState([])
+  const { all: catalog } = useCommunities()
 
   useEffect(() => {
     if (!profile.communities.length) { setDigest([]); return }
@@ -23,7 +25,7 @@ export default function MySpace() {
   if (!user) return <Navigate to="/auth" replace />
   if (!profile.onboarded) return <Navigate to="/welcome" replace />
 
-  const myCommunities = COMMUNITIES.filter((c) => profile.communities.includes(c.id))
+  const myCommunities = catalog.filter((c) => profile.communities.includes(c.id))
   const myConnections = USERS.filter((u) => profile.connections.includes(u.id))
   const myEvents = EVENTS
     .filter((e) => profile.communities.includes(e.communityId) || e.tags.some((t) => profile.interests.includes(t)))
@@ -64,7 +66,8 @@ export default function MySpace() {
         <div className="space-main">
           {/* My communities */}
           <section className="section">
-            <SectionHead icon="community" title="My communities" sub={myCommunities.length ? undefined : 'You haven’t joined any yet — your companion has ideas below.'} />
+            <SectionHead icon="community" title="My communities" sub={myCommunities.length ? undefined : 'You haven’t joined any yet — your companion has ideas below.'}
+              action={<Link to="/communities/new" className="btn brand-outline small"><Icon name="plus" size={14} /> Start a community</Link>} />
             {myCommunities.length > 0 ? (
               <div className="card-grid two">
                 {myCommunities.map((c) => <CommunityCard key={c.id} community={c} compact />)}
@@ -88,7 +91,7 @@ export default function MySpace() {
               />
               <div className="stack">
                 {digest.map((p) => (
-                  <PostCard key={p.id} post={p} community={COMMUNITIES.find((c) => c.id === p.communityId)} />
+                  <PostCard key={p.id} post={p} community={findCommunity(p.communityId)} />
                 ))}
               </div>
             </section>
@@ -109,6 +112,10 @@ export default function MySpace() {
           </section>
 
           {/* My projects — demo placeholder that stays honest */}
+          <section className="section">
+            <CityLine {...CITY_LINES.build} />
+          </section>
+
           <section className="section">
             <SectionHead icon="zap" title="My projects" sub="Collaborations you start or join live here" />
             <div className="card ghost-card left">
