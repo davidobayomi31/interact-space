@@ -314,7 +314,43 @@ CREATE TABLE IF NOT EXISTS events (
   created_at BIGINT
 );
 CREATE INDEX IF NOT EXISTS idx_events_community ON events(community_id);
+
+-- Roles: owner > admin > moderator > member. Whoever started a community
+-- owns it; before roles existed they were recorded as its moderator.
+UPDATE memberships m SET role = 'owner' FROM communities c
+  WHERE c.id = m.community_id AND c.created_by = m.user_id AND m.role = 'moderator';
+
+-- When a role was last given by an owner or admin. Moderators with no such
+-- record got the role from the retired demo rule ("the first community you
+-- join, you moderate"), so they go back to being members. Seeded personas
+-- keep the moderator roles the demo data gives them.
+ALTER TABLE memberships ADD COLUMN IF NOT EXISTS role_set_at BIGINT;
+UPDATE memberships m SET role = 'member' FROM users u
+  WHERE u.id = m.user_id AND m.role = 'moderator' AND m.role_set_at IS NULL AND COALESCE(u.is_seed, 0) = 0;
+
+-- Moderation history: every action a community's staff takes, so owners
+-- can see what happened and who did it.
+CREATE TABLE IF NOT EXISTS mod_log (
+  id TEXT PRIMARY KEY,
+  community_id TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_type TEXT,
+  target_id TEXT,
+  target_user_id TEXT,
+  summary TEXT DEFAULT '',
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS idx_mod_log_community ON mod_log(community_id, created_at);
 `
+
+// ── Roles ────────────────────────────────────────────────────────────
+// Owner, admin and moderator are a community's staff: all three can
+// moderate. Rank decides who can change whose role.
+export const ROLE_RANK = { member: 0, moderator: 1, admin: 2, owner: 3 }
+export const STAFF_ROLES = ['owner', 'admin', 'moderator']
+export const STAFF_SQL = "('owner', 'admin', 'moderator')"
+export const isStaff = (role) => STAFF_ROLES.includes(role)
 
 // Run once per cold start, and only once even if several requests race to
 // be first — every caller awaits the same promise.
@@ -397,7 +433,9 @@ export async function selfUser(row) {
     privacy: row.privacy === 'neighborhood' ? 'exact' : row.privacy,
     onboarded: !!row.onboarded,
     communities: communities.map((c) => c.id),
-    moderatorOf: communities.filter((c) => c.role === 'moderator').map((c) => c.id),
+    // Every community you're staff in (owner, admin or moderator).
+    moderatorOf: communities.filter((c) => isStaff(c.role)).map((c) => c.id),
+    roles: Object.fromEntries(communities.map((c) => [c.id, c.role])),
     connections: connections.map((r) => r.other_id),
     jobSkills: json(row.job_skills),
   }

@@ -61,9 +61,10 @@ database. No key? It transparently falls back to keyword matching — nothing br
 5. **Threads** (`/post/:id`) — a post with vote-ranked, threaded comments. Reply, vote, report.
 6. **Companion** (gold button, any screen) — "Introduce me to people in sustainable
    agriculture", "What discussions should I read about farming?"
-7. **Moderate** (`/mod`) — appears once you moderate a community. Review reports, remove or
-   dismiss. *(Demo rule: the first community you join makes you its moderator so the tools
-   are reachable.)*
+7. **Moderate** (`/mod`) — appears once you're staff in a community. Start a community
+   (`/communities/new`) to own one. The dashboard shows members, activity, reports and the
+   moderation history. Roles: owner > admin > moderator > member; owners appoint admins
+   and moderators, admins appoint moderators.
 
 ## Architecture
 

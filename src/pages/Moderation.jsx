@@ -12,6 +12,13 @@ import { Avatar } from '../components/bits.jsx'
 
 const ALL = 'all'
 
+// Owner > admin > moderator > member. Owners make admins and moderators;
+// admins make moderators (the server enforces the same rule).
+const RANK = { member: 0, moderator: 1, admin: 2, owner: 3 }
+const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', moderator: 'Mod', member: 'Member' }
+const canManage = (mine, theirs) => (RANK[mine] ?? 0) >= RANK.admin && RANK[theirs] < RANK[mine]
+const assignable = (mine) => ['admin', 'moderator', 'member'].filter((r) => RANK[r] < RANK[mine])
+
 function timeAgo(ts) {
   const m = Math.max(0, Math.floor((Date.now() - ts) / 60000))
   if (m < 1) return 'just now'
@@ -26,12 +33,14 @@ export default function Moderation() {
   const { user, loading } = useApp()
   const navigate = useNavigate()
   const [dash, setDash] = useState(null)
+  const [history, setHistory] = useState([])
   const [reports, setReports] = useState([])
   const [ready, setReady] = useState(false)
   const [scope, setScope] = useState(ALL)
 
   const load = () => Promise.all([
     api.modDashboard().then(setDash),
+    api.modHistory().then(setHistory),
     api.modReports().then((d) => setReports(d.reports)),
   ]).catch(() => {}).finally(() => setReady(true))
   useEffect(() => { if (!loading && !user) navigate('/auth'); else if (user) load() }, [user, loading]) // eslint-disable-line
@@ -64,7 +73,7 @@ export default function Moderation() {
         <div className="card empty-mod">
           <Icon name="shield" size={26} />
           <p><strong>No communities to moderate yet.</strong></p>
-          <p className="meta-dim">Start a community and you’ll moderate it — or, in this demo, the first community you join makes you its moderator.</p>
+          <p className="meta-dim">Start a community and you’ll own it — or ask a community’s owner or admins to make you a moderator.</p>
           <div className="card-actions" style={{ justifyContent: 'center' }}>
             <Link to="/communities/new" className="btn primary small"><Icon name="plus" size={14} /> Start a community</Link>
             <Link to="/" className="btn ghost small">Find a community</Link>
@@ -137,6 +146,11 @@ export default function Moderation() {
               <Activity items={(dash?.activity ?? []).filter((a) => inScope(a.communityId))} byId={byId} showCommunity={scope === ALL && communities.length > 1} />
             </section>
 
+            <section className="section">
+              <h2 className="section-title"><Icon name="book" size={16} /> Moderation history</h2>
+              <History entries={history.filter((e) => inScope(e.communityId))} byId={byId} showCommunity={scope === ALL && communities.length > 1} />
+            </section>
+
             {done.length > 0 && (
               <section className="section">
                 <h2 className="section-title meta-dim"><Icon name="check" size={16} /> Resolved reports ({done.length})</h2>
@@ -167,6 +181,7 @@ export default function Moderation() {
                     <span className="mod-community-text">
                       <strong>{c.name}</strong>
                       <span className="meta-dim">
+                        <span className={`role-badge ${c.role}`}>{c.role === 'moderator' ? 'Moderator' : ROLE_LABEL[c.role]}</span>
                         {c.memberCount.toLocaleString()} members · {c.stats.activeNow} active
                         {c.stats.openReports > 0 && <> · <span className="mod-alert-text">{c.stats.openReports} open</span></>}
                       </span>
@@ -193,7 +208,10 @@ export default function Moderation() {
               <p className="meta-dim mod-note">Communities are open to join right now. Approval-only communities, with requests waiting here, are part of the next step.</p>
             </section>
 
-            <Members members={(dash?.members ?? []).filter((m) => inScope(m.communityId))} byId={byId} showCommunity={scope === ALL && communities.length > 1} />
+            <Members members={(dash?.members ?? []).filter((m) => inScope(m.communityId))} byId={byId}
+              showCommunity={scope === ALL && communities.length > 1}
+              manage={scope !== ALL || communities.length === 1 ? (byId[scope] ?? communities[0]) : null}
+              meId={user?.id} onChanged={load} />
           </aside>
         </div>
       </>}
@@ -250,26 +268,42 @@ function Activity({ items, byId, showCommunity }) {
   )
 }
 
-function Members({ members, byId, showCommunity }) {
+function Members({ members, byId, showCommunity, manage, meId, onChanged }) {
   const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(null)
   const term = q.trim().toLowerCase()
-  // One row per person, even if they're in several of your communities.
+  // One row per person, even if they're in several of your communities;
+  // their highest role wins.
   const people = useMemo(() => {
     const seen = new Map()
     for (const m of members) {
       const row = seen.get(m.user.id) || { ...m, communities: [] }
       row.communities.push(m.communityId)
-      if (m.role === 'moderator') row.role = 'moderator'
+      if (RANK[m.role] > RANK[row.role]) row.role = m.role
       seen.set(m.user.id, row)
     }
-    return [...seen.values()]
+    // Staff first, then whoever is around.
+    return [...seen.values()].sort((a, b) => RANK[b.role] - RANK[a.role] || (b.user.active - a.user.active))
   }, [members])
   const list = people.filter((m) => !term || `${m.user.name} ${m.user.handle ?? ''} ${m.user.title ?? ''}`.toLowerCase().includes(term))
   const activeCount = people.filter((m) => m.user.active).length
+  const mine = manage?.role
+
+  const change = async (person, role) => {
+    setBusy(person.user.id)
+    try { await api.setRole(manage.id, person.user.id, role); await onChanged() }
+    catch (err) { alert(err.message) }
+    setBusy(null)
+  }
 
   return (
     <section className="card side-card">
       <div className="side-card-head"><Icon name="users" size={15} /> Members <span className="meta-dim">· {people.length}{activeCount > 0 && `, ${activeCount} active`}</span></div>
+      {manage && (RANK[mine] ?? 0) >= RANK.admin && (
+        <p className="meta-dim mod-note">
+          {mine === 'owner' ? 'As owner you can make members admins or moderators.' : 'As an admin you can make members moderators.'}
+        </p>
+      )}
       {people.length > 6 && (
         <label className="mod-search">
           <Icon name="search" size={13} />
@@ -277,19 +311,71 @@ function Members({ members, byId, showCommunity }) {
         </label>
       )}
       <div className="mod-members">
-        {list.slice(0, 40).map((m) => (
-          <Link key={m.user.id} to={`/profile/${m.user.id}`} className="connection-row">
-            <Avatar user={m.user} size={30} />
-            <div className="mod-member-text">
-              <div className="connection-name">{m.user.name} {m.role === 'moderator' && <span className="mod-badge">Mod</span>}</div>
-              <div className="meta-dim">
-                {showCommunity ? m.communities.map((id) => byId[id]?.name).filter(Boolean).join(', ') : (m.user.title || 'Member')}
-              </div>
+        {list.slice(0, 40).map((m) => {
+          const editable = manage && m.user.id !== meId && canManage(mine, m.role)
+          return (
+            <div key={m.user.id} className="mod-member-row">
+              <Link to={`/profile/${m.user.id}`} className="connection-row">
+                <Avatar user={m.user} size={30} />
+                <div className="mod-member-text">
+                  <div className="connection-name">
+                    {m.user.name}{m.user.id === meId && <span className="meta-dim"> (you)</span>}
+                    {!editable && m.role !== 'member' && <span className={`role-badge ${m.role}`}>{ROLE_LABEL[m.role]}</span>}
+                  </div>
+                  <div className="meta-dim">
+                    {showCommunity ? m.communities.map((id) => byId[id]?.name).filter(Boolean).join(', ') : (m.user.title || 'Member')}
+                  </div>
+                </div>
+              </Link>
+              {editable && (
+                <select className="role-select" value={m.role} disabled={busy === m.user.id}
+                  onChange={(e) => change(m, e.target.value)} aria-label={`Role for ${m.user.name}`}>
+                  {assignable(mine).map((r) => <option key={r} value={r}>{r === 'moderator' ? 'Moderator' : ROLE_LABEL[r]}</option>)}
+                </select>
+              )}
             </div>
-          </Link>
-        ))}
+          )
+        })}
         {!list.length && <p className="meta-dim">{term ? 'No one by that name.' : 'No members yet.'}</p>}
       </div>
     </section>
+  )
+}
+
+const HISTORY = {
+  'community.created': { icon: 'sparkle', say: (e) => <>started the community</> },
+  'role.changed': { icon: 'shield', say: (e) => {
+    const [from, to] = e.summary.split(' → ')
+    const who = e.targetUser ? <Link to={`/profile/${e.targetUser.id}`} className="post-author">{e.targetUser.name}</Link> : 'someone'
+    return RANK[to] > RANK[from]
+      ? <>made {who} {to === 'admin' ? 'an admin' : 'a moderator'}</>
+      : <>changed {who} from {from} to {to}</>
+  } },
+  'content.removed': { icon: 'trash', say: (e) => <>removed a {e.targetType}{e.targetUser && <> by {e.targetUser.name}</>}</> },
+  'report.dismissed': { icon: 'check', say: (e) => <>dismissed a report on a {e.targetType}{e.targetUser && <> by {e.targetUser.name}</>}</> },
+  'rules.updated': { icon: 'edit', say: () => <>updated the moderators’ rules</> },
+}
+
+function History({ entries, byId, showCommunity }) {
+  if (!entries.length) return <p className="meta-dim empty-note">No moderator actions yet. Role changes, removals, dismissed reports and rule edits will be recorded here.</p>
+  return (
+    <ol className="card mod-activity mod-history">
+      {entries.slice(0, 30).map((e) => {
+        const h = HISTORY[e.action] ?? { icon: 'info', say: () => e.action }
+        const c = byId[e.communityId]
+        const showDetail = e.action === 'content.removed' || e.action === 'report.dismissed' || e.action === 'rules.updated'
+        return (
+          <li key={e.id}>
+            <span className={`mod-activity-icon ${e.action.split('.')[0]}`}><Icon name={h.icon} size={13} /></span>
+            <div className="mod-activity-text">
+              {e.actor ? <Link to={`/profile/${e.actor.id}`} className="post-author">{e.actor.name}</Link> : 'Someone'} {h.say(e)}
+              {showCommunity && c && <> in <Link to={`/community/${c.id}`} style={{ color: c.accent }}>{c.name}</Link></>}
+              {showDetail && e.summary && <div className="mod-history-detail">“{e.summary}”</div>}
+            </div>
+            <span className="meta-dim mod-activity-time">{timeAgo(e.at)}</span>
+          </li>
+        )
+      })}
+    </ol>
   )
 }

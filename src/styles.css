@@ -1960,3 +1960,25 @@ a.card:hover, .community-card:hover, .event-card:hover, .post-card:hover, .perso
   .mod-side { margin-top: 24px; }
 }
 @media (max-width: 520px) { .mod-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mod-stat-value { font-size: 24px; } }
+
+/* ── Roles + moderation history ── */
+.role-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: var(--radius-pill);
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px;
+  background: var(--surface-2); color: var(--text-dim);
+}
+.role-badge.owner { background: #111; color: #fff; }
+.role-badge.admin { background: #dbe8f8; color: #1f5fa8; }
+.role-badge.moderator { background: var(--brand-soft); color: var(--brand-strong); }
+.mod-member-row { display: flex; align-items: center; gap: 8px; }
+.mod-member-row .connection-row { flex: 1; min-width: 0; }
+.role-select {
+  flex: none; font-size: 12px; font-weight: 600; padding: 5px 8px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong); background: #fff; color: var(--text);
+}
+.role-select:focus { outline: none; border-color: var(--brand); }
+.mod-activity-icon.role, .mod-activity-icon.community { background: #111; color: #fff; }
+.mod-activity-icon.content { background: var(--brand-soft); color: var(--brand-strong); }
+.mod-activity-icon.rules { background: #dbe8f8; color: #1f5fa8; }
+.mod-history-detail { margin-top: 3px; font-size: 12.5px; color: var(--text-dim); }
+.mod-community-text .role-badge { margin: 0 6px 0 0; }

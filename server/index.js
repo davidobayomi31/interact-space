@@ -11,6 +11,7 @@ import q, {
   serializeCommunity, serializePost, threadForPost,
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
   serializeAd, serializeLive, serializeEvent, parseJson,
+  ROLE_RANK, STAFF_SQL, isStaff,
 } from './db.js'
 import { seedIfEmpty, seedExtras } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
@@ -62,6 +63,16 @@ const now = () => Date.now()
 const NEW_USER_COLORS = ['#D8A63A', '#4A90E8', '#27AE60', '#9B59B6', '#E8734A', '#4AE8D4', '#E84A8A']
 
 const err = (res, code, msg) => res.status(code).json({ error: msg })
+
+// ── Roles + moderation history ───────────────────────────────────────
+const roleIn = async (userId, communityId) =>
+  (await q.get('SELECT role FROM memberships WHERE user_id = ? AND community_id = ?', userId, communityId))?.role ?? null
+
+// Write one line to a community's moderation history.
+async function logAction(communityId, actorId, action, { targetType = null, targetId = null, targetUserId = null, summary = '' } = {}) {
+  await q.run(`INSERT INTO mod_log (id, community_id, actor_id, action, target_type, target_id, target_user_id, summary, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, uid('log'), communityId, actorId, action, targetType, targetId, targetUserId, String(summary).slice(0, 240), now())
+}
 
 // ── Auth ─────────────────────────────────────────────────────────────
 app.post('/api/auth/register', async (req, res) => {
@@ -174,7 +185,8 @@ app.post('/api/communities', requireAuth, async (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)`,
     id, name, String(b.tagline || '').trim().slice(0, 120), String(b.description || '').trim().slice(0, 1000),
     scope, city, accent, icon, JSON.stringify(tags), JSON.stringify(rules), req.userId, now())
-  await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'moderator', ?)", req.userId, id, now())
+  await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'owner', ?)", req.userId, id, now())
+  await logAction(id, req.userId, 'community.created', { summary: name })
   const row = await q.get('SELECT * FROM communities WHERE id = ?', id)
   res.json({ community: await serializeCommunity(row, req.userId), user: await selfUser(await getUserById(req.userId)) })
 })
@@ -184,9 +196,10 @@ app.post('/api/communities', requireAuth, async (req, res) => {
 app.put('/api/communities/:id/mod-rules', requireAuth, async (req, res) => {
   const row = await q.get('SELECT * FROM communities WHERE id = ?', req.params.id)
   if (!row) return err(res, 404, 'Community not found.')
-  const isMod = await q.get("SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ? AND role = 'moderator'", req.userId, row.id)
-  if (!isMod) return err(res, 403, 'Only moderators can change the rules.')
-  await q.run('UPDATE communities SET mod_rules = ? WHERE id = ?', JSON.stringify(cleanList(req.body?.rules, 10, 160)), row.id)
+  if (!isStaff(await roleIn(req.userId, row.id))) return err(res, 403, 'Only moderators can change the rules.')
+  const rules = cleanList(req.body?.rules, 10, 160)
+  await q.run('UPDATE communities SET mod_rules = ? WHERE id = ?', JSON.stringify(rules), row.id)
+  await logAction(row.id, req.userId, 'rules.updated', { summary: rules.length ? rules.join(' · ') : 'Cleared the moderators’ rules' })
   res.json({ community: await serializeCommunity(await q.get('SELECT * FROM communities WHERE id = ?', row.id), req.userId) })
 })
 
@@ -219,19 +232,19 @@ app.post('/api/communities/:id/events', requireAuth, async (req, res) => {
 app.post('/api/communities/:id/join', requireAuth, async (req, res) => {
   const row = await q.get('SELECT * FROM communities WHERE id = ?', req.params.id)
   if (!row) return err(res, 404, 'Community not found.')
-  // Demo rule: the first community you join, you also get to moderate — so
-  // the moderation tools are reachable. Later joins are normal membership.
-  const modCount = (await q.get("SELECT COUNT(*) AS n FROM memberships WHERE user_id = ? AND role = 'moderator'", req.userId)).n
+  // Joining makes you a member. Staff roles are given by a community's
+  // owner or admins (see /roles), or come from starting a community.
   const existing = await q.get('SELECT role FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, row.id)
   if (!existing) {
-    const role = modCount === 0 ? 'moderator' : 'member'
-    await q.run('INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, ?, ?)', req.userId, row.id, role, now())
+    await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'member', ?)", req.userId, row.id, now())
     await q.run('UPDATE communities SET member_count = member_count + 1 WHERE id = ?', row.id)
   }
   res.json({ community: await serializeCommunity(row, req.userId), user: await selfUser(req.userRow) })
 })
 
 app.post('/api/communities/:id/leave', requireAuth, async (req, res) => {
+  // A community always needs its owner; handing ownership over comes later.
+  if (await roleIn(req.userId, req.params.id) === 'owner') return err(res, 400, 'Owners can’t leave their own community.')
   const existed = await q.run('DELETE FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, req.params.id)
   if (existed.changes) await q.run('UPDATE communities SET member_count = GREATEST(0, member_count - 1) WHERE id = ?', req.params.id)
   const row = await q.get('SELECT * FROM communities WHERE id = ?', req.params.id)
@@ -352,7 +365,7 @@ app.post('/api/reports', requireAuth, async (req, res) => {
 })
 
 app.get('/api/mod/reports', requireAuth, async (req, res) => {
-  const mod = await q.all("SELECT community_id FROM memberships WHERE user_id = ? AND role = 'moderator'", req.userId)
+  const mod = await q.all(`SELECT community_id FROM memberships WHERE user_id = ? AND role IN ${STAFF_SQL}`, req.userId)
   const ids = mod.map((m) => m.community_id)
   if (!ids.length) return res.json({ reports: [], communities: [] })
   const placeholders = ids.map(() => '?').join(',')
@@ -377,11 +390,56 @@ app.get('/api/mod/reports', requireAuth, async (req, res) => {
   res.json({ reports, communities: ids })
 })
 
+// Change someone's role in a community. Owners can make admins and
+// moderators; admins can make moderators. Nobody changes their own role or
+// the role of someone at or above their own rank, and ownership itself
+// can't be handed over here.
+app.post('/api/communities/:id/roles', requireAuth, async (req, res) => {
+  const communityId = req.params.id
+  const { userId, role } = req.body || {}
+  if (!['admin', 'moderator', 'member'].includes(role)) return err(res, 400, 'Pick admin, moderator or member.')
+  if (userId === req.userId) return err(res, 400, 'You can’t change your own role.')
+  const mine = await roleIn(req.userId, communityId)
+  const theirs = await roleIn(userId, communityId)
+  if (!theirs) return err(res, 404, 'That person isn’t a member of this community.')
+  const myRank = ROLE_RANK[mine] ?? 0
+  if (myRank < ROLE_RANK.admin) return err(res, 403, 'Only owners and admins can change roles.')
+  if (ROLE_RANK[theirs] >= myRank || ROLE_RANK[role] >= myRank) return err(res, 403, 'You can only manage roles below your own.')
+  if (theirs === role) return res.json({ ok: true, role })
+  await q.run('UPDATE memberships SET role = ?, role_set_at = ? WHERE user_id = ? AND community_id = ?', role, now(), userId, communityId)
+  const target = await getUserById(userId)
+  await logAction(communityId, req.userId, 'role.changed', { targetType: 'user', targetId: userId, targetUserId: userId, summary: `${theirs} → ${role}` })
+  res.json({ ok: true, role, user: publicUser(target) })
+})
+
+// Moderation history for the communities you're staff in.
+app.get('/api/mod/history', requireAuth, async (req, res) => {
+  const staffIn = (await q.all(`SELECT community_id FROM memberships WHERE user_id = ? AND role IN ${STAFF_SQL}`, req.userId)).map((r) => r.community_id)
+  const ids = req.query.community ? staffIn.filter((id) => id === req.query.community) : staffIn
+  if (!ids.length) return res.json({ entries: [] })
+  const rows = await q.all(`SELECT * FROM mod_log WHERE community_id IN (${ids.map(() => '?').join(',')}) ORDER BY created_at DESC LIMIT 100`, ...ids)
+  const people = new Map()
+  const person = async (id) => {
+    if (!id) return null
+    if (!people.has(id)) people.set(id, publicUser(await getUserById(id)))
+    return people.get(id)
+  }
+  const entries = []
+  for (const r of rows) {
+    entries.push({
+      id: r.id, communityId: r.community_id, action: r.action, at: r.created_at,
+      targetType: r.target_type, targetId: r.target_id, summary: r.summary,
+      actor: await person(r.actor_id), targetUser: await person(r.target_user_id),
+    })
+  }
+  res.json({ entries })
+})
+
 // The moderator's home screen: every community you moderate with its
 // numbers, the people in them, and what's been happening lately.
 const WEEK_MS = 7 * 24 * 3600 * 1000
 app.get('/api/mod/dashboard', requireAuth, async (req, res) => {
-  const mine = await q.all("SELECT community_id, created_at FROM memberships WHERE user_id = ? AND role = 'moderator'", req.userId)
+  const mine = await q.all(`SELECT community_id, created_at FROM memberships WHERE user_id = ? AND role IN ${STAFF_SQL}`, req.userId)
   const ids = mine.map((m) => m.community_id)
   if (!ids.length) return res.json({ communities: [], members: [], activity: [] })
   const inIds = ids.map(() => '?').join(',')
@@ -444,13 +502,15 @@ app.get('/api/mod/dashboard', requireAuth, async (req, res) => {
 app.post('/api/reports/:id/resolve', requireAuth, async (req, res) => {
   const report = await q.get('SELECT * FROM reports WHERE id = ?', req.params.id)
   if (!report) return err(res, 404, 'Report not found.')
-  const isMod = await q.get("SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ? AND role = 'moderator'", req.userId, report.community_id)
-  if (!isMod) return err(res, 403, 'You do not moderate that community.')
+  if (!isStaff(await roleIn(req.userId, report.community_id))) return err(res, 403, 'You do not moderate that community.')
   const action = req.body?.action === 'remove' ? 'remove' : 'dismiss'
-  if (action === 'remove') {
-    const table = report.target_type === 'post' ? 'posts' : 'comments'
-    await q.run(`UPDATE ${table} SET hidden = 1 WHERE id = ?`, report.target_id)
-  }
+  const table = report.target_type === 'post' ? 'posts' : 'comments'
+  const target = await q.get(`SELECT * FROM ${table} WHERE id = ?`, report.target_id)
+  if (action === 'remove') await q.run(`UPDATE ${table} SET hidden = 1 WHERE id = ?`, report.target_id)
+  await logAction(report.community_id, req.userId, action === 'remove' ? 'content.removed' : 'report.dismissed', {
+    targetType: report.target_type, targetId: report.target_id, targetUserId: target?.author_id ?? null,
+    summary: `${(target?.title || target?.body || '').slice(0, 120)} — reported for: ${report.reason}`,
+  })
   await q.run("UPDATE reports SET status = ?, action = ?, resolved_at = ?, resolver_id = ? WHERE id = ?", action === 'remove' ? 'resolved' : 'dismissed', action, now(), req.userId, report.id)
   res.json({ ok: true })
 })

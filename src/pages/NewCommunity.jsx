@@ -1,4 +1,4 @@
-// Start a community. Whoever starts it becomes its first moderator; the
+// Start a community. Whoever starts it owns it and moderates it; the
 // shared Charter is always one of its rules.
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
@@ -111,7 +111,7 @@ export default function NewCommunity() {
         </div>
 
         <div className="composer-foot">
-          <span className="meta-dim"><Icon name="sparkle" size={13} /> You’ll be its first moderator.</span>
+          <span className="meta-dim"><Icon name="sparkle" size={13} /> You’ll be its owner — you can add admins and moderators later.</span>
           <button className="btn primary" disabled={form.name.trim().length < 3 || busy}>{busy ? 'Starting…' : 'Start community'}</button>
         </div>
       </form>

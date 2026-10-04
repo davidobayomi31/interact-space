@@ -44,6 +44,7 @@ export default function Community() {
 
   const joined = profile.communities.includes(community.id)
   const isMod = user?.moderatorOf?.includes(community.id)
+  const myRole = user?.roles?.[community.id]
   const events = [...EVENTS.filter((e) => e.communityId === community.id), ...madeEvents]
     .sort((a, b) => a.date.localeCompare(b.date))
   const members = USERS.filter((u) => community.memberIds.includes(u.id))
@@ -83,14 +84,14 @@ export default function Community() {
               <span className="meta-dim"><Icon name="users" size={13} /> {community.memberCount.toLocaleString()} members</span>
               {meta && <RatingSummary rating={meta.rating} />}
               {live && <LiveBadge />}
-              {isMod && <Link to="/mod" className="mod-badge-link"><Icon name="shield" size={12} /> You moderate this</Link>}
+              {isMod && <Link to="/mod" className="mod-badge-link"><Icon name="shield" size={12} /> {myRole === 'owner' ? 'You own this' : myRole === 'admin' ? 'You’re an admin here' : 'You moderate this'}</Link>}
             </div>
           </div>
           <div className="community-banner-actions">
             {joined ? (
               <>
                 <span className="joined-note"><Icon name="check" size={14} /> You’re a member</span>
-                <button className="btn ghost small" onClick={() => leaveCommunity(community.id)}>Leave</button>
+                {myRole !== 'owner' && <button className="btn ghost small" onClick={() => leaveCommunity(community.id)}>Leave</button>}
               </>
             ) : (
               <button className="btn primary" onClick={() => (user ? joinCommunity(community.id) : (window.location.href = '/auth'))}>Join community</button>

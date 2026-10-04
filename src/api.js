@@ -54,6 +54,8 @@ export const report = (targetType, targetId, reason) =>
   req('/reports', { method: 'POST', body: { targetType, targetId, reason } })
 export const modReports = () => req('/mod/reports')
 export const modDashboard = () => req('/mod/dashboard')
+export const modHistory = () => req('/mod/history').then((d) => d.entries)
+export const setRole = (communityId, userId, role) => req(`/communities/${communityId}/roles`, { method: 'POST', body: { userId, role } })
 export const resolveReport = (id, action) => req(`/reports/${id}/resolve`, { method: 'POST', body: { action } })
 
 // Community ratings
