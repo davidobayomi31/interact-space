@@ -53,6 +53,7 @@ export const vote = (targetType, targetId, value) =>
 export const report = (targetType, targetId, reason) =>
   req('/reports', { method: 'POST', body: { targetType, targetId, reason } })
 export const modReports = () => req('/mod/reports')
+export const modDashboard = () => req('/mod/dashboard')
 export const resolveReport = (id, action) => req(`/reports/${id}/resolve`, { method: 'POST', body: { action } })
 
 // Community ratings

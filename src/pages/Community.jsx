@@ -15,7 +15,7 @@ export default function Community() {
   const { id } = useParams()
   const { user, profile, joinCommunity, leaveCommunity } = useApp()
   const [params] = useSearchParams()
-  const [tab, setTab] = useState(params.get('tab') === 'live' ? 'live' : 'discussions')
+  const [tab, setTab] = useState(['live', 'events', 'members'].includes(params.get('tab')) ? params.get('tab') : 'discussions')
   const [posts, setPosts] = useState([])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')

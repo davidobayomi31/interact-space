@@ -377,6 +377,70 @@ app.get('/api/mod/reports', requireAuth, async (req, res) => {
   res.json({ reports, communities: ids })
 })
 
+// The moderator's home screen: every community you moderate with its
+// numbers, the people in them, and what's been happening lately.
+const WEEK_MS = 7 * 24 * 3600 * 1000
+app.get('/api/mod/dashboard', requireAuth, async (req, res) => {
+  const mine = await q.all("SELECT community_id, created_at FROM memberships WHERE user_id = ? AND role = 'moderator'", req.userId)
+  const ids = mine.map((m) => m.community_id)
+  if (!ids.length) return res.json({ communities: [], members: [], activity: [] })
+  const inIds = ids.map(() => '?').join(',')
+  const t = now(), week = t - WEEK_MS, activeSince = t - 5 * 60 * 1000
+
+  const rows = await q.all(`SELECT * FROM communities WHERE id IN (${inIds})`, ...ids)
+  const communities = await Promise.all(rows.map(async (c) => {
+    const [joined, activeNow, activeWeek, newWeek, posts, postsWeek, openReports, resolvedWeek, events] = await Promise.all([
+      q.get('SELECT COUNT(*) AS n FROM memberships WHERE community_id = ?', c.id),
+      q.get('SELECT COUNT(*) AS n FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.community_id = ? AND u.last_seen_at > ?', c.id, activeSince),
+      q.get('SELECT COUNT(*) AS n FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.community_id = ? AND u.last_seen_at > ?', c.id, week),
+      q.get('SELECT COUNT(*) AS n FROM memberships WHERE community_id = ? AND created_at > ?', c.id, week),
+      q.get('SELECT COUNT(*) AS n FROM posts WHERE community_id = ? AND hidden = 0', c.id),
+      q.get('SELECT COUNT(*) AS n FROM posts WHERE community_id = ? AND hidden = 0 AND created_at > ?', c.id, week),
+      q.get("SELECT COUNT(*) AS n FROM reports WHERE community_id = ? AND status = 'open'", c.id),
+      q.get("SELECT COUNT(*) AS n FROM reports WHERE community_id = ? AND status <> 'open' AND resolved_at > ?", c.id, week),
+      q.get('SELECT COUNT(*) AS n FROM events WHERE community_id = ? AND date >= ?', c.id, new Date(t).toISOString().slice(0, 10)),
+    ])
+    return {
+      ...(await serializeCommunity(c, req.userId)),
+      stats: {
+        joined: joined.n, activeNow: activeNow.n, activeWeek: activeWeek.n, newWeek: newWeek.n,
+        posts: posts.n, postsWeek: postsWeek.n, openReports: openReports.n, resolvedWeek: resolvedWeek.n,
+        upcomingEvents: events.n,
+      },
+    }
+  }))
+
+  const memberRows = await q.all(`SELECT u.*, m.community_id, m.role, m.created_at AS joined_at
+    FROM memberships m JOIN users u ON u.id = m.user_id
+    WHERE m.community_id IN (${inIds}) ORDER BY u.last_seen_at DESC NULLS LAST, m.created_at DESC LIMIT 200`, ...ids)
+  const members = memberRows.map((r) => ({ user: publicUser(r), communityId: r.community_id, role: r.role, joinedAt: r.joined_at }))
+
+  // Recent activity: joins, posts, comments, events and reports, newest first.
+  const [joins, posts, comments, events, reports] = await Promise.all([
+    q.all(`SELECT u.*, m.community_id, m.created_at AS at FROM memberships m JOIN users u ON u.id = m.user_id
+      WHERE m.community_id IN (${inIds}) AND m.created_at IS NOT NULL ORDER BY m.created_at DESC LIMIT 15`, ...ids),
+    q.all(`SELECT u.*, p.id AS post_id, p.title AS item_title, p.community_id, p.created_at AS at FROM posts p JOIN users u ON u.id = p.author_id
+      WHERE p.community_id IN (${inIds}) AND p.hidden = 0 ORDER BY p.created_at DESC LIMIT 15`, ...ids),
+    q.all(`SELECT u.*, c.body AS item_body, p.id AS post_id, p.title AS item_title, p.community_id, c.created_at AS at FROM comments c
+      JOIN posts p ON p.id = c.post_id JOIN users u ON u.id = c.author_id
+      WHERE p.community_id IN (${inIds}) AND c.hidden = 0 ORDER BY c.created_at DESC LIMIT 15`, ...ids),
+    q.all(`SELECT u.*, e.id AS event_id, e.title AS item_title, e.community_id, e.created_at AS at FROM events e JOIN users u ON u.id = e.creator_id
+      WHERE e.community_id IN (${inIds}) ORDER BY e.created_at DESC LIMIT 15`, ...ids),
+    q.all(`SELECT u.*, r.reason, r.target_type, r.community_id, r.created_at AS at FROM reports r JOIN users u ON u.id = r.reporter_id
+      WHERE r.community_id IN (${inIds}) ORDER BY r.created_at DESC LIMIT 15`, ...ids),
+  ])
+  const item = (type, r, extra) => ({ type, at: r.at, communityId: r.community_id, actor: publicUser(r), ...extra })
+  const activity = [
+    ...joins.map((r) => item('join', r, {})),
+    ...posts.map((r) => item('post', r, { title: r.item_title, link: `/post/${r.post_id}` })),
+    ...comments.map((r) => item('comment', r, { title: r.item_title, text: r.item_body.slice(0, 120), link: `/post/${r.post_id}` })),
+    ...events.map((r) => item('event', r, { title: r.item_title, link: `/community/${r.community_id}?tab=events` })),
+    ...reports.map((r) => item('report', r, { title: r.reason, text: r.target_type })),
+  ].filter((a) => a.at).sort((a, b) => b.at - a.at).slice(0, 25)
+
+  res.json({ communities, members, activity })
+})
+
 app.post('/api/reports/:id/resolve', requireAuth, async (req, res) => {
   const report = await q.get('SELECT * FROM reports WHERE id = ?', req.params.id)
   if (!report) return err(res, 404, 'Report not found.')
