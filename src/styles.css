@@ -473,9 +473,6 @@ a.card-title:hover { color: var(--brand-strong); }
 .community-banner-text { flex: 1; min-width: 260px; }
 .community-banner h1 { font-size: clamp(24px, 3.6vw, 36px); margin: 6px 0 4px; }
 .community-tagline { color: var(--text-dim); margin-bottom: 10px; }
-.breadcrumb { font-size: 12.5px; color: var(--text-dim); display: flex; gap: 7px; flex-wrap: wrap; }
-.breadcrumb a:hover { color: var(--brand-strong); }
-.breadcrumb strong { color: var(--accent); }
 .community-banner-actions { display: flex; align-items: center; gap: 12px; }
 .joined-note { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 600; font-size: 14px; }
 
@@ -1126,7 +1123,7 @@ a.post-stat:hover { color: var(--text); }
 .date-month, .scope-badge, .pill, .opp-type, .pin-badge, .mod-type,
 .assistant-section-label, .ads-rail-label, .hero-globe-label,
 .vision-section-head, .vision-banner-tag, .vision-how-tag, .privacy-note,
-.you-badge, .mod-badge, .live-badge, .breadcrumb {
+.you-badge, .mod-badge, .live-badge {
   font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em;
 }
 .pill { border-width: 1px; border-color: var(--border-soft); background: var(--surface-2); color: var(--text); }
@@ -2093,6 +2090,7 @@ html.pref-reduce-motion *, html.pref-reduce-motion *::before, html.pref-reduce-m
 
 /* Thread: full page width, with the community alongside. */
 .thread-page { max-width: var(--maxw); }
+.thread-grid { margin-top: 28px; }
 .thread-main { min-width: 0; }
 .thread-side { margin-top: 0; }
 .thread-more { display: flex; flex-direction: column; }
@@ -2202,3 +2200,4 @@ html.pref-reduce-motion *, html.pref-reduce-motion *::before, html.pref-reduce-m
 .card-link:hover { border-color: var(--text); }
 .card-link:has(.stretched:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
 .card-link .stretched:focus-visible { outline: none; }
+.community-main, .community-side { min-width: 0; }

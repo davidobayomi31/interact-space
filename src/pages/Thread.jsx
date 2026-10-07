@@ -101,12 +101,6 @@ export default function Thread() {
 
   return (
     <div className="page thread-page" style={{ '--accent': community?.accent ?? 'var(--gold)' }}>
-      <div className="thread-breadcrumb">
-        <Link to="/">Local Network</Link> <span>/</span>
-        {community && <><Link to={`/community/${community.id}`} style={{ color: community.accent }}>{community.name}</Link> <span>/</span></>}
-        <span>Discussion</span>
-      </div>
-
       <div className="space-grid thread-grid">
       <div className="thread-main">
       <article className="card thread-post">
