@@ -66,13 +66,13 @@ export function CommunityCard({ community, shared = [], source, because, compact
   const [meta, setMeta] = useState(null)
   useEffect(() => { api.getCommunity(community.id).then(setMeta).catch(() => {}) }, [community.id])
   return (
-    <div className={`card community-card ${compact ? 'compact' : ''}`} style={{ '--accent': community.accent }}>
+    <div className={`card community-card card-link ${compact ? 'compact' : ''}`} style={{ '--accent': community.accent }}>
       <div className="community-card-head">
         <div className="community-glyph" style={{ color: community.accent }}>
           <Icon name={community.icon} size={compact ? 18 : 22} />
         </div>
         <div className="community-card-title">
-          <Link to={`/community/${community.id}`} className="card-title">{community.name}</Link>
+          <Link to={`/community/${community.id}`} className="card-title stretched">{community.name}</Link>
           <div className="meta-row">
             <span className={`scope-badge ${community.scope}`}>
               <Icon name={community.scope === 'global' ? 'globe' : 'map-pin'} size={11} />
@@ -103,11 +103,11 @@ export function PersonCard({ user: person, shared = [], source, because }) {
   const connected = profile.connections.includes(person.id)
   const onConnect = () => (user ? connect(person.id) : navigate('/auth'))
   return (
-    <div className="card person-card">
+    <div className="card person-card card-link">
       <div className="person-head">
         <Avatar user={person} size={44} />
         <div>
-          <Link to={`/profile/${person.id}`} className="card-title">{person.name}</Link>
+          <Link to={`/profile/${person.id}`} className="card-title stretched">{person.name}</Link>
           <div className="meta-dim">{person.title} · {person.area ?? person.city}</div>
         </div>
       </div>
@@ -129,14 +129,16 @@ export function EventCard({ event, shared = [], source, because }) {
   const day = d.toLocaleDateString('en-GB', { day: 'numeric' })
   const month = d.toLocaleDateString('en-GB', { month: 'short' })
   return (
-    <div className="card event-card">
+    <div className={`card event-card ${community ? 'card-link' : ''}`}>
       <div className="event-head">
         <div className="date-block" style={{ '--accent': community?.accent ?? 'var(--gold)' }}>
           <span className="date-day">{day}</span>
           <span className="date-month">{month}</span>
         </div>
         <div>
-          <div className="card-title">{event.title}</div>
+          {community
+            ? <Link to={`/community/${community.id}?tab=events`} className="card-title stretched">{event.title}</Link>
+            : <div className="card-title">{event.title}</div>}
           <div className="meta-dim">
             <Icon name="clock" size={12} /> {event.time} · <Icon name="map-pin" size={12} /> {event.venue}
           </div>
@@ -161,7 +163,7 @@ export function EventCard({ event, shared = [], source, because }) {
 export function PostCard({ post, community, because }) {
   const comm = community || findCommunity(post.communityId)
   return (
-    <div className="card post-card">
+    <div className="card post-card card-link">
       <div className="post-card-row">
         <Vote targetType="post" targetId={post.id} score={post.score} myVote={post.myVote} layout="vertical" />
         <div className="post-card-body">
@@ -173,7 +175,7 @@ export function PostCard({ post, community, because }) {
               {comm && <> · in <Link to={`/community/${comm.id}`} style={{ color: comm.accent }}>{comm.name}</Link></>}
             </div>
           </div>
-          <Link to={`/post/${post.id}`} className="post-title">{post.title}</Link>
+          <Link to={`/post/${post.id}`} className="post-title stretched">{post.title}</Link>
           {post.body && <p className="card-desc">{post.body}</p>}
           <Trace because={because} />
           <div className="post-stats">

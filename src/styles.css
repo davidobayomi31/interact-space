@@ -2191,3 +2191,14 @@ html.pref-reduce-motion *, html.pref-reduce-motion *::before, html.pref-reduce-m
   .settings-choices, .settings-row { grid-template-columns: 1fr; }
 }
 .settings-block p.meta-dim, .settings-faq p.meta-dim { display: block; }
+
+/* Whole-card links: the card's main link stretches over the entire card,
+   so tapping anywhere opens it. Buttons and other links inside the card
+   sit above that layer and keep working on their own. */
+.card-link { position: relative; cursor: pointer; transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s; }
+.card-link .stretched::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.card-link a:not(.stretched), .card-link button, .card-link select, .card-link input,
+.card-link .vote, .card-link .report-wrap { position: relative; z-index: 2; }
+.card-link:hover { border-color: var(--text); }
+.card-link:has(.stretched:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.card-link .stretched:focus-visible { outline: none; }
