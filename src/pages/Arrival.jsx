@@ -140,12 +140,6 @@ export default function Arrival() {
         </div>
       </section>
 
-      <section className="section city-lines">
-        <CityLine {...CITY_LINES.voice} />
-        <CityLine {...CITY_LINES.roots} />
-        <CityLine {...CITY_LINES.trust} />
-      </section>
-
     </div>
   )
 }

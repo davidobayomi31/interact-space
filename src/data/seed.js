@@ -536,9 +536,6 @@ export const WORLD_EVENTS = [
 export const CITY_LINES = {
   grow: { icon: 'globe', line: 'Starting in Lagos. Built to grow.', sub: 'Every community is independent — all share one Charter.' },
   meet: { icon: 'users', line: 'Find your people. Then go meet them.', sub: 'Online is where it starts. The city is where it happens.' },
-  voice: { icon: 'layers', line: 'One person. Many voices. Your rules.', sub: 'You decide who sees which version of you — and nobody else does.' },
-  roots: { icon: 'map-pin', line: 'Local roots. Global reach.', sub: 'A street in Yaba and a founder in Nairobi are one conversation apart.' },
-  trust: { icon: 'shield', line: 'Trust is earned in the open.', sub: 'Ratings, records and real people — not follower counts.' },
   build: { icon: 'community', line: 'Built by the people who show up.', sub: 'Every community here was started by someone who cared enough to begin.' },
   work: { icon: 'wrench', line: 'Good work travels by word of mouth.', sub: 'Here, the word of mouth is written down.' },
 }
