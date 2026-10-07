@@ -135,7 +135,7 @@ export default function Profile() {
         </div>
         <div className="profile-hero-actions">
           {isMe ? (
-            <Link to="/space" className="btn ghost"><Icon name="home" size={15} /> My Space</Link>
+            <Link to="/home" className="btn ghost"><Icon name="home" size={15} /> Home</Link>
           ) : (
             <>
               <Link to={`/chats?dm=${user.id}`} className="btn brand-outline"><Icon name="message-circle" size={15} /> Message</Link>

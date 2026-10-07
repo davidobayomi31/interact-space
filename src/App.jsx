@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from './state.jsx'
 import { Icon } from './components/Icons.jsx'
@@ -19,12 +20,80 @@ import ProfileVision from './pages/ProfileVision.jsx'
 import Voice from './pages/Voice.jsx'
 import VoiceBuilder from './pages/VoiceBuilder.jsx'
 import NewCommunity from './pages/NewCommunity.jsx'
+import Explore from './pages/Explore.jsx'
+import AddHub from './pages/AddHub.jsx'
+import Notifications from './pages/Notifications.jsx'
+import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
-function Header() {
-  const { user, profile, logout, setAssistantOpen } = useApp()
+// The five places a member moves between (see VOIDAJ-Blueprint.md §13).
+// Notifications, Chat and Profile sit to the right, reachable from anywhere.
+const PRIMARY = [
+  { to: '/home', icon: 'home', label: 'Home', short: 'Home' },
+  { to: '/explore', icon: 'search', label: 'Explore', short: 'Explore' },
+  { to: '/', icon: 'map-pin', label: 'My City', short: 'City', end: true },
+  { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', short: 'Jobs' },
+  { to: '/add', icon: 'plus-circle', label: 'Add Hub', short: 'Add' },
+]
+
+// Unread messages plus open reports for moderators — the bell's number.
+function useAttentionCount() {
+  const { user } = useApp()
   const location = useLocation()
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!user) { setCount(0); return }
+    const mod = user.moderatorOf?.length > 0
+    Promise.all([
+      api.listConversations().then((cs) => cs.reduce((n, c) => n + (c.unread || 0), 0)).catch(() => 0),
+      mod ? api.modReports().then((d) => d.reports.filter((r) => r.status === 'open').length).catch(() => 0) : 0,
+    ]).then(([dms, reports]) => setCount(dms + reports))
+  }, [user, location.pathname])
+  return count
+}
+
+function ProfileMenu() {
+  const { user, logout } = useApp()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const location = useLocation()
+  useEffect(() => setOpen(false), [location.pathname])
+  useEffect(() => {
+    if (!open) return
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false) }
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+
+  return (
+    <div className="profile-menu" ref={ref}>
+      <button className="me-chip" aria-label="Profile menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <Avatar user={user} size={32} />
+      </button>
+      {open && (
+        <div className="profile-menu-list" role="menu">
+          <div className="profile-menu-head">
+            <strong>{user.name}</strong>
+            <span className="meta-dim">{user.handle}</span>
+          </div>
+          <Link role="menuitem" to="/profile/me"><Icon name="user" size={15} /> My Profile</Link>
+          <Link role="menuitem" to="/home"><Icon name="community" size={15} /> My Communities</Link>
+          <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
+          {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
+          <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Header() {
+  const { user, setAssistantOpen } = useApp()
+  const location = useLocation()
+  const attention = useAttentionCount()
   if (IMMERSIVE.includes(location.pathname)) return null
 
   return (
@@ -35,11 +104,9 @@ function Header() {
       </Link>
 
       <nav className="topnav" aria-label="Primary">
-        <NavLink to="/" end><Icon name="globe" size={16} /> The City</NavLink>
-        {profile.onboarded && <NavLink to="/space"><Icon name="home" size={16} /> My Space</NavLink>}
-        <NavLink to="/jobs"><Icon name="wrench" size={16} /> Jobs</NavLink>
-        {profile.onboarded && <NavLink to="/chats"><Icon name="message-circle" size={16} /> Chats</NavLink>}
-        {user?.moderatorOf?.length > 0 && <NavLink to="/mod"><Icon name="shield" size={16} /> Moderate</NavLink>}
+        {PRIMARY.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.end}><Icon name={n.icon} size={16} /> {n.label}</NavLink>
+        ))}
       </nav>
 
       <div className="topbar-right">
@@ -48,12 +115,14 @@ function Header() {
         </button>
         {user ? (
           <>
-            <Link to="/profile/me" className="me-chip" aria-label="My profile">
-              <Avatar user={user} size={32} />
-            </Link>
-            <button className="icon-btn subtle" title="Sign out" onClick={logout} aria-label="Sign out">
-              <Icon name="log-out" size={15} />
-            </button>
+            <NavLink to="/notifications" className="icon-btn subtle bar-icon" aria-label={attention ? `Notifications, ${attention} new` : 'Notifications'}>
+              <Icon name="bell" size={18} />
+              {attention > 0 && <span className="bar-badge">{attention > 9 ? '9+' : attention}</span>}
+            </NavLink>
+            <NavLink to="/chats" className="icon-btn subtle bar-icon" aria-label="Chat">
+              <Icon name="message-circle" size={18} />
+            </NavLink>
+            <ProfileMenu />
           </>
         ) : (
           <Link to="/auth" className="btn primary small">Join the city</Link>
@@ -64,17 +133,13 @@ function Header() {
 }
 
 function MobileNav() {
-  const { user, profile } = useApp()
   const location = useLocation()
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <nav className="mobile-nav" aria-label="Primary (mobile)">
-      <NavLink to="/" end><Icon name="globe" size={19} /><span>City</span></NavLink>
-      <NavLink to="/jobs"><Icon name="wrench" size={19} /><span>Jobs</span></NavLink>
-      <NavLink to={profile.onboarded ? '/chats' : user ? '/welcome' : '/auth'}><Icon name="message-circle" size={19} /><span>Chats</span></NavLink>
-      {user
-        ? <NavLink to={profile.onboarded ? '/space' : '/welcome'}><Icon name="home" size={19} /><span>Space</span></NavLink>
-        : <NavLink to="/auth"><Icon name="user" size={19} /><span>Sign in</span></NavLink>}
+      {PRIMARY.map((n) => (
+        <NavLink key={n.to} to={n.to} end={n.end}><Icon name={n.icon} size={19} /><span>{n.short}</span></NavLink>
+      ))}
     </nav>
   )
 }
@@ -105,7 +170,11 @@ export default function App() {
               <Route path="/" element={<Arrival />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/welcome" element={<Onboarding />} />
-              <Route path="/space" element={<MySpace />} />
+              <Route path="/home" element={<MySpace />} />
+              <Route path="/space" element={<Navigate to="/home" replace />} />
+              <Route path="/explore" element={<Explore />} />
+              <Route path="/add" element={<AddHub />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />

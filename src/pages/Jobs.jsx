@@ -2,7 +2,7 @@
 // workers set the categories they do and get notified when a match posts.
 // ID verification is a simulated demo badge (no real KYC provider wired up).
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { JOB_CATEGORIES } from '../data/seed.js'
 import * as api from '../api.js'
@@ -51,8 +51,8 @@ function VerifyModal({ onClose, onVerified }) {
   )
 }
 
-function PostJobForm({ onCreated }) {
-  const [open, setOpen] = useState(false)
+function PostJobForm({ onCreated, startOpen = false }) {
+  const [open, setOpen] = useState(startOpen)
   const [form, setForm] = useState({ title: '', category: JOB_CATEGORIES[0].id, area: '', budget: '', description: '', verifiedOnly: false })
   const [busy, setBusy] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
@@ -135,7 +135,7 @@ function SkillsPicker({ profile, onSave }) {
   )
 }
 
-function JobCard({ job, onInterest }) {
+export function JobCard({ job, onInterest }) {
   const { user } = useApp()
   const info = catInfo(job.category)
   return (
@@ -181,6 +181,8 @@ export default function Jobs() {
   const [category, setCategory] = useState('')
   const [showVerify, setShowVerify] = useState(false)
   const [toast, setToast] = useState(null)
+  // Add Hub sends people here with ?post=1 to open the form straight away.
+  const [params] = useSearchParams()
 
   const load = () => {
     api.listJobs(category ? { category } : {}).then(setJobs).catch(() => setJobs([]))
@@ -242,7 +244,7 @@ export default function Jobs() {
       <div className="space-grid" style={{ marginTop: 24 }}>
         <div className="space-main">
           <div className="job-toolbar">
-            {user ? <PostJobForm onCreated={(j) => setJobs((js) => [j, ...js])} /> : <span />}
+            {user ? <PostJobForm startOpen={params.get('post') === '1'} onCreated={(j) => setJobs((js) => [j, ...js])} /> : <span />}
             <select className="job-select" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="">All categories</option>
               {JOB_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}

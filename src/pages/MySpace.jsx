@@ -58,7 +58,7 @@ export default function MySpace() {
           </div>
         </div>
         <div className="space-hero-actions">
-          <Link to="/" className="btn ghost"><Icon name="globe" size={15} /> Step out into the city</Link>
+          <Link to="/" className="btn ghost"><Icon name="globe" size={15} /> Go to My City</Link>
         </div>
       </section>
 

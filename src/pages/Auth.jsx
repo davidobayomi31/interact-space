@@ -21,7 +21,7 @@ export default function Auth() {
       const user = mode === 'register'
         ? await register(form)
         : await login({ email: form.email, password: form.password })
-      navigate(user.onboarded ? '/space' : '/welcome')
+      navigate(user.onboarded ? '/home' : '/welcome')
     } catch (err) {
       setError(err.message)
     }

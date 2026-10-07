@@ -60,7 +60,7 @@ export default function Arrival() {
             <p className="hero-sub">{phone ? SHORT_PITCH : PURPOSE}</p>
             <div className="hero-actions">
               {user && profile.onboarded ? (
-                <Link to="/space" className="btn primary large">Go to My Space <Icon name="arrow" size={17} /></Link>
+                <Link to="/home" className="btn primary large">Go to Home <Icon name="arrow" size={17} /></Link>
               ) : (
                 <Link to={enterTo} className="btn primary large">Enter the city <Icon name="arrow" size={17} /></Link>
               )}

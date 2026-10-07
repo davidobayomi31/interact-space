@@ -84,7 +84,7 @@ export default function Community() {
               <span className="meta-dim"><Icon name="users" size={13} /> {community.memberCount.toLocaleString()} members</span>
               {meta && <RatingSummary rating={meta.rating} />}
               {live && <LiveBadge />}
-              {isMod && <Link to="/mod" className="mod-badge-link"><Icon name="shield" size={12} /> {myRole === 'owner' ? 'You own this' : myRole === 'admin' ? 'You’re an admin here' : 'You moderate this'}</Link>}
+              {isMod && <Link to={`/mod?community=${community.id}`} className="mod-badge-link"><Icon name="shield" size={12} /> {myRole === 'owner' ? 'You own this' : myRole === 'admin' ? 'You’re an admin here' : 'You moderate this'}</Link>}
             </div>
           </div>
           <div className="community-banner-actions">

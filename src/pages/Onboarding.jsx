@@ -123,7 +123,7 @@ export default function Onboarding() {
 
   const finish = () => {
     setAssistantOpen(false)
-    navigate('/space')
+    navigate('/home')
   }
 
   // When we understood nothing, we still show a starting map — but it is

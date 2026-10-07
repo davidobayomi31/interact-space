@@ -45,7 +45,7 @@ export default function NewCommunity() {
   return (
     <div className="page new-community">
       <section className="new-community-head">
-        <Link to="/space" className="meta-dim"><Icon name="back" size={13} /> Back</Link>
+        <Link to="/home" className="meta-dim"><Icon name="back" size={13} /> Back</Link>
         <h1>Start a community</h1>
         <p className="section-sub">Your community, your culture. Every community runs itself — and all of them share one Charter.</p>
       </section>

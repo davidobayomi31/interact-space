@@ -3,7 +3,7 @@
 // what's waiting on you, reports to act on, and what's been happening.
 // Any member can report; moderators review and act.
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { EVENTS } from '../data/seed.js'
@@ -36,7 +36,10 @@ export default function Moderation() {
   const [history, setHistory] = useState([])
   const [reports, setReports] = useState([])
   const [ready, setReady] = useState(false)
-  const [scope, setScope] = useState(ALL)
+  // A community's own page links here with ?community=<id>, so moderation
+  // opens on that community rather than the cross-community view.
+  const [params] = useSearchParams()
+  const [scope, setScope] = useState(params.get('community') || ALL)
 
   const load = () => Promise.all([
     api.modDashboard().then(setDash),

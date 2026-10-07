@@ -50,18 +50,26 @@ database. No key? It transparently falls back to keyword matching — nothing br
 
 ## The demo journey
 
-1. **Arrival** (`/`) — the open city, explorable without an account: trending communities,
+Navigation follows Nuel's blueprint (`VOIDAJ-Blueprint.md`): **Home · Explore · My City ·
+Quick Jobs · Add Hub**, with Notifications, Chat and your Profile menu always in the top bar.
+
+1. **My City** (`/`) — the open city, explorable without an account: trending communities,
    events, and live public discussions (real posts, real vote scores).
 2. **Join** (`/auth`) — create an account, then the **AI onboarding** (`/welcome`) collects
    your goals and interests through conversation and reveals your starting map, each pick
    traced to what you said.
-3. **My Space** (`/space`) — your communities, a bounded catch-up digest, events, connections.
+3. **Home** (`/home`, formerly `/space`) — your communities, a bounded catch-up digest, events, connections.
 4. **Communities** (`/community/:id`) — per-community identity, rules, moderators; start a
    discussion (if you've joined).
 5. **Threads** (`/post/:id`) — a post with vote-ranked, threaded comments. Reply, vote, report.
 6. **Companion** (gold button, any screen) — "Introduce me to people in sustainable
    agriculture", "What discussions should I read about farming?"
-7. **Moderate** (`/mod`) — appears once you're staff in a community. Start a community
+7. **Explore** (`/explore`) — one search across people, communities, events, jobs and posts.
+   **Add Hub** (`/add`) — one place to create a post, event, job, community or voice.
+   **Notifications** (`/notifications`) — unread messages, matched jobs, interest in your jobs,
+   and open reports for communities you moderate.
+8. **Moderate** (`/mod`) — not in the main nav; reached from the community page or the Profile
+   menu once you're staff in a community. Start a community
    (`/communities/new`) to own one. The dashboard shows members, activity, reports and the
    moderation history. Roles: owner > admin > moderator > member; owners appoint admins
    and moderators, admins appoint moderators.
