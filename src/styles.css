@@ -2072,3 +2072,12 @@ a.card:hover, .community-card:hover, .event-card:hover, .post-card:hover, .perso
 .notif-item > .icon:last-child { color: var(--text-dim); flex-shrink: 0; }
 .notif-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); color: var(--text-dim); flex-shrink: 0; }
 .notif-text { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.45; }
+
+/* Managing a community takes the whole width: the dashboard has its own
+   side column, so the community's About/Rules column steps aside. */
+.community-body.managing { grid-template-columns: minmax(0, 1fr); }
+.community-body.managing .community-side { display: none; }
+.community-body.managing .mod-stats { margin-top: 4px; }
+button.mod-badge-link { border: 0; cursor: pointer; font: inherit; font-size: 12.5px; }
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tab { white-space: nowrap; }

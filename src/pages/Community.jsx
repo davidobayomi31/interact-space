@@ -1,6 +1,7 @@
 // Community page — independent identity (accent color, glyph, rules) over
 // a shared layout: discussions (real posts + votes), events, members.
 import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom'
+import { ModerationPanel } from './Moderation.jsx'
 import { useEffect, useState } from 'react'
 import { USERS, EVENTS, CHARTER } from '../data/seed.js'
 import { useCommunities, findCommunity } from '../communities.js'
@@ -14,8 +15,12 @@ import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
 export default function Community() {
   const { id } = useParams()
   const { user, profile, joinCommunity, leaveCommunity } = useApp()
-  const [params] = useSearchParams()
-  const [tab, setTab] = useState(['live', 'events', 'members'].includes(params.get('tab')) ? params.get('tab') : 'discussions')
+  const [params, setParams] = useSearchParams()
+  const tabFromUrl = () => (['live', 'events', 'members', 'manage'].includes(params.get('tab')) ? params.get('tab') : 'discussions')
+  const [tab, setTabState] = useState(tabFromUrl)
+  useEffect(() => setTabState(tabFromUrl()), [params]) // eslint-disable-line
+  // Keep the open tab in the URL so Manage (and the rest) can be linked to.
+  const setTab = (t) => setParams(t === 'discussions' ? {} : { tab: t }, { replace: true })
   const [posts, setPosts] = useState([])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -84,7 +89,7 @@ export default function Community() {
               <span className="meta-dim"><Icon name="users" size={13} /> {community.memberCount.toLocaleString()} members</span>
               {meta && <RatingSummary rating={meta.rating} />}
               {live && <LiveBadge />}
-              {isMod && <Link to={`/mod?community=${community.id}`} className="mod-badge-link"><Icon name="shield" size={12} /> {myRole === 'owner' ? 'You own this' : myRole === 'admin' ? 'You’re an admin here' : 'You moderate this'}</Link>}
+              {isMod && <button className="mod-badge-link" onClick={() => setTab('manage')}><Icon name="shield" size={12} /> {myRole === 'owner' ? 'You own this' : myRole === 'admin' ? 'You’re an admin here' : 'You moderate this'}</button>}
             </div>
           </div>
           <div className="community-banner-actions">
@@ -100,10 +105,10 @@ export default function Community() {
         </div>
       </section>
 
-      <div className="community-body">
+      <div className={`community-body ${tab === 'manage' ? 'managing' : ''}`}>
         <div className="community-main">
           <div className="tabs" role="tablist">
-            {['discussions', 'events', 'live', 'members'].map((t) => (
+            {['discussions', 'events', 'live', 'members', ...(isMod ? ['manage'] : [])].map((t) => (
               <button
                 key={t} role="tab" aria-selected={tab === t}
                 className={`tab ${tab === t ? 'active' : ''}`}
@@ -113,6 +118,7 @@ export default function Community() {
                 {t === 'events' && <><Icon name="calendar" size={15} /> Events ({events.length})</>}
                 {t === 'live' && <><Icon name="radio" size={15} /> Live {live && <span className="live-dot" />}</>}
                 {t === 'members' && <><Icon name="users" size={15} /> Members</>}
+                {t === 'manage' && <><Icon name="shield" size={15} /> Manage</>}
               </button>
             ))}
           </div>
@@ -159,6 +165,10 @@ export default function Community() {
           )}
 
           {tab === 'live' && <LiveTab community={community} isMember={joined} />}
+
+          {tab === 'manage' && (isMod
+            ? <ModerationPanel communityId={community.id} />
+            : <p className="meta-dim empty-note">Only this community’s owner, admins and moderators can manage it.</p>)}
 
           {tab === 'members' && (
             <div className="member-grid">

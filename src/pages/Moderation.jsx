@@ -3,14 +3,12 @@
 // what's waiting on you, reports to act on, and what's been happening.
 // Any member can report; moderators review and act.
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { EVENTS } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
-
-const ALL = 'all'
 
 // Owner > admin > moderator > member. Owners make admins and moderators;
 // admins make moderators (the server enforces the same rule).
@@ -29,31 +27,82 @@ function timeAgo(ts) {
   return d < 30 ? `${d}d ago` : `${Math.floor(d / 30)}mo ago`
 }
 
-export default function Moderation() {
-  const { user, loading } = useApp()
-  const navigate = useNavigate()
+// One load of everything the dashboard shows, across all the communities
+// the signed-in member helps run.
+function useModData() {
+  const { user } = useApp()
   const [dash, setDash] = useState(null)
   const [history, setHistory] = useState([])
   const [reports, setReports] = useState([])
   const [ready, setReady] = useState(false)
-  // A community's own page links here with ?community=<id>, so moderation
-  // opens on that community rather than the cross-community view.
-  const [params] = useSearchParams()
-  const [scope, setScope] = useState(params.get('community') || ALL)
-
   const load = () => Promise.all([
     api.modDashboard().then(setDash),
     api.modHistory().then(setHistory),
     api.modReports().then((d) => setReports(d.reports)),
   ]).catch(() => {}).finally(() => setReady(true))
-  useEffect(() => { if (!loading && !user) navigate('/auth'); else if (user) load() }, [user, loading]) // eslint-disable-line
+  useEffect(() => { if (user) load() }, [user]) // eslint-disable-line
+  return { dash, history, reports, ready, load }
+}
 
+// The cross-community overview, reached from the profile menu. Day-to-day
+// moderation lives on each community's own Manage tab (see ModerationPanel).
+export default function Moderation() {
+  const { user, loading } = useApp()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const data = useModData()
+  useEffect(() => { if (!loading && !user) navigate('/auth') }, [user, loading]) // eslint-disable-line
+
+  // Old links that scoped this page to one community now go to that community.
+  const only = params.get('community')
+  if (only) return <Navigate to={`/community/${only}?tab=manage`} replace />
+
+  const communities = data.dash?.communities ?? []
+  if (data.ready && !communities.length) {
+    return (
+      <div className="page mod-page">
+        <ModHead />
+        <div className="card empty-mod">
+          <Icon name="shield" size={26} />
+          <p><strong>No communities to moderate yet.</strong></p>
+          <p className="meta-dim">Start a community and you’ll own it — or ask a community’s owner or admins to make you a moderator.</p>
+          <div className="card-actions" style={{ justifyContent: 'center' }}>
+            <Link to="/communities/new" className="btn primary small"><Icon name="plus" size={14} /> Start a community</Link>
+            <Link to="/explore?type=communities" className="btn ghost small">Find a community</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="page mod-page">
+      <ModHead />
+      {!data.ready ? <p className="meta-dim" style={{ marginTop: 24 }}>Loading…</p> : <Dashboard data={data} />}
+    </div>
+  )
+}
+
+// The same dashboard, scoped to one community, for its Manage tab.
+export function ModerationPanel({ communityId }) {
+  const data = useModData()
+  if (!data.ready) return <p className="meta-dim" style={{ marginTop: 24 }}>Loading…</p>
+  if (!data.dash?.communities?.some((c) => c.id === communityId)) {
+    return <p className="meta-dim empty-note">You don’t help run this community.</p>
+  }
+  return <Dashboard data={data} only={communityId} />
+}
+
+function Dashboard({ data, only }) {
+  const { user } = useApp()
+  const { dash, history, reports, load } = data
   const act = async (id, action) => { await api.resolveReport(id, action); load() }
 
   const communities = dash?.communities ?? []
-  const inScope = (communityId) => scope === ALL || communityId === scope
+  const inScope = (communityId) => !only || communityId === only
   const shown = communities.filter((c) => inScope(c.id))
   const byId = useMemo(() => Object.fromEntries(communities.map((c) => [c.id, c])), [communities])
+  const several = !only && communities.length > 1
 
   // The seeded demo events live in the frontend catalog, not the database.
   const today = new Date().toISOString().slice(0, 10)
@@ -69,117 +118,86 @@ export default function Moderation() {
   const open = reports.filter((r) => r.status === 'open' && inScope(r.community.id))
   const done = reports.filter((r) => r.status !== 'open' && inScope(r.community.id))
 
-  if (ready && !communities.length) {
-    return (
-      <div className="page mod-page">
-        <ModHead />
-        <div className="card empty-mod">
-          <Icon name="shield" size={26} />
-          <p><strong>No communities to moderate yet.</strong></p>
-          <p className="meta-dim">Start a community and you’ll own it — or ask a community’s owner or admins to make you a moderator.</p>
-          <div className="card-actions" style={{ justifyContent: 'center' }}>
-            <Link to="/communities/new" className="btn primary small"><Icon name="plus" size={14} /> Start a community</Link>
-            <Link to="/" className="btn ghost small">Find a community</Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="page mod-page">
-      <ModHead />
+    <>
+      <section className="mod-stats" aria-label="At a glance">
+        <Stat icon="users" label="Members" value={total.memberCount} sub={`${total.joined} joined on Voidaj`} />
+        <Stat icon="zap" label="Active now" value={total.activeNow} sub={`${total.activeWeek} this week`} live={total.activeNow > 0} />
+        <Stat icon="plus-circle" label="New this week" value={total.newWeek} sub="members joined" />
+        <Stat icon="chat" label="Posts this week" value={total.postsWeek} sub={`${total.posts} in total`} />
+        <Stat icon="flag" label="Open reports" value={total.openReports} sub={`${total.resolvedWeek} resolved this week`} alert={total.openReports > 0} />
+        <Stat icon="calendar" label="Upcoming events" value={total.upcomingEvents} sub="on the calendar" />
+      </section>
 
-      {communities.length > 1 && (
-        <div className="mod-scope" role="tablist" aria-label="Community">
-          <button role="tab" aria-selected={scope === ALL} className={scope === ALL ? 'on' : ''} onClick={() => setScope(ALL)}>All communities</button>
-          {communities.map((c) => (
-            <button key={c.id} role="tab" aria-selected={scope === c.id} className={scope === c.id ? 'on' : ''}
-              style={{ '--accent': c.accent }} onClick={() => setScope(c.id)}>
-              <span className="mod-scope-dot" aria-hidden="true" />{c.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {!ready ? <p className="meta-dim" style={{ marginTop: 24 }}>Loading…</p> : <>
-        <section className="mod-stats" aria-label="At a glance">
-          <Stat icon="users" label="Members" value={total.memberCount} sub={`${total.joined} joined on Voidaj`} />
-          <Stat icon="zap" label="Active now" value={total.activeNow} sub={`${total.activeWeek} this week`} live={total.activeNow > 0} />
-          <Stat icon="plus-circle" label="New this week" value={total.newWeek} sub="members joined" />
-          <Stat icon="chat" label="Posts this week" value={total.postsWeek} sub={`${total.posts} in total`} />
-          <Stat icon="flag" label="Open reports" value={total.openReports} sub={`${total.resolvedWeek} resolved this week`} alert={total.openReports > 0} />
-          <Stat icon="calendar" label="Upcoming events" value={total.upcomingEvents} sub="on the calendar" />
-        </section>
-
-        <div className="mod-grid">
-          <div className="mod-main">
-            <section className="section">
-              <h2 className="section-title"><Icon name="flag" size={16} /> Reports requiring attention {open.length > 0 && <span className="mod-count">{open.length}</span>}</h2>
-              {open.length === 0 ? (
-                <div className="card mod-clear"><Icon name="check" size={18} /> All clear — nothing reported right now.</div>
-              ) : (
-                <div className="mod-list">
-                  {open.map((r) => (
-                    <div key={r.id} className="card mod-report">
-                      <div className="mod-report-main">
-                        <div className="mod-meta">
-                          <span className="scope-badge local" style={{ '--accent': r.community.accent, color: r.community.accent }}>{r.community.name}</span>
-                          <span className="mod-type">{r.targetType}</span>
-                          <span className="meta-dim">reported by {r.reporter?.name || 'a member'}</span>
-                        </div>
-                        <div className="mod-reason"><Icon name="flag" size={13} /> {r.reason}</div>
-                        <div className="mod-preview">
-                          “{r.preview?.slice(0, 180)}{r.preview?.length > 180 ? '…' : ''}”
-                          {r.author && <span className="meta-dim"> — {r.author.name}</span>}
-                        </div>
+      <div className="mod-grid">
+        <div className="mod-main">
+          <section className="section">
+            <h2 className="section-title"><Icon name="flag" size={16} /> Reports requiring attention {open.length > 0 && <span className="mod-count">{open.length}</span>}</h2>
+            {open.length === 0 ? (
+              <div className="card mod-clear"><Icon name="check" size={18} /> All clear — nothing reported right now.</div>
+            ) : (
+              <div className="mod-list">
+                {open.map((r) => (
+                  <div key={r.id} className="card mod-report">
+                    <div className="mod-report-main">
+                      <div className="mod-meta">
+                        {!only && <span className="scope-badge local" style={{ '--accent': r.community.accent, color: r.community.accent }}>{r.community.name}</span>}
+                        <span className="mod-type">{r.targetType}</span>
+                        <span className="meta-dim">reported by {r.reporter?.name || 'a member'}</span>
                       </div>
-                      <div className="mod-actions">
-                        <button className="btn danger small" onClick={() => act(r.id, 'remove')}><Icon name="trash" size={14} /> Remove</button>
-                        <button className="btn ghost small" onClick={() => act(r.id, 'dismiss')}>Dismiss</button>
+                      <div className="mod-reason"><Icon name="flag" size={13} /> {r.reason}</div>
+                      <div className="mod-preview">
+                        “{r.preview?.slice(0, 180)}{r.preview?.length > 180 ? '…' : ''}”
+                        {r.author && <span className="meta-dim"> — {r.author.name}</span>}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="section">
-              <h2 className="section-title"><Icon name="clock" size={16} /> Recent activity</h2>
-              <Activity items={(dash?.activity ?? []).filter((a) => inScope(a.communityId))} byId={byId} showCommunity={scope === ALL && communities.length > 1} />
-            </section>
-
-            <section className="section">
-              <h2 className="section-title"><Icon name="book" size={16} /> Moderation history</h2>
-              <History entries={history.filter((e) => inScope(e.communityId))} byId={byId} showCommunity={scope === ALL && communities.length > 1} />
-            </section>
-
-            {done.length > 0 && (
-              <section className="section">
-                <h2 className="section-title meta-dim"><Icon name="check" size={16} /> Resolved reports ({done.length})</h2>
-                <div className="mod-list">
-                  {done.slice(0, 10).map((r) => (
-                    <div key={r.id} className="card mod-report resolved">
-                      <div className="mod-report-main">
-                        <div className="mod-meta">
-                          <span className="scope-badge local" style={{ '--accent': r.community.accent, color: r.community.accent }}>{r.community.name}</span>
-                          <span className={`mod-status ${r.action}`}>{r.action === 'remove' ? 'Removed' : 'Dismissed'}</span>
-                        </div>
-                        <div className="mod-preview meta-dim">“{r.preview?.slice(0, 120)}…”</div>
-                      </div>
+                    <div className="mod-actions">
+                      <button className="btn danger small" onClick={() => act(r.id, 'remove')}><Icon name="trash" size={14} /> Remove</button>
+                      <button className="btn ghost small" onClick={() => act(r.id, 'dismiss')}>Dismiss</button>
                     </div>
-                  ))}
-                </div>
-              </section>
+                  </div>
+                ))}
+              </div>
             )}
-          </div>
+          </section>
 
-          <aside className="mod-side">
+          <section className="section">
+            <h2 className="section-title"><Icon name="clock" size={16} /> Recent activity</h2>
+            <Activity items={(dash?.activity ?? []).filter((a) => inScope(a.communityId))} byId={byId} showCommunity={several} />
+          </section>
+
+          <section className="section">
+            <h2 className="section-title"><Icon name="book" size={16} /> Moderation history</h2>
+            <History entries={history.filter((e) => inScope(e.communityId))} byId={byId} showCommunity={several} />
+          </section>
+
+          {done.length > 0 && (
+            <section className="section">
+              <h2 className="section-title meta-dim"><Icon name="check" size={16} /> Resolved reports ({done.length})</h2>
+              <div className="mod-list">
+                {done.slice(0, 10).map((r) => (
+                  <div key={r.id} className="card mod-report resolved">
+                    <div className="mod-report-main">
+                      <div className="mod-meta">
+                        {!only && <span className="scope-badge local" style={{ '--accent': r.community.accent, color: r.community.accent }}>{r.community.name}</span>}
+                        <span className={`mod-status ${r.action}`}>{r.action === 'remove' ? 'Removed' : 'Dismissed'}</span>
+                      </div>
+                      <div className="mod-preview meta-dim">“{r.preview?.slice(0, 120)}…”</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        <aside className="mod-side">
+          {!only && (
             <section className="card side-card">
               <div className="side-card-head"><Icon name="community" size={15} /> What you manage</div>
               <div className="mod-communities">
                 {shown.map((c) => (
-                  <Link key={c.id} to={`/community/${c.id}`} className="mod-community" style={{ '--accent': c.accent }}>
+                  <Link key={c.id} to={`/community/${c.id}?tab=manage`} className="mod-community" style={{ '--accent': c.accent }}>
                     <span className="community-glyph" style={{ color: c.accent }}><Icon name={c.icon} size={16} /></span>
                     <span className="mod-community-text">
                       <strong>{c.name}</strong>
@@ -195,30 +213,30 @@ export default function Moderation() {
               </div>
               <Link to="/communities/new" className="link-btn"><Icon name="plus" size={12} /> Start another community</Link>
             </section>
+          )}
 
-            <section className="card side-card">
-              <div className="side-card-head"><Icon name="bell" size={15} /> Pending items</div>
-              <ul className="mod-pending">
-                <li>
-                  <span><Icon name="flag" size={13} /> Reports to review</span>
-                  <strong className={total.openReports ? 'mod-alert-text' : ''}>{total.openReports}</strong>
-                </li>
-                <li className="meta-dim">
-                  <span><Icon name="user" size={13} /> Membership requests</span>
-                  <em>Soon</em>
-                </li>
-              </ul>
-              <p className="meta-dim mod-note">Communities are open to join right now. Approval-only communities, with requests waiting here, are part of the next step.</p>
-            </section>
+          <section className="card side-card">
+            <div className="side-card-head"><Icon name="bell" size={15} /> Pending items</div>
+            <ul className="mod-pending">
+              <li>
+                <span><Icon name="flag" size={13} /> Reports to review</span>
+                <strong className={total.openReports ? 'mod-alert-text' : ''}>{total.openReports}</strong>
+              </li>
+              <li className="meta-dim">
+                <span><Icon name="user" size={13} /> Membership requests</span>
+                <em>Soon</em>
+              </li>
+            </ul>
+            <p className="meta-dim mod-note">Communities are open to join right now. Approval-only communities, with requests waiting here, are part of the next step.</p>
+          </section>
 
-            <Members members={(dash?.members ?? []).filter((m) => inScope(m.communityId))} byId={byId}
-              showCommunity={scope === ALL && communities.length > 1}
-              manage={scope !== ALL || communities.length === 1 ? (byId[scope] ?? communities[0]) : null}
-              meId={user?.id} onChanged={load} />
-          </aside>
-        </div>
-      </>}
-    </div>
+          <Members members={(dash?.members ?? []).filter((m) => inScope(m.communityId))} byId={byId}
+            showCommunity={several}
+            manage={only ? byId[only] : communities.length === 1 ? communities[0] : null}
+            meId={user?.id} onChanged={load} />
+        </aside>
+      </div>
+    </>
   )
 }
 
@@ -226,7 +244,7 @@ function ModHead() {
   return (
     <section className="discover-hero">
       <h1><Icon name="shield" size={22} /> Moderation</h1>
-      <p className="meta-dim">Your communities at a glance — who’s here, what needs you, and what’s been happening.</p>
+      <p className="meta-dim">Every community you help run, at a glance. Open one to manage it from its own Manage tab.</p>
     </section>
   )
 }

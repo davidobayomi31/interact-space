@@ -48,7 +48,7 @@ export default function Notifications() {
         list.push({
           key: `rep-${r.id}`, at: r.createdAt, icon: 'flag',
           text: <>A {r.targetType} was reported in <strong>{r.community?.name ?? 'your community'}</strong>{r.reason ? `: “${r.reason}”` : ''}</>,
-          to: `/mod?community=${r.community?.id}`,
+          to: `/community/${r.community?.id}?tab=manage`,
         })
       }
       list.sort((a, b) => (b.at || 0) - (a.at || 0))

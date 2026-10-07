@@ -68,8 +68,9 @@ Quick Jobs · Add Hub**, with Notifications, Chat and your Profile menu always i
    **Add Hub** (`/add`) — one place to create a post, event, job, community or voice.
    **Notifications** (`/notifications`) — unread messages, matched jobs, interest in your jobs,
    and open reports for communities you moderate.
-8. **Moderate** (`/mod`) — not in the main nav; reached from the community page or the Profile
-   menu once you're staff in a community. Start a community
+8. **Manage** (`/community/:id?tab=manage`) — each community's own moderation dashboard, a
+   tab only its staff see. `/mod` (Profile menu → Moderation) is the overview across every
+   community you help run. Start a community
    (`/communities/new`) to own one. The dashboard shows members, activity, reports and the
    moderation history. Roles: owner > admin > moderator > member; owners appoint admins
    and moderators, admins appoint moderators.
