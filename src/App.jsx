@@ -23,6 +23,7 @@ import NewCommunity from './pages/NewCommunity.jsx'
 import Explore from './pages/Explore.jsx'
 import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
+import Settings from './pages/Settings.jsx'
 import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
@@ -45,9 +46,10 @@ function useAttentionCount() {
   useEffect(() => {
     if (!user) { setCount(0); return }
     const mod = user.moderatorOf?.length > 0
+    const notify = user.settings?.notify ?? {}
     Promise.all([
-      api.listConversations().then((cs) => cs.reduce((n, c) => n + (c.unread || 0), 0)).catch(() => 0),
-      mod ? api.modReports().then((d) => d.reports.filter((r) => r.status === 'open').length).catch(() => 0) : 0,
+      notify.messages !== false ? api.listConversations().then((cs) => cs.reduce((n, c) => n + (c.unread || 0), 0)).catch(() => 0) : 0,
+      mod && notify.community !== false ? api.modReports().then((d) => d.reports.filter((r) => r.status === 'open').length).catch(() => 0) : 0,
     ]).then(([dms, reports]) => setCount(dms + reports))
   }, [user, location.pathname])
   return count
@@ -83,6 +85,7 @@ function ProfileMenu() {
           <Link role="menuitem" to="/home"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
+          <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
           <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
         </div>
       )}
@@ -175,6 +178,8 @@ export default function App() {
               <Route path="/explore" element={<Explore />} />
               <Route path="/add" element={<AddHub />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/:section" element={<Settings />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />

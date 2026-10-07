@@ -22,6 +22,14 @@ export function AppProvider({ children }) {
     api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false))
   }, [])
 
+  // Accessibility preferences from Settings apply to the whole app.
+  const prefs = user?.settings
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('pref-reduce-motion', !!prefs?.reduceMotion)
+    root.classList.toggle('pref-large-text', !!prefs?.largeText)
+  }, [prefs?.reduceMotion, prefs?.largeText])
+
   const register = async (data) => { const u = await api.register(data); setUser(u); return u }
   const login = async (data) => { const u = await api.login(data); setUser(u); return u }
   const logout = async () => { await api.logout(); setUser(null) }

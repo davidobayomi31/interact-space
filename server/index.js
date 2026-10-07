@@ -11,7 +11,7 @@ import q, {
   serializeCommunity, serializePost, threadForPost,
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
   serializeAd, serializeLive, serializeEvent, parseJson,
-  ROLE_RANK, STAFF_SQL, isStaff,
+  ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
 } from './db.js'
 import { seedIfEmpty, seedExtras } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
@@ -88,16 +88,18 @@ app.post('/api/auth/register', async (req, res) => {
   await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, email.toLowerCase(), hashPassword(password), name.trim(), handle, 'New citizen of Interact Space', color, now())
   issueSession(res, id)
+  await recordLogin(req, id)
   res.json({ user: await selfUser(await getUserById(id)) })
 })
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {}
   const row = await getUserByEmail(email || '')
-  if (!row || row.is_seed || !checkPassword(password || '', row.password_hash)) {
+  if (!row || row.is_seed || row.deleted_at || !checkPassword(password || '', row.password_hash)) {
     return err(res, 401, 'Wrong email or password.')
   }
-  issueSession(res, row.id)
+  issueSession(res, row.id, row.token_version)
+  await recordLogin(req, row.id)
   res.json({ user: await selfUser(row) })
 })
 
@@ -106,6 +108,26 @@ app.post('/api/auth/logout', async (req, res) => { clearSession(res); res.json({
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.userId ? await selfUser(req.userRow) : null }))
 
 const PRIVACY_LEVELS = ['exact', 'city-only', 'hidden']
+const MESSAGE_LEVELS = ['everyone', 'connections', 'nobody']
+
+async function recordLogin(req, userId) {
+  const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  await q.run('INSERT INTO login_events (id, user_id, at, user_agent, ip) VALUES (?, ?, ?, ?, ?)',
+    uid('login'), userId, now(), String(req.headers['user-agent'] || '').slice(0, 300), ip.slice(0, 64)).catch(() => {})
+}
+
+// Only known preference keys, with the right types, are ever stored.
+function cleanSettings(input, current) {
+  if (!input || typeof input !== 'object') return null
+  const next = { ...current, notify: { ...current.notify } }
+  if (MESSAGE_LEVELS.includes(input.messages)) next.messages = input.messages
+  for (const k of ['reduceMotion', 'largeText']) if (typeof input[k] === 'boolean') next[k] = input[k]
+  if (typeof input.language === 'string' && /^[a-z]{2}$/.test(input.language)) next.language = input.language
+  for (const k of Object.keys(DEFAULT_SETTINGS.notify)) {
+    if (typeof input.notify?.[k] === 'boolean') next.notify[k] = input.notify[k]
+  }
+  return next
+}
 
 // Portfolio pieces: capped, trimmed, and only http(s) links survive.
 function cleanPortfolio(v) {
@@ -126,6 +148,26 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
   if (b.privacy != null && !PRIVACY_LEVELS.includes(b.privacy)) return err(res, 400, 'Unknown privacy setting.')
   const portfolio = cleanPortfolio(b.portfolio)
   const arr = (v, fallbackJson) => JSON.stringify(Array.isArray(v) ? v : JSON.parse(fallbackJson))
+
+  // Usernames are how people find and mention you, so they must be unique.
+  let handle = cur.handle
+  if (b.handle != null) {
+    const h = String(b.handle).trim().replace(/^@/, '').toLowerCase()
+    if (!/^[a-z0-9_]{3,20}$/.test(h)) return err(res, 400, 'Usernames are 3–20 letters, numbers or underscores.')
+    const taken = await q.get('SELECT id FROM users WHERE LOWER(handle) = ? AND id <> ?', '@' + h, cur.id)
+    if (taken) return err(res, 409, `@${h} is already taken.`)
+    handle = '@' + h
+  }
+  let phone = cur.phone || ''
+  if (b.phone != null) {
+    phone = String(b.phone).trim()
+    if (phone && !/^\+?[0-9 ()-]{7,20}$/.test(phone)) return err(res, 400, 'Enter a valid phone number.')
+  }
+  const settings = cleanSettings(b.settings, readSettings(cur))
+  const city = b.city != null ? (String(b.city).trim().slice(0, 60) || cur.city) : cur.city
+
+  await q.run(`UPDATE users SET handle=?, phone=?, settings=?, city=? WHERE id=?`,
+    handle, phone, JSON.stringify(settings ?? readSettings(cur)), city, cur.id)
   await q.run(`UPDATE users SET portfolio=?, name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, job_skills=?, onboarded=? WHERE id=?`,
       portfolio ? JSON.stringify(portfolio) : (cur.portfolio || '[]'),
       b.name?.trim() || cur.name,
@@ -140,6 +182,112 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
       b.onboarded != null ? (b.onboarded ? 1 : 0) : cur.onboarded,
       cur.id,)
   res.json({ user: await selfUser(await getUserById(cur.id)) })
+})
+
+// ── Settings: account, security, data (VOIDAJ-Blueprint.md §10) ─────
+// Changing how you sign in always asks for the current password.
+app.post('/api/auth/email', requireAuth, async (req, res) => {
+  const { email, password } = req.body || {}
+  if (!checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return err(res, 400, 'Enter a valid email address.')
+  const other = await getUserByEmail(email)
+  if (other && other.id !== req.userId) return err(res, 409, 'Another account already uses that email.')
+  await q.run('UPDATE users SET email = ? WHERE id = ?', email.toLowerCase(), req.userId)
+  res.json({ user: await selfUser(await getUserById(req.userId)) })
+})
+
+app.post('/api/auth/password', requireAuth, async (req, res) => {
+  const { current, next } = req.body || {}
+  if (!checkPassword(current || '', req.userRow.password_hash)) return err(res, 401, 'Your current password isn’t right.')
+  if (!next || next.length < 6) return err(res, 400, 'New password must be at least 6 characters.')
+  // A new password signs out every other session; this one gets a fresh token.
+  const version = (req.userRow.token_version || 0) + 1
+  await q.run('UPDATE users SET password_hash = ?, token_version = ? WHERE id = ?', hashPassword(next), version, req.userId)
+  issueSession(res, req.userId, version)
+  res.json({ ok: true })
+})
+
+app.get('/api/auth/sessions', requireAuth, async (req, res) => {
+  const rows = await q.all('SELECT * FROM login_events WHERE user_id = ? ORDER BY at DESC LIMIT 15', req.userId)
+  res.json({ logins: rows.map((r) => ({ id: r.id, at: Number(r.at), userAgent: r.user_agent, ip: r.ip })) })
+})
+
+app.post('/api/auth/logout-others', requireAuth, async (req, res) => {
+  const version = (req.userRow.token_version || 0) + 1
+  await q.run('UPDATE users SET token_version = ? WHERE id = ?', version, req.userId)
+  issueSession(res, req.userId, version)
+  res.json({ ok: true })
+})
+
+// Everything Voidaj holds about you, as one JSON file.
+app.get('/api/me/export', requireAuth, async (req, res) => {
+  const id = req.userId
+  const [memberships, connections, posts, comments, messages, jobs, applications, voices, events, ratings, logins] = await Promise.all([
+    q.all('SELECT community_id, role, created_at FROM memberships WHERE user_id = ?', id),
+    q.all('SELECT other_id, created_at FROM connections WHERE user_id = ?', id),
+    q.all('SELECT id, community_id, title, body, created_at FROM posts WHERE author_id = ?', id),
+    q.all('SELECT id, post_id, body, created_at FROM comments WHERE author_id = ?', id),
+    q.all('SELECT from_id, to_id, body, created_at FROM dm_messages WHERE from_id = ? OR to_id = ? ORDER BY created_at', id, id),
+    q.all('SELECT * FROM jobs WHERE poster_id = ?', id),
+    q.all('SELECT job_id, status, note, created_at FROM job_interests WHERE user_id = ?', id),
+    q.all('SELECT name, handle, headline, sections, content, created_at FROM voices WHERE user_id = ?', id),
+    q.all('SELECT * FROM events WHERE creator_id = ?', id),
+    q.all('SELECT community_id, stars, review FROM ratings WHERE user_id = ?', id),
+    q.all('SELECT at, user_agent, ip FROM login_events WHERE user_id = ? ORDER BY at DESC', id),
+  ])
+  const { password_hash, token_version, ...account } = req.userRow
+  res.setHeader('Content-Disposition', `attachment; filename="voidaj-data-${new Date().toISOString().slice(0, 10)}.json"`)
+  res.json({ exportedAt: new Date().toISOString(), account, memberships, connections, posts, comments, messages, jobs, applications, voices, events, ratings, logins })
+})
+
+// Deleting an account removes the person: their sign-in, profile, private
+// messages, memberships and votes. What they wrote in public threads stays,
+// credited to "Former member", so other people's conversations still read.
+app.delete('/api/auth/me', requireAuth, async (req, res) => {
+  const { password } = req.body || {}
+  if (!checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
+  const id = req.userId
+  const owned = await q.all("SELECT community_id FROM memberships WHERE user_id = ? AND role = 'owner'", id)
+  await transaction(async (t) => {
+    // A community shouldn't lose its owner: hand it to the most senior,
+    // longest-standing person left.
+    for (const { community_id: cid } of owned) {
+      const heir = await t.get(`SELECT user_id FROM memberships WHERE community_id = ? AND user_id <> ?
+        ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'moderator' THEN 1 ELSE 2 END, created_at LIMIT 1`, cid, id)
+      if (heir) {
+        await t.run("UPDATE memberships SET role = 'owner', role_set_at = ? WHERE community_id = ? AND user_id = ?", now(), cid, heir.user_id)
+        await t.run(`INSERT INTO mod_log (id, community_id, actor_id, action, target_user_id, summary, created_at)
+          VALUES (?, ?, ?, 'owner.left', ?, '', ?)`, uid('log'), cid, id, heir.user_id, now())
+      }
+    }
+    for (const sql of [
+      'DELETE FROM memberships WHERE user_id = ?',
+      'DELETE FROM connections WHERE user_id = ? OR other_id = ?',
+      'DELETE FROM dm_messages WHERE from_id = ? OR to_id = ?',
+      'DELETE FROM chat_members WHERE user_id = ?',
+      'DELETE FROM job_interests WHERE user_id = ?',
+      'DELETE FROM voices WHERE user_id = ?',
+      'DELETE FROM votes WHERE user_id = ?',
+      'DELETE FROM ratings WHERE user_id = ?',
+      'DELETE FROM login_events WHERE user_id = ?',
+    ]) await t.run(sql, ...Array((sql.match(/\?/g) || []).length).fill(id))
+    await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
+    await t.run(`UPDATE users SET email = NULL, password_hash = NULL, name = 'Former member', handle = NULL,
+      title = '', bio = '', area = NULL, phone = '', interests = '[]', goals = '[]', skills = '[]',
+      job_skills = '[]', portfolio = '[]', settings = '{}', id_verified = 0,
+      token_version = COALESCE(token_version, 0) + 1, deleted_at = ? WHERE id = ?`, now(), id)
+  })
+  clearSession(res)
+  res.json({ ok: true })
+})
+
+app.post('/api/support', async (req, res) => {
+  const body = String(req.body?.body || '').trim()
+  if (body.length < 5) return err(res, 400, 'Tell us a little more about what happened.')
+  const kind = ['problem', 'question', 'idea'].includes(req.body?.kind) ? req.body.kind : 'problem'
+  await q.run('INSERT INTO support_requests (id, user_id, kind, body, page, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    uid('sup'), req.userId, kind, body.slice(0, 4000), String(req.body?.page || '').slice(0, 200), now())
+  res.json({ ok: true })
 })
 
 // Simulated ID verification — instant demo "badge", no real KYC provider.
@@ -744,6 +892,19 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
   if (!other) return err(res, 404, 'Person not found.')
   const body = (req.body?.body || '').trim()
   if (!body) return err(res, 400, 'Write something first.')
+  // Respect who the recipient lets message them. A conversation they've
+  // already had with you stays open either way.
+  const allow = readSettings(other).messages
+  if (allow !== 'everyone') {
+    const talked = await q.get('SELECT 1 FROM dm_messages WHERE from_id = ? AND to_id = ? LIMIT 1', other.id, req.userId)
+    const connected = await q.get('SELECT 1 FROM connections WHERE (user_id = ? AND other_id = ?) OR (user_id = ? AND other_id = ?) LIMIT 1',
+      other.id, req.userId, req.userId, other.id)
+    if (!talked && (allow === 'nobody' || !connected)) {
+      return err(res, 403, allow === 'nobody'
+        ? `${other.name} isn’t taking new messages right now.`
+        : `${other.name} only takes messages from their connections.`)
+    }
+  }
   const id = uid('dm')
   await q.run('INSERT INTO dm_messages (id, from_id, to_id, body, created_at) VALUES (?, ?, ?, ?, ?)', id, req.userId, other.id, body, now())
   res.json({ message: serializeDm(await q.get('SELECT * FROM dm_messages WHERE id = ?', id)) })

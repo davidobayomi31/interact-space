@@ -342,6 +342,33 @@ CREATE TABLE IF NOT EXISTS mod_log (
   created_at BIGINT
 );
 CREATE INDEX IF NOT EXISTS idx_mod_log_community ON mod_log(community_id, created_at);
+
+-- Settings (VOIDAJ-Blueprint.md §10). Contact details, one JSON blob of
+-- preferences, and a token version: bumping it signs out every session.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS settings TEXT DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at BIGINT;
+
+-- Every sign-in, so members can see where their account is being used.
+CREATE TABLE IF NOT EXISTS login_events (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  at BIGINT,
+  user_agent TEXT DEFAULT '',
+  ip TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id, at);
+
+-- "Report a problem" from Settings → Help & Support.
+CREATE TABLE IF NOT EXISTS support_requests (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  kind TEXT DEFAULT 'problem',
+  body TEXT NOT NULL,
+  page TEXT DEFAULT '',
+  created_at BIGINT
+);
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -420,6 +447,20 @@ export function publicUser(row) {
   }
 }
 
+// Preferences a member can change in Settings. Stored values are merged
+// over these, so a new preference needs no migration.
+export const DEFAULT_SETTINGS = {
+  messages: 'everyone', // who can message you: 'everyone' | 'connections' | 'nobody'
+  notify: { messages: true, jobs: true, community: true, events: true, push: true },
+  reduceMotion: false,
+  largeText: false,
+  language: 'en',
+}
+export function readSettings(row) {
+  const s = json(row?.settings, {})
+  return { ...DEFAULT_SETTINGS, ...s, notify: { ...DEFAULT_SETTINGS.notify, ...(s.notify || {}) } }
+}
+
 // The full "me" object the frontend keeps as the current user.
 export async function selfUser(row) {
   if (!row) return null
@@ -438,6 +479,10 @@ export async function selfUser(row) {
     roles: Object.fromEntries(communities.map((c) => [c.id, c.role])),
     connections: connections.map((r) => r.other_id),
     jobSkills: json(row.job_skills),
+    // Private to the member themselves — never in publicUser.
+    email: row.email, phone: row.phone || '',
+    settings: readSettings(row),
+    createdAt: row.created_at,
   }
 }
 

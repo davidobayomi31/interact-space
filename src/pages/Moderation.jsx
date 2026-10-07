@@ -375,6 +375,7 @@ const HISTORY = {
   'content.removed': { icon: 'trash', say: (e) => <>removed a {e.targetType}{e.targetUser && <> by {e.targetUser.name}</>}</> },
   'report.dismissed': { icon: 'check', say: (e) => <>dismissed a report on a {e.targetType}{e.targetUser && <> by {e.targetUser.name}</>}</> },
   'rules.updated': { icon: 'edit', say: () => <>updated the moderators’ rules</> },
+  'owner.left': { icon: 'shield', say: (e) => <>left Voidaj, so {e.targetUser ? <Link to={`/profile/${e.targetUser.id}`} className="post-author">{e.targetUser.name}</Link> : 'someone'} became the owner</> },
 }
 
 function History({ entries, byId, showCommunity }) {

@@ -19,6 +19,14 @@ export const register = (body) => req('/auth/register', { method: 'POST', body }
 export const login = (body) => req('/auth/login', { method: 'POST', body }).then((d) => d.user)
 export const logout = () => req('/auth/logout', { method: 'POST' })
 export const patchMe = (body) => req('/auth/me', { method: 'PATCH', body }).then((d) => d.user)
+// Settings
+export const changeEmail = (email, password) => req('/auth/email', { method: 'POST', body: { email, password } }).then((d) => d.user)
+export const changePassword = (current, next) => req('/auth/password', { method: 'POST', body: { current, next } })
+export const listLogins = () => req('/auth/sessions').then((d) => d.logins)
+export const logoutOthers = () => req('/auth/logout-others', { method: 'POST' })
+export const deleteAccount = (password) => req('/auth/me', { method: 'DELETE', body: { password } })
+export const sendSupport = (body) => req('/support', { method: 'POST', body })
+export const exportUrl = '/api/me/export'
 export const verifyId = (idNumber) => req('/auth/verify-id', { method: 'POST', body: { idNumber } }).then((d) => d.user)
 
 // Communities & people

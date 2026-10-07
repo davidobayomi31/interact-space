@@ -68,7 +68,11 @@ Quick Jobs · Add Hub**, with Notifications, Chat and your Profile menu always i
    **Add Hub** (`/add`) — one place to create a post, event, job, community or voice.
    **Notifications** (`/notifications`) — unread messages, matched jobs, interest in your jobs,
    and open reports for communities you moderate.
-8. **Manage** (`/community/:id?tab=manage`) — each community's own moderation dashboard, a
+8. **Settings** (`/settings`, Profile menu → Settings) — account (name, username, phone, email,
+   password), privacy (location, who can message you), security (recent sign-ins, sign out
+   other devices), notifications, preferences (language, location, accessibility, interests),
+   help & support (report a problem), and data (download everything, delete your account).
+9. **Manage** (`/community/:id?tab=manage`) — each community's own moderation dashboard, a
    tab only its staff see. `/mod` (Profile menu → Moderation) is the overview across every
    community you help run. Start a community
    (`/communities/new`) to own one. The dashboard shows members, activity, reports and the

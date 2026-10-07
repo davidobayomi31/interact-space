@@ -201,7 +201,8 @@ export default function Jobs() {
     const fresh = matched.filter((j) => j.createdAt > lastSeen)
     if (fresh.length) {
       setToast(`${fresh.length} new job${fresh.length > 1 ? 's' : ''} match what you do — including “${fresh[0].title}”`)
-      if ('Notification' in window && Notification.permission === 'granted') {
+      const notify = user.settings?.notify ?? {}
+      if (notify.push && notify.jobs !== false && 'Notification' in window && Notification.permission === 'granted') {
         new Notification('New quick job near you', { body: fresh[0].title })
       }
     }

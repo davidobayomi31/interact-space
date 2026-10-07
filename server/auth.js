@@ -14,8 +14,10 @@ const IS_PRODUCTION = !!process.env.VERCEL || process.env.NODE_ENV === 'producti
 export const hashPassword = (pw) => bcrypt.hashSync(pw, 10)
 export const checkPassword = (pw, hash) => bcrypt.compareSync(pw, hash)
 
-export function issueSession(res, userId) {
-  const token = jwt.sign({ uid: userId }, SECRET, { expiresIn: '30d' })
+// `version` is the user's token_version: raising it in the database signs
+// out every session issued before (Settings → Security → sign out others).
+export function issueSession(res, userId, version = 0) {
+  const token = jwt.sign({ uid: userId, v: version || 0 }, SECRET, { expiresIn: '30d' })
   res.cookie(COOKIE, token, {
     httpOnly: true, sameSite: 'lax', maxAge: MAX_AGE, path: '/',
     // Over HTTPS the session cookie should never be sent in the clear.
@@ -36,9 +38,9 @@ export async function attachUser(req, _res, next) {
   const token = req.cookies?.[COOKIE]
   if (token) {
     try {
-      const { uid } = jwt.verify(token, SECRET)
+      const { uid, v = 0 } = jwt.verify(token, SECRET)
       const row = await getUserById(uid)
-      if (row) { req.userRow = row; req.userId = uid }
+      if (row && !row.deleted_at && (row.token_version || 0) === v) { req.userRow = row; req.userId = uid }
     } catch { /* invalid/expired token → treated as logged out */ }
   }
   next()

@@ -16,11 +16,14 @@ export default function Notifications() {
   useEffect(() => {
     if (!user) return
     const mod = user.moderatorOf?.length > 0
+    // Settings → Notifications decides which of these sources count.
+    const notify = user.settings?.notify ?? {}
+    const want = (k) => notify[k] !== false
     Promise.all([
-      api.listConversations().catch(() => []),
-      profile.jobSkills?.length ? api.listJobs({ matchMine: 1 }).catch(() => []) : [],
-      api.myJobs().catch(() => ({})),
-      mod ? api.modReports().then((d) => d.reports).catch(() => []) : [],
+      want('messages') ? api.listConversations().catch(() => []) : [],
+      want('jobs') && profile.jobSkills?.length ? api.listJobs({ matchMine: 1 }).catch(() => []) : [],
+      want('jobs') ? api.myJobs().catch(() => ({})) : {},
+      mod && want('community') ? api.modReports().then((d) => d.reports).catch(() => []) : [],
     ]).then(([convos, matched, mine, reports]) => {
       const list = []
       for (const c of convos.filter((c) => c.unread > 0)) {
@@ -74,6 +77,7 @@ export default function Notifications() {
           <p><strong>You’re all caught up.</strong><br />
             New messages, jobs that match your skills, and people interested in jobs you post will show up here.
             {!profile.jobSkills?.length && <> <Link to="/jobs">Tell Quick Jobs what you can do</Link> to get matched work.</>}
+            {' '}<Link to="/settings/notifications">Choose what you’re notified about</Link>.
           </p>
         </div>
       ) : (
