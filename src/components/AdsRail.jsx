@@ -195,13 +195,13 @@ export function AdsRail() {
           </div>
         )}
         {ads.map((ad, i) => (
-          <div key={ad.id} className={`card ad-card ${i === active ? 'enlarged' : 'minimized'}`} style={{ '--accent': ad.accent }}>
+          // Every ad shows in full so the rail is filled, not half empty; the
+          // rotating one is lifted slightly to draw the eye.
+          <div key={ad.id} className={`card ad-card ${i === active ? 'enlarged' : ''}`} style={{ '--accent': ad.accent }}>
             <AdMark ad={ad} />
             <strong>{ad.businessName}</strong>
-            {i === active && <>
-              <span className="meta-dim">{ad.tagline}</span>
-              <span className="btn primary small ad-cta">{ad.ctaLabel}</span>
-            </>}
+            <span className="meta-dim">{ad.tagline}</span>
+            <span className="btn primary small ad-cta">{ad.ctaLabel}</span>
           </div>
         ))}
       </div>
