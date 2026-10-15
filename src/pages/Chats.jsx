@@ -9,6 +9,7 @@ import { useApp } from '../state.jsx'
 import { USERS } from '../data/seed.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
+import { MediaButtons, MediaTray, MediaView } from '../components/Media.jsx'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR
@@ -80,7 +81,8 @@ function Thread({ messages, meId, other, isGroup, intro }) {
             {!mine && <span className="dm-row-face">{last && <Face user={author} size={28} />}</span>}
             <div className="dm-bubble-col">
               {isGroup && !mine && first && <span className="dm-sender">{author?.name}</span>}
-              <div className="dm-bubble" title={stamp(m.createdAt)}>{m.body}</div>
+              {m.media?.length > 0 && <div className="dm-media" title={stamp(m.createdAt)}><MediaView media={m.media} /></div>}
+              {m.body && <div className="dm-bubble" title={stamp(m.createdAt)}>{m.body}</div>}
             </div>
           </div>
         )
@@ -92,23 +94,29 @@ function Thread({ messages, meId, other, isGroup, intro }) {
 
 function Composer({ onSend, placeholder = 'Message…' }) {
   const [text, setText] = useState('')
+  const [media, setMedia] = useState([])
+  const [sending, setSending] = useState(false)
   const inputRef = useRef(null)
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     const body = text.trim()
-    if (!body) return
-    onSend(body)
-    setText('')
+    if ((!body && !media.length) || sending) return
+    setSending(true)
+    try {
+      await onSend(body, media)
+      setText(''); setMedia([])
+    } catch (err) { alert(err.message) }
+    setSending(false)
     inputRef.current?.focus()
   }
   return (
     <form className="dm-composer" onSubmit={submit}>
+      <MediaTray media={media} setMedia={setMedia} />
       <div className="dm-composer-pill">
         <Icon name="smile" size={22} />
         <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label="Message" />
-        {text.trim()
-          ? <button type="submit" className="dm-send">Send</button>
-          : <span className="dm-composer-icons" aria-hidden="true"><Icon name="image" size={21} /></span>}
+        {(text.trim() || media.length > 0) && <button type="submit" className="dm-send" disabled={sending}>{sending ? 'Sending…' : 'Send'}</button>}
+        <MediaButtons media={media} setMedia={setMedia} className="dm-composer-icons" />
       </div>
     </form>
   )
@@ -208,12 +216,12 @@ export default function Chats() {
   }
   const closeThread = () => { setActiveDm(null); setActiveGroup(null); setDmUser(null); setParams(tab === 'groups' ? { tab: 'groups' } : {}, { replace: true }) }
 
-  const sendDm = async (body) => {
-    const msg = await api.sendMessage(activeDm, body)
+  const sendDm = async (body, media) => {
+    const msg = await api.sendMessage(activeDm, body, media)
     setMessages((m) => [...m, msg]); loadConversations()
   }
-  const sendGroup = async (body) => {
-    const msg = await api.sendChatMessage(activeGroup, body)
+  const sendGroup = async (body, media) => {
+    const msg = await api.sendChatMessage(activeGroup, body, media)
     setMessages((m) => [...m, msg]); loadChats()
   }
   const createGroup = async (e) => {

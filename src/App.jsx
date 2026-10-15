@@ -6,9 +6,8 @@ import { VoidajMark } from './components/VoidajMark.jsx'
 import { Avatar } from './components/bits.jsx'
 import Assistant from './components/Assistant.jsx'
 import { AdsRail } from './components/AdsRail.jsx'
-import Arrival from './pages/Arrival.jsx'
+import Home from './pages/Home.jsx'
 import Onboarding from './pages/Onboarding.jsx'
-import MySpace from './pages/MySpace.jsx'
 import Community from './pages/Community.jsx'
 import Profile from './pages/Profile.jsx'
 import Thread from './pages/Thread.jsx'
@@ -28,12 +27,12 @@ import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
-// The five places a member moves between (see VOIDAJ-Blueprint.md §13).
-// Notifications, Chat and Profile sit to the right, reachable from anywhere.
+// The places a member moves between (see VOIDAJ-Blueprint.md §13). My City
+// now lives inside Home. Notifications, Chat and Profile sit to the right,
+// reachable from anywhere.
 const PRIMARY = [
   { to: '/home', icon: 'home', label: 'Home', short: 'Home' },
   { to: '/explore', icon: 'search', label: 'Explore', short: 'Explore' },
-  { to: '/', icon: 'map-pin', label: 'My City', short: 'City', end: true },
   { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', short: 'Jobs' },
   { to: '/add', icon: 'plus-circle', label: 'Add Hub', short: 'Add' },
 ]
@@ -101,7 +100,7 @@ function Header() {
 
   return (
     <header className="topbar">
-      <Link to="/" className="brand">
+      <Link to="/home" className="brand">
         <span className="brand-mark"><VoidajMark size={22} /></span>
         <span className="brand-name">Voidaj <em>Interact Space</em></span>
       </Link>
@@ -170,10 +169,11 @@ export default function App() {
           <Header />
           <main className="main">
             <Routes>
-              <Route path="/" element={<Arrival />} />
+              {/* My City merged into Home; the old address lands there. */}
+              <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/welcome" element={<Onboarding />} />
-              <Route path="/home" element={<MySpace />} />
+              <Route path="/home" element={<Home />} />
               <Route path="/space" element={<Navigate to="/home" replace />} />
               <Route path="/explore" element={<Explore />} />
               <Route path="/add" element={<AddHub />} />
@@ -191,8 +191,8 @@ export default function App() {
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/chats" element={<Chats />} />
               <Route path="/vision" element={<ProfileVision />} />
-              {/* Unknown or retired paths (e.g. the old /discover) land in the city. */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* Unknown or retired paths (e.g. the old /discover) land on Home. */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </main>
           <Footer />

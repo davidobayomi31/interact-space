@@ -1,9 +1,10 @@
-// Ads rail — its own bar down the right side of the screen, top to bottom,
-// with "Advertise here" at its foot. The page makes room for it rather
-// than sliding under it.
-// One ad is enlarged at a time for 5s, then minimizes as the next ad
-// takes its turn, looping continuously. Businesses pay to post; payment
-// is simulated (no real processor wired up in this prototype).
+// Community partners (formerly "ads") — local businesses that back the
+// city. The rail is its own bar down the right side of the screen, top to
+// bottom, with "Become a partner" at its foot. The page makes room for it
+// rather than sliding under it.
+// One partner is enlarged at a time for 5s, then minimizes as the next
+// takes its turn, looping continuously. Businesses pay to be listed;
+// payment is simulated (no real processor wired up in this prototype).
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
@@ -12,7 +13,7 @@ import { Icon } from './Icons.jsx'
 
 const ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E']
 
-// Advertisers give us a name, not a logo file, so the rail draws a
+// Partners give us a name, not a logo file, so the rail draws a
 // monogram from the name in their own accent colour.
 export function AdMark({ ad }) {
   const initials = ad.businessName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
@@ -56,7 +57,7 @@ function AdvertiseForm({ onClose, onCreated }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="card modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="side-card-head"><Icon name="tag" size={16} /> Advertise your business</div>
+        <div className="side-card-head"><Icon name="tag" size={16} /> Become a Community partner</div>
         {step === 'form' ? (
           <form className="composer-full" onSubmit={submit}>
             <input className="composer-title" value={form.businessName} onChange={set('businessName')} placeholder="Business name" autoFocus />
@@ -86,7 +87,7 @@ function AdvertiseForm({ onClose, onCreated }) {
             <p className="meta-dim"><em>Demo checkout — no real payment is processed.</em></p>
             <div className="composer-foot">
               <button type="button" className="btn ghost small" onClick={onClose}>Cancel</button>
-              <button className="btn primary small" onClick={pay} disabled={busy}>{busy ? 'Processing…' : 'Pay ₦8,000 & post'}</button>
+              <button className="btn primary small" onClick={pay} disabled={busy}>{busy ? 'Processing…' : 'Pay ₦8,000 & go live'}</button>
             </div>
           </div>
         )}
@@ -95,11 +96,9 @@ function AdvertiseForm({ onClose, onCreated }) {
   )
 }
 
-// Ads shouldn't be the first thing a visitor meets. On the landing page the
-// rail stays hidden until the visitor has actually scrolled AND Trending in
+// Partners shouldn't be the first thing a visitor meets. On Home the rail
+// stays hidden until the visitor has actually scrolled AND Trending in
 // Lagos has risen into the upper part of the screen — then it fades in.
-// "Visible at all" wasn't enough: once the hero got shorter, the section
-// peeked in on load and the rail appeared with the hero still on screen.
 // Scrolling back up hides it again. Pages with no anchor show it at once.
 const AD_ANCHOR = '#trending-lagos'
 const REVEAL_LINE = 0.7   // anchor's top must pass 70% of the viewport height
@@ -143,17 +142,7 @@ function useAnchorReached() {
 export function AdsRail() {
   const { user } = useApp()
   const { pathname } = useLocation()
-  const anchorReached = useAnchorReached()
-  // On the landing page the hero hands off from the companion to the globe
-  // as you scroll; the rail arrives as that hand-off finishes.
-  const [heroDone, setHeroDone] = useState(false)
-  useEffect(() => {
-    const on = (e) => setHeroDone(e.detail >= 0.85)
-    window.addEventListener('voida:hero-progress', on)
-    return () => window.removeEventListener('voida:hero-progress', on)
-  }, [])
-  useEffect(() => { setHeroDone(false) }, [pathname])
-  const adsVisible = anchorReached || heroDone
+  const adsVisible = useAnchorReached()
   const [ads, setAds] = useState([])
   const [active, setActive] = useState(0)
   const [showForm, setShowForm] = useState(false)
@@ -170,7 +159,7 @@ export function AdsRail() {
   }, [ads.length])
 
   const navigate = useNavigate()
-  // No ads over private conversations.
+  // No partners over private conversations.
   const hidden = pathname.startsWith('/chats')
 
   // The bar is part of the layout, so the page needs to know to make room.
@@ -182,21 +171,21 @@ export function AdsRail() {
 
   if (hidden) return null
 
-  // The bar itself is always there; on the landing page the ads inside it
-  // wait until the visitor is past the hero.
+  // The bar itself is always there; on Home the partners inside it wait
+  // until the visitor reaches the city.
   return (
-    <aside className="ads-rail" aria-label="Sponsored">
-      <div className="ads-rail-label"><Icon name="tag" size={12} /> Sponsored</div>
+    <aside className="ads-rail" aria-label="Community partners">
+      <div className="ads-rail-label"><Icon name="tag" size={12} /> Community partners</div>
       <div className={`ads-stack ${adsVisible ? 'shown' : ''}`}>
         {ads.length === 0 && (
           <div className="card ad-card empty">
             <Icon name="tag" size={18} />
-            <span className="meta-dim">Your business could be here.</span>
+            <span className="meta-dim">Your business could be a Community partner.</span>
           </div>
         )}
         {ads.map((ad, i) => (
-          // Every ad shows in full so the rail is filled, not half empty; the
-          // rotating one is lifted slightly to draw the eye.
+          // Every partner shows in full so the rail is filled, not half
+          // empty; the rotating one is lifted slightly to draw the eye.
           <div key={ad.id} className={`card ad-card ${i === active ? 'enlarged' : ''}`} style={{ '--accent': ad.accent }}>
             <AdMark ad={ad} />
             <strong>{ad.businessName}</strong>
@@ -208,7 +197,7 @@ export function AdsRail() {
       <div className="ads-rail-foot">
         <span className="meta-dim">Your business here</span>
         <button className="btn brand-outline small ads-rail-cta" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>
-          <Icon name="plus" size={13} /> Advertise here
+          <Icon name="plus" size={13} /> Become a partner
         </button>
       </div>
       {showForm && <AdvertiseForm onClose={() => setShowForm(false)} onCreated={(ad) => setAds((a) => [ad, ...a])} />}
@@ -216,37 +205,50 @@ export function AdsRail() {
   )
 }
 
-// Phones have no room for the rail, so the landing page shows a single
-// sponsored card under the globe instead, cycling through the same ads.
-// It is placed inside the hero's caption, which only appears once the
-// companion has handed the globe over.
-export function PhoneHeroAd() {
+// Community partners inside the page itself — in My City on Home, where
+// "Find your people" used to be. Phones have no room for the rail, so this
+// is how they see partners too. The highlighted one rotates like the rail.
+export function CommunityPartners({ max = 4 }) {
+  const { user } = useApp()
+  const navigate = useNavigate()
   const [ads, setAds] = useState(FALLBACK_ADS)
   const [i, setI] = useState(0)
+  const [showForm, setShowForm] = useState(false)
   useEffect(() => {
     api.listAds().then((a) => { if (a.length) setAds(a) }).catch(() => {})
   }, [])
+  const shown = ads.slice(0, max)
   useEffect(() => {
-    if (ads.length < 2) return
-    const t = setInterval(() => setI((n) => (n + 1) % ads.length), 5000)
+    if (shown.length < 2) return
+    const t = setInterval(() => setI((n) => (n + 1) % shown.length), 5000)
     return () => clearInterval(t)
-  }, [ads.length])
-  const ad = ads[i % ads.length]
+  }, [shown.length])
   return (
-    <div className="phone-ad" key={ad.id} style={{ '--accent': ad.accent }} aria-label="Sponsored">
-      <AdMark ad={ad} />
-      <div className="phone-ad-text">
-        <small>Sponsored</small>
-        <strong>{ad.businessName}</strong>
-        <span>{ad.tagline}</span>
+    <div className="partners-panel" aria-label="Community partners">
+      <div className="hx-label"><Icon name="tag" size={12} /> Community partners <em>Local businesses</em></div>
+      <div className="partners-list">
+        {shown.map((ad, n) => (
+          <div key={ad.id} className={`phone-ad ${n === i % shown.length ? 'on' : ''}`} style={{ '--accent': ad.accent }}>
+            <AdMark ad={ad} />
+            <div className="phone-ad-text">
+              <strong>{ad.businessName}</strong>
+              <span>{ad.tagline}</span>
+            </div>
+          </div>
+        ))}
       </div>
+      <button type="button" className="btn brand-outline small" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>
+        <Icon name="plus" size={13} /> Become a partner
+      </button>
+      {showForm && <AdvertiseForm onClose={() => setShowForm(false)} onCreated={(ad) => setAds((a) => [ad, ...a])} />}
     </div>
   )
 }
 
-// Ads in search. When someone searches, one sponsored result sits under the
-// real matches: an ad whose name or tagline matches the search if there is
-// one, otherwise one of the paying ads in turn. It is always labelled.
+// Partners in search. When someone searches, one partner result sits under
+// the real matches: a partner whose name or tagline matches the search if
+// there is one, otherwise one of the paying partners in turn. It is always
+// labelled.
 let adsCache = null
 export function useAds() {
   const [ads, setAds] = useState(adsCache || FALLBACK_ADS)
@@ -274,7 +276,7 @@ export function SearchAd({ ad }) {
         <strong>{ad.businessName}</strong>
         <span>{ad.tagline}</span>
       </div>
-      <span className="search-ad-tag">Sponsored</span>
+      <span className="search-ad-tag">Community partner</span>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import * as api from '../api.js'
 import { Vote } from './Vote.jsx'
 import { ReportButton } from './ReportButton.jsx'
 import { RatingSummary } from './Rating.jsx'
+import { MediaView } from './Media.jsx'
 
 // Local, dependency-free copy of the live badge markup — Live.jsx imports
 // Avatar from this file, so importing LiveBadge back from Live.jsx here
@@ -177,6 +178,7 @@ export function PostCard({ post, community, because }) {
           </div>
           <Link to={`/post/${post.id}`} className="post-title stretched">{post.title}</Link>
           {post.body && <p className="card-desc">{post.body}</p>}
+          <MediaView media={post.media} compact />
           <Trace because={because} />
           <div className="post-stats">
             <Link to={`/post/${post.id}`} className="post-stat">

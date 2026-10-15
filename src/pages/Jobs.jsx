@@ -135,17 +135,18 @@ function SkillsPicker({ profile, onSave }) {
   )
 }
 
-export function JobCard({ job, onInterest }) {
-  const { user } = useApp()
+// The whole card opens the job; offering to do it happens inside.
+export function JobCard({ job }) {
   const info = catInfo(job.category)
   return (
-    <div className="card job-card">
+    <div className="card job-card card-link">
       <div className="job-card-head">
         <div className="community-glyph" style={{ color: 'var(--gold)' }}><Icon name={info.icon} size={20} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="card-title">{job.title}</div>
+          <Link to={`/jobs?job=${job.id}`} className="card-title stretched">{job.title}</Link>
           <div className="meta-row">
             <span className="pill">{info.label}</span>
+            {job.verified && <span className="verified-tag"><Icon name="badge-check" size={12} /> Verified job</span>}
             {job.area && <span className="meta-dim"><Icon name="map-pin" size={12} /> {job.area}</span>}
             {job.budget && <span className="meta-dim"><Icon name="tag" size={12} /> {job.budget}</span>}
             {job.verifiedOnly && <span className="scope-badge local"><Icon name="badge-check" size={11} /> Verified pros only</span>}
@@ -163,12 +164,100 @@ export function JobCard({ job, onInterest }) {
       </div>
       <div className="card-actions">
         <span className="meta-dim"><Icon name="users" size={13} /> {job.interested} interested</span>
-        <button
-          className={job.iInterested ? 'btn ghost small' : 'btn primary small'}
-          onClick={() => (user ? onInterest(job.id) : (window.location.href = '/auth'))}
-        >
-          {job.iInterested ? <><Icon name="check" size={14} /> Interested</> : 'I can do this'}
+        {job.iInterested && <span className="meta-dim"><Icon name="check" size={13} /> You offered to do this</span>}
+      </div>
+    </div>
+  )
+}
+
+// A job, opened. This is where someone offers to do it.
+function JobSheet({ job, onInterest, onClose }) {
+  const { user } = useApp()
+  const info = catInfo(job.category)
+  useEffect(() => {
+    const esc = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [onClose])
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="card modal-card job-sheet" role="dialog" aria-label={job.title} onClick={(e) => e.stopPropagation()}>
+        <div className="job-card-head">
+          <div className="community-glyph" style={{ color: 'var(--gold)' }}><Icon name={info.icon} size={22} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 className="card-title">{job.title}</h2>
+            <div className="meta-row">
+              <span className="pill">{info.label}</span>
+              {job.verified && <span className="verified-tag"><Icon name="badge-check" size={12} /> Verified job</span>}
+              {job.verifiedOnly && <span className="scope-badge local"><Icon name="badge-check" size={11} /> Verified pros only</span>}
+            </div>
+          </div>
+          <button className="icon-btn subtle" onClick={onClose} aria-label="Close"><Icon name="x" size={16} /></button>
+        </div>
+        <ul className="job-facts">
+          {job.area && <li><Icon name="map-pin" size={14} /> {job.area}{job.city ? `, ${job.city}` : ''}</li>}
+          {job.budget && <li><Icon name="tag" size={14} /> {job.budget}</li>}
+          <li><Icon name="users" size={14} /> {job.interested} interested</li>
+          <li><Icon name="clock" size={14} /> Posted {job.ago} ago</li>
+        </ul>
+        {job.description && <p className="card-desc">{job.description}</p>}
+        <div className="post-head">
+          <Avatar user={job.poster} size={30} />
+          <div className="meta-dim">
+            Posted by <Link to={`/profile/${job.poster.id}`} className="post-author">{job.poster.name}</Link>
+            {job.poster.idVerified && <span className="verified-tag"><Icon name="badge-check" size={12} /> Verified</span>}
+          </div>
+        </div>
+        <div className="composer-foot">
+          {user && job.poster.id !== user.id
+            ? <Link to={`/chats?dm=${job.poster.id}`} className="btn ghost small"><Icon name="message-circle" size={14} /> Message</Link>
+            : <span />}
+          <button
+            className={job.iInterested ? 'btn ghost small' : 'btn primary small'}
+            onClick={() => (user ? onInterest(job.id) : (window.location.href = '/auth'))}
+          >
+            {job.iInterested ? <><Icon name="check" size={14} /> You offered — undo</> : 'I can do this'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Instead of a long list, a tile that shuffles through a few categories at
+// a time. Tap one to filter; the shuffle button deals a new handful.
+const TILE_SIZE = 4
+const deal = (exclude = []) => {
+  const pool = JOB_CATEGORIES.filter((c) => !exclude.includes(c.id))
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, TILE_SIZE)
+}
+
+function CategoryTile({ category, onPick }) {
+  const [hand, setHand] = useState(() => deal())
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    if (paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const t = setInterval(() => setHand((h) => deal(h.map((c) => c.id))), 4500)
+    return () => clearInterval(t)
+  }, [paused])
+  // The picked category stays in view even when it's shuffled out.
+  const shown = category && !hand.some((c) => c.id === category)
+    ? [{ ...catInfo(category), id: category }, ...hand.slice(0, TILE_SIZE - 1)]
+    : hand
+  return (
+    <div className="card category-tile" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)}>
+      <div className="category-tile-head">
+        <span className="hx-label"><Icon name="layers" size={12} /> Browse categories</span>
+        <button type="button" className="icon-btn subtle" onClick={() => setHand((h) => deal(h.map((c) => c.id)))} aria-label="Shuffle categories">
+          <Icon name="shuffle" size={15} />
         </button>
+      </div>
+      <div className="category-tile-grid" key={shown.map((c) => c.id).join()}>
+        {shown.map((c) => (
+          <button key={c.id} type="button" className={`category-chip ${category === c.id ? 'on' : ''}`} onClick={() => onPick(category === c.id ? '' : c.id)}>
+            <Icon name={c.icon} size={16} /> {c.label}
+          </button>
+        ))}
       </div>
     </div>
   )
@@ -179,10 +268,21 @@ export default function Jobs() {
   const [jobs, setJobs] = useState([])
   const [matched, setMatched] = useState([])
   const [category, setCategory] = useState('')
+  const [verifiedView, setVerifiedView] = useState(false)
+  const [allMatches, setAllMatches] = useState(false)
   const [showVerify, setShowVerify] = useState(false)
   const [toast, setToast] = useState(null)
-  // Add Hub sends people here with ?post=1 to open the form straight away.
-  const [params] = useSearchParams()
+  const [stray, setStray] = useState(null)
+  // Add Hub sends people here with ?post=1 to open the form straight away;
+  // ?job=<id> opens that job.
+  const [params, setParams] = useSearchParams()
+  const openId = params.get('job')
+  const openJob = [...matched, ...jobs].find((j) => j.id === openId) || (stray?.id === openId ? stray : null)
+  const closeJob = () => setParams((p) => { p.delete('job'); return p }, { replace: true })
+  // A job linked from elsewhere may sit outside the current filter.
+  useEffect(() => {
+    if (openId && !openJob) api.listJobs().then((all) => setStray(all.find((j) => j.id === openId) || null)).catch(() => {})
+  }, [openId]) // eslint-disable-line
 
   const load = () => {
     api.listJobs(category ? { category } : {}).then(setJobs).catch(() => setJobs([]))
@@ -214,11 +314,18 @@ export default function Jobs() {
       const job = await api.toggleJobInterest(id)
       setJobs((js) => js.map((j) => (j.id === id ? job : j)))
       setMatched((js) => js.map((j) => (j.id === id ? job : j)))
+      setStray((s) => (s?.id === id ? job : s))
     } catch (err) { alert(err.message) }
   }
 
   const matchedIds = new Set(matched.map((j) => j.id))
-  const rest = jobs.filter((j) => !matchedIds.has(j.id))
+  // Verified jobs lead each category; the toggle shows only them.
+  const rest = jobs.filter((j) => !matchedIds.has(j.id) && (!verifiedView || j.verified))
+    .sort((a, b) => (category ? Number(b.verified) - Number(a.verified) : 0))
+  const MATCH_PREVIEW = 2
+  const matchShown = allMatches ? matched : matched.slice(0, MATCH_PREVIEW)
+  const listTitle = `${verifiedView ? 'Verified ' : ''}${category ? catInfo(category).label : verifiedView ? 'jobs' : 'All open jobs'}`
+  const verifiedCount = jobs.filter((j) => j.verified).length
 
   return (
     <div className="page jobs-page">
@@ -246,26 +353,35 @@ export default function Jobs() {
         <div className="space-main">
           <div className="job-toolbar">
             {user ? <PostJobForm startOpen={params.get('post') === '1'} onCreated={(j) => setJobs((js) => [j, ...js])} /> : <span />}
-            <select className="job-select" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
-              {JOB_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
           </div>
 
           {matched.length > 0 && (
             <section className="section" style={{ marginTop: 24 }}>
-              <SectionHead icon="bell" title="Matched for you" sub="Jobs in categories you said you can do" />
+              <SectionHead icon="bell" title="Matches for you" sub="A preview of jobs in categories you said you can do"
+                action={matched.length > MATCH_PREVIEW
+                  ? <button className="btn ghost small" onClick={() => setAllMatches((v) => !v)}>{allMatches ? 'Show less' : `See all ${matched.length}`}</button>
+                  : null} />
               <div className="stack">
-                {matched.map((j) => <JobCard key={j.id} job={j} onInterest={onInterest} />)}
+                {matchShown.map((j) => <JobCard key={j.id} job={j} />)}
               </div>
             </section>
           )}
 
           <section className="section" style={{ marginTop: matched.length ? 44 : 24 }}>
-            <SectionHead icon="briefcase" title={category ? catInfo(category).label : 'All open jobs'} />
+            <CategoryTile category={category} onPick={setCategory} />
+            <div className="filter-row job-filter" role="tablist" aria-label="Which jobs">
+              <button role="tab" aria-selected={!category && !verifiedView} className={!category && !verifiedView ? 'on' : ''}
+                onClick={() => { setCategory(''); setVerifiedView(false) }}>All jobs</button>
+              <button role="tab" aria-selected={verifiedView} className={verifiedView ? 'on' : ''} onClick={() => setVerifiedView((v) => !v)}>
+                <Icon name="badge-check" size={13} /> Verified jobs <span className="filter-count">{verifiedCount}</span>
+              </button>
+              {category && <button className="on" onClick={() => setCategory('')}>{catInfo(category).label} <Icon name="x" size={12} /></button>}
+            </div>
+            <SectionHead icon="briefcase" title={listTitle}
+              sub={verifiedView ? 'Checked jobs from trusted posters — how jobs get verified is still being settled' : undefined} />
             <div className="stack">
-              {rest.length === 0 && <p className="meta-dim empty-note">No open jobs here yet — be the first to post one.</p>}
-              {rest.map((j) => <JobCard key={j.id} job={j} onInterest={onInterest} />)}
+              {rest.length === 0 && <p className="meta-dim empty-note">{verifiedView ? 'No verified jobs here yet.' : 'No open jobs here yet — be the first to post one.'}</p>}
+              {rest.map((j) => <JobCard key={j.id} job={j} />)}
             </div>
           </section>
         </div>
@@ -287,6 +403,8 @@ export default function Jobs() {
           </aside>
         )}
       </div>
+
+      {openJob && <JobSheet job={openJob} onInterest={onInterest} onClose={closeJob} />}
 
       {showVerify && (
         <VerifyModal onClose={() => setShowVerify(false)} onVerified={async (idNumber) => { await api.verifyId(idNumber); await refreshMe() }} />

@@ -91,16 +91,16 @@ export const getVoice = (handle) => req(`/v/${encodeURIComponent(handle)}`)
 // Direct messages
 export const listConversations = () => req('/messages').then((d) => d.conversations)
 export const getThread = (userId) => req(`/messages/${userId}`)
-export const sendMessage = (userId, body) => req(`/messages/${userId}`, { method: 'POST', body: { body } }).then((d) => d.message)
+export const sendMessage = (userId, body, media = []) => req(`/messages/${userId}`, { method: 'POST', body: { body, media } }).then((d) => d.message)
 
 // Group chats
 export const listChats = () => req('/chats').then((d) => d.chats)
 export const createChat = (body) => req('/chats', { method: 'POST', body }).then((d) => d.chat)
 export const joinChat = (id) => req(`/chats/${id}/join`, { method: 'POST' }).then((d) => d.chat)
 export const listChatMessages = (id) => req(`/chats/${id}/messages`).then((d) => d.messages)
-export const sendChatMessage = (id, body) => req(`/chats/${id}/messages`, { method: 'POST', body: { body } }).then((d) => d.message)
+export const sendChatMessage = (id, body, media = []) => req(`/chats/${id}/messages`, { method: 'POST', body: { body, media } }).then((d) => d.message)
 
-// Ads
+// Community partners (stored as "ads" in the API)
 export const listAds = () => req('/ads').then((d) => d.ads)
 export const listMyAds = () => req('/ads/mine').then((d) => d.ads)
 export const createAd = (body) => req('/ads', { method: 'POST', body }).then((d) => d.ad)

@@ -9,6 +9,7 @@ import { Icon } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { Vote } from '../components/Vote.jsx'
 import { ReportButton } from '../components/ReportButton.jsx'
+import { MediaView } from '../components/Media.jsx'
 
 function CommentNode({ comment, depth, onReplied }) {
   const { user } = useApp()
@@ -117,6 +118,7 @@ export default function Thread() {
             </div>
             <h1 className="thread-title">{post.title}</h1>
             {post.body && <p className="thread-body">{post.body}</p>}
+            <MediaView media={post.media} />
             <div className="post-stats">
               <span className="post-stat"><Icon name="chat" size={14} /> {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}</span>
               <ReportButton targetType="post" targetId={post.id} />

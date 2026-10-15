@@ -369,6 +369,17 @@ CREATE TABLE IF NOT EXISTS support_requests (
   page TEXT DEFAULT '',
   created_at BIGINT
 );
+
+-- Photos, short camera videos and voice messages on posts and in chats.
+-- A JSON list of { kind, type, src, ... }; src is an inline data URL for
+-- now (placeholder until real object storage is wired up).
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS media TEXT DEFAULT '[]';
+ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS media TEXT DEFAULT '[]';
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS media TEXT DEFAULT '[]';
+
+-- Verified jobs. How a job earns this isn't settled yet; for now a job is
+-- verified when this flag is set or its poster is ID-verified.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0;
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -509,7 +520,7 @@ export async function serializePost(row, viewerId) {
   const author = publicUser(authorRow) || { id: row.author_id, name: 'Unknown', color: '#888' }
   return {
     id: row.id, communityId: row.community_id, title: row.title, body: row.body,
-    pinned: !!row.pinned, hidden: !!row.hidden, author,
+    media: json(row.media), pinned: !!row.pinned, hidden: !!row.hidden, author,
     score: row.base_score + score,
     myVote: mine,
     commentCount: countRow.n, createdAt: row.created_at, ago: timeAgo(row.created_at),
@@ -588,6 +599,7 @@ export async function serializeJob(row, viewerId) {
   return {
     id: row.id, title: row.title, category: row.category, description: row.description,
     area: row.area, city: row.city, budget: row.budget, verifiedOnly: !!row.verified_only,
+    verified: !!row.verified || !!posterRow?.id_verified,
     status: row.status, poster, interested: countRow.n, iInterested: !!mineRow,
     createdAt: row.created_at, ago: timeAgo(row.created_at),
   }
@@ -600,23 +612,33 @@ export async function serializeChat(row, viewerId) {
     viewerId
       ? q.get('SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?', row.id, viewerId)
       : Promise.resolve(null),
-    q.get('SELECT body, created_at FROM chat_messages WHERE chat_id = ? ORDER BY created_at DESC LIMIT 1', row.id),
+    q.get('SELECT body, media, created_at FROM chat_messages WHERE chat_id = ? ORDER BY created_at DESC LIMIT 1', row.id),
   ])
   return {
     id: row.id, name: row.name, description: row.description, communityId: row.community_id,
     accent: row.accent, memberCount: countRow.n, joined: !!memberRow, createdAt: row.created_at,
-    lastMessage: last?.body ?? null, lastAt: last?.created_at ?? row.created_at,
+    lastMessage: last ? (last.body || mediaLabel(last.media)) : null, lastAt: last?.created_at ?? row.created_at,
   }
 }
 
 export async function serializeChatMessage(row) {
   const author = publicUser(await getUserById(row.sender_id)) || { id: row.sender_id, name: 'Unknown', color: '#888' }
-  return { id: row.id, chatId: row.chat_id, body: row.body, author, createdAt: row.created_at, ago: timeAgo(row.created_at) }
+  return { id: row.id, chatId: row.chat_id, body: row.body, media: json(row.media), author, createdAt: row.created_at, ago: timeAgo(row.created_at) }
 }
 
 // Pure — no database access.
 export function serializeDm(row) {
-  return { id: row.id, fromId: row.from_id, toId: row.to_id, body: row.body, createdAt: row.created_at, ago: timeAgo(row.created_at), read: !!row.read }
+  return { id: row.id, fromId: row.from_id, toId: row.to_id, body: row.body, media: json(row.media), createdAt: row.created_at, ago: timeAgo(row.created_at), read: !!row.read }
+}
+
+// What an inbox shows for a message that is only an attachment.
+export function mediaLabel(media) {
+  const list = json(media)
+  if (!list.length) return ''
+  const kinds = new Set(list.map((m) => m.kind))
+  if (kinds.has('audio')) return 'Voice message'
+  if (kinds.has('video')) return 'Video'
+  return list.length > 1 ? `${list.length} photos` : 'Photo'
 }
 
 // ── Ads ──────────────────────────────────────────────────────────────

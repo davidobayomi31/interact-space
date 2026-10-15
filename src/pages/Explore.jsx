@@ -62,19 +62,11 @@ export default function Explore() {
     posts: posts.filter((p) => matches(q, p.title, p.body, p.author?.name)),
   }), [q, communities, madeEvents, jobs, posts, today])
 
-  const onInterest = async (id) => {
-    if (!user) { window.location.href = '/auth'; return }
-    try {
-      const job = await api.toggleJobInterest(id)
-      setJobs((js) => js.map((j) => (j.id === id ? job : j)))
-    } catch (err) { alert(err.message) }
-  }
-
   const render = {
     people: (u) => <PersonCard key={u.id} user={u} />,
     communities: (c) => <CommunityCard key={c.id} community={c} />,
     events: (e) => <EventCard key={e.id} event={e} />,
-    jobs: (j) => <JobCard key={j.id} job={j} onInterest={onInterest} />,
+    jobs: (j) => <JobCard key={j.id} job={j} />,
     posts: (p) => <PostCard key={p.id} post={p} />,
   }
   const layout = { people: 'card-grid two', communities: 'card-grid two', events: 'card-grid two', jobs: 'stack', posts: 'stack' }
@@ -85,7 +77,7 @@ export default function Explore() {
     <div className="page explore-page">
       <section className="discover-hero">
         <h1><Icon name="search" size={24} /> Explore</h1>
-        <p className="meta-dim">Find people, communities, events, jobs and conversations across Voidaj.</p>
+        <p className="meta-dim">Search and browse everything on Voidaj — people, communities, events, jobs and conversations. Home shows what’s happening around you; Explore is where you go looking.</p>
       </section>
 
       <div className="explore-search">

@@ -10,7 +10,7 @@ import q, {
   init, selfUser, publicUser, getUserByEmail, getUserById,
   serializeCommunity, serializePost, threadForPost,
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
-  serializeAd, serializeLive, serializeEvent, parseJson,
+  serializeAd, serializeLive, serializeEvent, parseJson, mediaLabel,
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
 } from './db.js'
 import { seedIfEmpty, seedExtras } from './seed.js'
@@ -18,7 +18,9 @@ import { hashPassword, checkPassword, issueSession, clearSession, attachUser, re
 import { companionReply } from './companion.js'
 
 const app = express()
-app.use(express.json())
+// Photos, voice notes and short videos travel inline in JSON for now, so
+// the body limit sits above the default (see cleanMedia below).
+app.use(express.json({ limit: '25mb' }))
 app.use(cookieParser())
 
 // Creating the schema and seeding used to happen once at startup, when the
@@ -63,6 +65,36 @@ const now = () => Date.now()
 const NEW_USER_COLORS = ['#D8A63A', '#4A90E8', '#27AE60', '#9B59B6', '#E8734A', '#4AE8D4', '#E84A8A']
 
 const err = (res, code, msg) => res.status(code).json({ error: msg })
+
+// ── Media attachments ────────────────────────────────────────────────
+// Photos (compressed in the browser), short camera videos and voice
+// messages. Placeholder storage: they are kept inline as data URLs until
+// real object storage (and automated scanning for moderation) exists;
+// until then attachments are covered by the normal report flow.
+const MEDIA_MAX = 10
+const MEDIA_TYPES = {
+  image: /^image\/(jpeg|png|webp)$/,
+  video: /^video\/(webm|mp4)$/,
+  audio: /^audio\/(webm|ogg|mp4|mpeg)$/,
+}
+const MEDIA_BYTES = { image: 3 * 1024 * 1024, video: 12 * 1024 * 1024, audio: 3 * 1024 * 1024 }
+function cleanMedia(list) {
+  if (list == null) return []
+  if (!Array.isArray(list)) throw new Error('Attachments are not in a format we understand.')
+  if (list.length > MEDIA_MAX) throw new Error(`Up to ${MEDIA_MAX} attachments at a time.`)
+  return list.map((m) => {
+    const kind = m?.kind
+    const type = String(m?.type || '').split(';')[0]
+    const src = String(m?.src || '')
+    if (!MEDIA_TYPES[kind]?.test(type) || !src.startsWith(`data:${type}`)) throw new Error('That file type isn’t supported.')
+    if (src.length * 0.75 > MEDIA_BYTES[kind]) throw new Error('One of the attachments is too large.')
+    const out = { kind, type, src }
+    if (m.width) out.width = Math.round(Number(m.width)) || undefined
+    if (m.height) out.height = Math.round(Number(m.height)) || undefined
+    if (m.duration) out.duration = Math.round(Number(m.duration)) || undefined
+    return out
+  })
+}
 
 // ── Roles + moderation history ───────────────────────────────────────
 const roleIn = async (userId, communityId) =>
@@ -441,12 +473,14 @@ app.get('/api/posts', async (req, res) => {
 app.post('/api/posts', requireAuth, async (req, res) => {
   const { communityId, title, body } = req.body || {}
   if (!title?.trim()) return err(res, 400, 'Give your post a title.')
+  let media
+  try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
   const community = await q.get('SELECT id FROM communities WHERE id = ?', communityId)
   if (!community) return err(res, 404, 'Community not found.')
   const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, communityId)
   if (!member) return err(res, 403, 'Join the community to post in it.')
   const id = uid('p')
-  await q.run('INSERT INTO posts (id, community_id, author_id, title, body, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, communityId, req.userId, title.trim(), (body || '').trim(), now())
+  await q.run('INSERT INTO posts (id, community_id, author_id, title, body, media, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)', id, communityId, req.userId, title.trim(), (body || '').trim(), JSON.stringify(media), now())
   res.json({ post: await serializePost(await q.get('SELECT * FROM posts WHERE id = ?', id), req.userId) })
 })
 
@@ -870,11 +904,11 @@ app.get('/api/messages', requireAuth, async (req, res) => {
   `, req.userId, req.userId)
   const conversations = (await Promise.all(rows.map(async (r) => {
     const other = publicUser(await getUserById(r.other_id))
-    const last = await q.get(`SELECT body, created_at FROM dm_messages
+    const last = await q.get(`SELECT body, media, created_at FROM dm_messages
       WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)
       ORDER BY created_at DESC LIMIT 1`, req.userId, r.other_id, r.other_id, req.userId)
     const unread = (await q.get('SELECT COUNT(*) AS n FROM dm_messages WHERE from_id = ? AND to_id = ? AND read = 0', r.other_id, req.userId)).n
-    return { other, lastMessage: last?.body ?? '', lastAt: last?.created_at ?? r.last_at, unread }
+    return { other, lastMessage: last?.body || mediaLabel(last?.media), lastAt: last?.created_at ?? r.last_at, unread }
   }))).filter((c) => c.other)
   res.json({ conversations })
 })
@@ -891,7 +925,9 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
   const other = await getUserById(req.params.userId)
   if (!other) return err(res, 404, 'Person not found.')
   const body = (req.body?.body || '').trim()
-  if (!body) return err(res, 400, 'Write something first.')
+  let media
+  try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
+  if (!body && !media.length) return err(res, 400, 'Write something first.')
   // Respect who the recipient lets message them. A conversation they've
   // already had with you stays open either way.
   const allow = readSettings(other).messages
@@ -906,7 +942,7 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
     }
   }
   const id = uid('dm')
-  await q.run('INSERT INTO dm_messages (id, from_id, to_id, body, created_at) VALUES (?, ?, ?, ?, ?)', id, req.userId, other.id, body, now())
+  await q.run('INSERT INTO dm_messages (id, from_id, to_id, body, media, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, req.userId, other.id, body, JSON.stringify(media), now())
   res.json({ message: serializeDm(await q.get('SELECT * FROM dm_messages WHERE id = ?', id)) })
 })
 
@@ -945,9 +981,11 @@ app.post('/api/chats/:id/messages', requireAuth, async (req, res) => {
   const member = await q.get('SELECT 1 FROM chat_members WHERE chat_id = ? AND user_id = ?', req.params.id, req.userId)
   if (!member) return err(res, 403, 'Join this group chat to post in it.')
   const body = (req.body?.body || '').trim()
-  if (!body) return err(res, 400, 'Write something first.')
+  let media
+  try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
+  if (!body && !media.length) return err(res, 400, 'Write something first.')
   const id = uid('gm')
-  await q.run('INSERT INTO chat_messages (id, chat_id, sender_id, body, created_at) VALUES (?, ?, ?, ?, ?)', id, req.params.id, req.userId, body, now())
+  await q.run('INSERT INTO chat_messages (id, chat_id, sender_id, body, media, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, req.params.id, req.userId, body, JSON.stringify(media), now())
   res.json({ message: await serializeChatMessage(await q.get('SELECT * FROM chat_messages WHERE id = ?', id)) })
 })
 
@@ -974,8 +1012,8 @@ app.post('/api/ads', requireAuth, async (req, res) => {
 
 app.post('/api/ads/:id/pay', requireAuth, async (req, res) => {
   const ad = await q.get('SELECT * FROM ads WHERE id = ?', req.params.id)
-  if (!ad) return err(res, 404, 'Ad not found.')
-  if (ad.owner_id !== req.userId) return err(res, 403, 'Not your ad.')
+  if (!ad) return err(res, 404, 'Community partner listing not found.')
+  if (ad.owner_id !== req.userId) return err(res, 403, 'Not your listing.')
   await q.run('UPDATE ads SET active = 1 WHERE id = ?', ad.id)
   res.json({ ad: serializeAd(await q.get('SELECT * FROM ads WHERE id = ?', ad.id)) })
 })

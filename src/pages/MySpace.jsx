@@ -1,7 +1,7 @@
-// Stage 3 — My Space: the personal digital home, with an always-visible
-// door back out into the wider city.
+// Stage 3 — My Space: the personal part of Home (see Home.jsx), shown
+// below the feed and My City once someone is signed in.
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { COMMUNITIES, USERS, EVENTS, CITY_LINES } from '../data/seed.js'
 import { useCommunities, findCommunity } from '../communities.js'
@@ -11,8 +11,9 @@ import { Icon } from '../components/Icons.jsx'
 import { Avatar, CommunityCard, PersonCard, EventCard, PostCard, SectionHead, TagPills, CityLine } from '../components/bits.jsx'
 import { LiveNowRow } from '../components/Live.jsx'
 
+// Home handles signing in and onboarding; this only renders for members.
 export default function MySpace() {
-  const { user, profile, loading, setAssistantOpen } = useApp()
+  const { user, profile, setAssistantOpen } = useApp()
   const [digest, setDigest] = useState([])
   const { all: catalog } = useCommunities()
 
@@ -20,10 +21,6 @@ export default function MySpace() {
     if (!profile.communities.length) { setDigest([]); return }
     api.listPosts().then((all) => setDigest(all.filter((p) => profile.communities.includes(p.communityId)).slice(0, 3))).catch(() => {})
   }, [user]) // eslint-disable-line
-
-  if (loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
-  if (!user) return <Navigate to="/auth" replace />
-  if (!profile.onboarded) return <Navigate to="/welcome" replace />
 
   const myCommunities = catalog.filter((c) => profile.communities.includes(c.id))
   const myConnections = USERS.filter((u) => profile.connections.includes(u.id))
@@ -43,7 +40,7 @@ export default function MySpace() {
   const first = profile.name.split(' ')[0]
 
   return (
-    <div className="page myspace">
+    <div className="myspace" id="my-space">
       {/* Identity band */}
       <section className="space-hero">
         <div className="space-hero-left">
@@ -58,7 +55,7 @@ export default function MySpace() {
           </div>
         </div>
         <div className="space-hero-actions">
-          <Link to="/" className="btn ghost"><Icon name="globe" size={15} /> Go to My City</Link>
+          <a href="#my-city" className="btn ghost"><Icon name="map-pin" size={15} /> My City</a>
         </div>
       </section>
 
@@ -107,7 +104,7 @@ export default function MySpace() {
               {myEvents.length ? myEvents.map((e) => {
                 const shared = e.tags.filter((t) => profile.interests.includes(t))
                 return <EventCard key={e.id} event={e} shared={shared} source="profile" />
-              }) : <p className="meta-dim">Nothing on your calendar yet — <Link to="/">see what’s on in the city</Link>.</p>}
+              }) : <p className="meta-dim">Nothing on your calendar yet — <a href="#my-city">see what’s on in the city</a>.</p>}
             </div>
           </section>
 

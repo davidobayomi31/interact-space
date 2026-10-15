@@ -11,6 +11,7 @@ import { Icon } from '../components/Icons.jsx'
 import { Avatar, EventCard, PostCard } from '../components/bits.jsx'
 import { LiveTab, LiveBadge } from '../components/Live.jsx'
 import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
+import { MediaButtons, MediaTray } from '../components/Media.jsx'
 
 export default function Community() {
   const { id } = useParams()
@@ -24,6 +25,7 @@ export default function Community() {
   const [posts, setPosts] = useState([])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [media, setMedia] = useState([])
   const [posting, setPosting] = useState(false)
   const [live, setLive] = useState(null)
   const [meta, setMeta] = useState(null)
@@ -61,8 +63,8 @@ export default function Community() {
     if (!title.trim() || posting) return
     setPosting(true)
     try {
-      const post = await api.createPost({ communityId: community.id, title, body })
-      setPosts((p) => [post, ...p]); setTitle(''); setBody('')
+      const post = await api.createPost({ communityId: community.id, title, body, media })
+      setPosts((p) => [post, ...p]); setTitle(''); setBody(''); setMedia([])
     } catch (err) { alert(err.message) }
     setPosting(false)
   }
@@ -123,11 +125,15 @@ export default function Community() {
               {joined ? (
                 <form className="card composer-full" onSubmit={submitPost}>
                   <input className="composer-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Start a discussion in ${community.name}…`} aria-label="Post title" />
-                  {(title || body) && (
+                  {(title || body || media.length > 0) && (
                     <textarea className="composer-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add details (optional)…" rows={3} />
                   )}
+                  <MediaTray media={media} setMedia={setMedia} />
                   <div className="composer-foot">
-                    <span className="meta-dim">Posting as {user.name}</span>
+                    <span className="composer-foot-left">
+                      <MediaButtons media={media} setMedia={setMedia} />
+                      <span className="meta-dim">Posting as {user.name}</span>
+                    </span>
                     <button className="btn primary small" disabled={!title.trim() || posting}>Post</button>
                   </div>
                 </form>

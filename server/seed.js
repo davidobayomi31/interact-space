@@ -169,6 +169,12 @@ export async function seedExtras() {
     }
   }
 
+  // Demo verified jobs: until there is a real way to verify a job, the
+  // seeded "verified pros only" jobs stand in as checked ones.
+  if (!(await q.get('SELECT 1 FROM jobs WHERE verified = 1 LIMIT 1'))) {
+    await q.run(`UPDATE jobs SET verified = 1 WHERE verified_only = 1 AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1)`)
+  }
+
   if ((await q.get('SELECT COUNT(*) AS n FROM ads')).n === 0) {
     const AD_SQL = `INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, active, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING`
