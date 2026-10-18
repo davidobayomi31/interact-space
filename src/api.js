@@ -27,6 +27,8 @@ export const logoutOthers = () => req('/auth/logout-others', { method: 'POST' })
 export const deleteAccount = (password) => req('/auth/me', { method: 'DELETE', body: { password } })
 export const sendSupport = (body) => req('/support', { method: 'POST', body })
 export const exportUrl = '/api/me/export'
+export const adminUsers = () => req('/admin/users').then((d) => d.users)
+export const adminUsersCsvUrl = '/api/admin/users.csv'
 export const verifyId = (idNumber) => req('/auth/verify-id', { method: 'POST', body: { idNumber } }).then((d) => d.user)
 
 // Communities & people

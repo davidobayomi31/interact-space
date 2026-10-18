@@ -384,6 +384,30 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0;
 -- Social links on a profile: a JSON list of { kind, value }, where value
 -- is a handle (instagram, x, …) or a full https link (website, other).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS socials TEXT DEFAULT '[]';
+
+-- Admins (the CEO and whoever he trusts) can open /admin: every account,
+-- sign-up numbers and a CSV download. Set by hand in the database.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;
+
+-- The same list as a read-only "spreadsheet" in Supabase's Table Editor
+-- (schema "admin", view "ceo_users"). It leaves out password hashes and
+-- private settings, and sits outside the public schema so Supabase's Data
+-- API never serves it.
+CREATE SCHEMA IF NOT EXISTS admin;
+CREATE OR REPLACE VIEW admin.ceo_users AS
+  SELECT u.name, u.handle AS username, u.email, u.phone, u.city, u.area,
+    to_timestamp(u.created_at / 1000.0) AS joined,
+    to_timestamp(u.last_seen_at / 1000.0) AS last_active,
+    (COALESCE(u.id_verified, 0) = 1) AS id_verified,
+    (COALESCE(u.onboarded, 0) = 1) AS finished_signup,
+    (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id) AS communities,
+    (SELECT COUNT(*) FROM posts p WHERE p.author_id = u.id) AS posts,
+    (SELECT COUNT(*) FROM jobs j WHERE j.poster_id = u.id) AS jobs_posted,
+    (SELECT COUNT(*) FROM job_interests ji WHERE ji.user_id = u.id) AS jobs_offered_on,
+    (COALESCE(u.is_seed, 0) = 1) AS sample_account
+  FROM users u
+  WHERE u.deleted_at IS NULL
+  ORDER BY (COALESCE(u.is_seed, 0) = 1), u.created_at DESC;
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -499,6 +523,7 @@ export async function selfUser(row) {
     email: row.email, phone: row.phone || '',
     settings: readSettings(row),
     createdAt: row.created_at,
+    isAdmin: !!row.is_admin,
   }
 }
 

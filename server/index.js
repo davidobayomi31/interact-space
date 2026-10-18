@@ -342,6 +342,46 @@ app.post('/api/support', async (req, res) => {
   res.json({ ok: true })
 })
 
+// ── Admin (the CEO's view of every account) ───────────────────────────
+const requireAdmin = (req, res, next) => (req.userRow?.is_admin ? next() : err(res, 403, 'Only admins can see this.'))
+
+async function adminUsers() {
+  const rows = await q.all(`SELECT u.*,
+      (SELECT COUNT(*)::int FROM memberships m WHERE m.user_id = u.id) AS n_communities,
+      (SELECT COUNT(*)::int FROM posts p WHERE p.author_id = u.id) AS n_posts,
+      (SELECT COUNT(*)::int FROM jobs j WHERE j.poster_id = u.id) AS n_jobs
+    FROM users u WHERE u.deleted_at IS NULL ORDER BY u.created_at DESC NULLS LAST`)
+  return rows.map((u) => ({
+    id: u.id, name: u.name, handle: u.handle, email: u.email || '', phone: u.phone || '',
+    city: u.city || '', area: u.area || '', joinedAt: u.created_at, lastActiveAt: u.last_seen_at,
+    idVerified: !!u.id_verified, onboarded: !!u.onboarded, sample: !!u.is_seed, admin: !!u.is_admin,
+    communities: u.n_communities, posts: u.n_posts, jobsPosted: u.n_jobs,
+  }))
+}
+
+app.get('/api/admin/users', requireAuth, requireAdmin, async (_req, res) => {
+  res.json({ users: await adminUsers() })
+})
+
+// The same list as a spreadsheet file. Cells that start with = + - @ are
+// prefixed with ' so Excel/Sheets show them as text instead of running them.
+app.get('/api/admin/users.csv', requireAuth, requireAdmin, async (_req, res) => {
+  const day = (ts) => (ts ? new Date(ts).toISOString().slice(0, 10) : '')
+  // Phone numbers are validated to digits, spaces and + ( ) - on save, so
+  // they can't hold a formula and keep their leading +.
+  const cell = (v, trusted = false) => {
+    let t = String(v ?? '')
+    if (!trusted && /^[=+\-@\t\r]/.test(t)) t = `'${t}`
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+  }
+  const head = ['Name', 'Username', 'Email', 'Phone', 'City', 'Area', 'Joined', 'Last active', 'ID verified', 'Finished sign-up', 'Communities', 'Posts', 'Jobs posted', 'Sample account']
+  const lines = (await adminUsers()).map((u) => [u.name, u.handle, u.email, [u.phone], u.city, u.area, day(u.joinedAt), day(u.lastActiveAt),
+    u.idVerified ? 'yes' : 'no', u.onboarded ? 'yes' : 'no', u.communities, u.posts, u.jobsPosted, u.sample ? 'yes' : 'no'].map((v) => (Array.isArray(v) ? cell(v[0], true) : cell(v))).join(','))
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="voidaj-users-${new Date().toISOString().slice(0, 10)}.csv"`)
+  res.send('\uFEFF' + [head.join(','), ...lines].join('\r\n'))
+})
+
 // Simulated ID verification — instant demo "badge", no real KYC provider.
 app.post('/api/auth/verify-id', requireAuth, async (req, res) => {
   const { idNumber } = req.body || {}

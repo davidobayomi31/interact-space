@@ -26,6 +26,7 @@ import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import MyCity from './pages/MyCity.jsx'
+import Admin from './pages/Admin.jsx'
 import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
@@ -94,6 +95,7 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
           <Link role="menuitem" to="/saved"><Icon name="heart" size={15} /> Saved</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
+          {user.isAdmin && <Link role="menuitem" to="/admin"><Icon name="lock" size={15} /> Admin</Link>}
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
           <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
         </div>
@@ -239,6 +241,7 @@ export default function App() {
               <Route path="/saved" element={<Favorites />} />
               <Route path="/favorites" element={<Navigate to="/saved" replace />} />
               <Route path="/city" element={<MyCity />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />

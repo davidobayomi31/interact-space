@@ -115,8 +115,8 @@ export function AdsRail() {
   }, [ads.length])
 
   const navigate = useNavigate()
-  // No ads over private conversations.
-  const hidden = pathname.startsWith('/chats')
+  // No ads over private conversations or the admin table.
+  const hidden = pathname.startsWith('/chats') || pathname.startsWith('/admin')
 
   // The bar is part of the layout, so the page needs to know to make room.
   useEffect(() => {
