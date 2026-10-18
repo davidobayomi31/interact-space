@@ -46,3 +46,10 @@ From Nuel's message on Oct 14. **Not built yet.** The current `/welcome` onboard
 - Anyone who skips a step still gets a sensible default (trending in Lagos), clearly labelled as such.
 
 > Note: this was written down from the summary of Nuel's message we have. Check it against his original Oct 14 message before building, and add anything that's missing.
+
+## Backend (paused Oct 18)
+
+David asked to pause backend work and do UI only for now.
+
+- **Favorites on the server.** Favorites are saved in the browser only (`src/favorites.js`), so they don't follow someone to another device and are lost if browser data is cleared. Move them to a `favorites` table with `GET/POST/DELETE /api/favorites`, include them in the data export, and delete them with the account.
+- **Making accounts real.** Sign-up, sign-in and the Postgres database already work in production. What's still simulated: ID verification (instant badge), ad payment (demo checkout), and there is no email verification or "forgot password" yet (both need an email service).

@@ -8,6 +8,7 @@ import { useCommunities, findCommunity } from '../communities.js'
 import { matchCommunities, matchPeople, tagLabel } from '../ai.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
+import { Eagle } from '../components/Eagle.jsx'
 import { Avatar, CommunityCard, PersonCard, EventCard, PostCard, SectionHead, TagPills, CityLine } from '../components/bits.jsx'
 import { LiveNowRow } from '../components/Live.jsx'
 
@@ -119,7 +120,7 @@ export default function MySpace() {
               <Icon name="plus-circle" size={22} />
               <p><strong>No projects yet.</strong><br />Projects grow out of communities — ask your companion to help you start one with people who share your goals.</p>
               <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}>
-                <Icon name="sparkle" size={14} /> Start with the Companion
+                <Eagle size={18} /> Start with the Companion
               </button>
             </div>
           </section>
@@ -128,7 +129,7 @@ export default function MySpace() {
         <aside className="space-side">
           {/* AI assistant card */}
           <div className="card companion-card">
-            <div className="assistant-orb"><Icon name="sparkle" size={18} /></div>
+            <div className="assistant-orb"><Eagle size={30} /></div>
             <strong>Your Companion</strong>
             <p className="meta-dim">Knows your goals{profile.goals.length ? `: ${profile.goals.slice(0, 2).join(', ')}` : ''}. Ask it anything about the network.</p>
             <button className="btn primary small" onClick={() => setAssistantOpen(true)}>Open chat</button>

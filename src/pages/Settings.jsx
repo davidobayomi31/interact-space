@@ -7,6 +7,7 @@ import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { TAGS } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
+import { Eagle } from '../components/Eagle.jsx'
 
 const SECTIONS = [
   { id: 'account', icon: 'user', label: 'Account', sub: 'Name, username, email, phone, password' },
@@ -431,7 +432,7 @@ function Help() {
       </Block>
 
       <Block title="Contact support" sub="For quick questions about how Voidaj works, the Companion can usually answer straight away.">
-        <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}><Icon name="sparkle" size={14} /> Ask the Companion</button>
+        <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}><Eagle size={18} /> Ask the Companion</button>
       </Block>
     </>
   )

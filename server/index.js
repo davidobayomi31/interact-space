@@ -174,11 +174,30 @@ function cleanPortfolio(v) {
   }).filter((p) => p.title)
 }
 
+// Social links. Platforms take a handle (a pasted https link to the
+// profile also works); website and other take a full https link, so
+// nothing but an ordinary web address can end up behind a profile link.
+const SOCIAL_KINDS = ['instagram', 'x', 'tiktok', 'linkedin', 'youtube', 'facebook', 'whatsapp', 'snapchat', 'website', 'other']
+function cleanSocials(v) {
+  if (!Array.isArray(v)) return null
+  return v.slice(0, 12).map((s) => {
+    const kind = SOCIAL_KINDS.includes(s?.kind) ? s.kind : null
+    let value = String(s?.value || '').trim().slice(0, 300)
+    if (!kind || !value) return null
+    if (/^https?:\/\//i.test(value)) return { kind, value }
+    if (kind === 'website' || kind === 'other') return null
+    if (kind === 'whatsapp') value = value.replace(/[^0-9+]/g, '')
+    else value = value.replace(/^@/, '').replace(/[^A-Za-z0-9._-]/g, '')
+    return value ? { kind, value } : null
+  }).filter(Boolean)
+}
+
 app.patch('/api/auth/me', requireAuth, async (req, res) => {
   const b = req.body || {}
   const cur = req.userRow
   if (b.privacy != null && !PRIVACY_LEVELS.includes(b.privacy)) return err(res, 400, 'Unknown privacy setting.')
   const portfolio = cleanPortfolio(b.portfolio)
+  const socials = cleanSocials(b.socials)
   const arr = (v, fallbackJson) => JSON.stringify(Array.isArray(v) ? v : JSON.parse(fallbackJson))
 
   // Usernames are how people find and mention you, so they must be unique.
@@ -198,8 +217,9 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
   const settings = cleanSettings(b.settings, readSettings(cur))
   const city = b.city != null ? (String(b.city).trim().slice(0, 60) || cur.city) : cur.city
 
-  await q.run(`UPDATE users SET handle=?, phone=?, settings=?, city=? WHERE id=?`,
-    handle, phone, JSON.stringify(settings ?? readSettings(cur)), city, cur.id)
+  await q.run(`UPDATE users SET handle=?, phone=?, settings=?, city=?, socials=? WHERE id=?`,
+    handle, phone, JSON.stringify(settings ?? readSettings(cur)), city,
+    socials ? JSON.stringify(socials) : (cur.socials || '[]'), cur.id)
   await q.run(`UPDATE users SET portfolio=?, name=?, title=?, area=?, bio=?, privacy=?, interests=?, goals=?, skills=?, job_skills=?, onboarded=? WHERE id=?`,
       portfolio ? JSON.stringify(portfolio) : (cur.portfolio || '[]'),
       b.name?.trim() || cur.name,
@@ -306,7 +326,7 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
     await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
     await t.run(`UPDATE users SET email = NULL, password_hash = NULL, name = 'Former member', handle = NULL,
       title = '', bio = '', area = NULL, phone = '', interests = '[]', goals = '[]', skills = '[]',
-      job_skills = '[]', portfolio = '[]', settings = '{}', id_verified = 0,
+      job_skills = '[]', portfolio = '[]', socials = '[]', settings = '{}', id_verified = 0,
       token_version = COALESCE(token_version, 0) + 1, deleted_at = ? WHERE id = ?`, now(), id)
   })
   clearSession(res)

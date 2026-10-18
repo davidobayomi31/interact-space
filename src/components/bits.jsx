@@ -10,6 +10,7 @@ import { Vote } from './Vote.jsx'
 import { ReportButton } from './ReportButton.jsx'
 import { RatingSummary } from './Rating.jsx'
 import { MediaView } from './Media.jsx'
+import { useFavorites, isFavorite, toggleFavorite } from '../favorites.js'
 
 // Local, dependency-free copy of the live badge markup — Live.jsx imports
 // Avatar from this file, so importing LiveBadge back from Live.jsx here
@@ -34,6 +35,24 @@ export function Avatar({ user, size = 40 }) {
       {initials}
       {user.active && <span className="active-dot" style={{ '--dot': `${Math.max(8, Math.round(size * 0.24))}px` }} aria-hidden="true" />}
     </div>
+  )
+}
+
+// Heart that saves anything to Favorites. `item` is { kind, id, title,
+// subtitle, href }. `label` shows the word beside the heart.
+export function FavoriteButton({ item, label = false, className = '' }) {
+  const on = isFavorite(useFavorites(), item.kind, item.id)
+  const text = on ? 'Remove from favorites' : 'Add to favorites'
+  return (
+    <button
+      type="button"
+      className={`fav-btn ${label ? 'btn ghost small' : 'icon-btn'} ${on ? 'on' : ''} ${className}`}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(item) }}
+      aria-pressed={on} aria-label={text} title={text}
+    >
+      <Icon name="heart" size={label ? 14 : 16} />
+      {label && <span>{on ? 'Favorited' : 'Favorite'}</span>}
+    </button>
   )
 }
 
@@ -93,6 +112,7 @@ export function CommunityCard({ community, shared = [], source, because, compact
           {joined ? <><Icon name="check" size={14} /> Joined</> : 'Join'}
         </button>
         <Link to={`/community/${community.id}`} className="btn ghost small">Visit</Link>
+        <FavoriteButton item={{ kind: 'community', id: community.id, title: community.name, subtitle: community.tagline, href: `/community/${community.id}` }} />
       </div>
     </div>
   )
@@ -119,6 +139,7 @@ export function PersonCard({ user: person, shared = [], source, because }) {
           {connected ? <><Icon name="check" size={14} /> Connected</> : 'Connect'}
         </button>
         <Link to={`/profile/${person.id}`} className="btn ghost small">Profile</Link>
+        <FavoriteButton item={{ kind: 'person', id: person.id, title: person.name, subtitle: person.title, href: `/profile/${person.id}` }} />
       </div>
     </div>
   )
@@ -153,7 +174,10 @@ export function EventCard({ event, shared = [], source, because }) {
       <Trace shared={shared} source={source} because={because} />
       <div className="card-actions">
         <span className="meta-dim"><Icon name="users" size={13} /> {event.attending} attending</span>
-        <button className="btn primary small">RSVP</button>
+        <span className="card-actions-end">
+          <FavoriteButton item={{ kind: 'event', id: event.id, title: event.title, subtitle: `${event.date} · ${event.time}${community ? ` · ${community.name}` : ''}`, href: community ? `/community/${community.id}?tab=events` : '/home' }} />
+          <button className="btn primary small">RSVP</button>
+        </span>
       </div>
     </div>
   )
@@ -185,6 +209,7 @@ export function PostCard({ post, community, because }) {
               <Icon name="chat" size={14} /> {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
             </Link>
             <ReportButton targetType="post" targetId={post.id} />
+            <FavoriteButton item={{ kind: 'post', id: post.id, title: post.title, subtitle: comm ? `in ${comm.name}` : '', href: `/post/${post.id}` }} />
           </div>
         </div>
       </div>

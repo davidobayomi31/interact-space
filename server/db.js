@@ -380,6 +380,10 @@ ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS media TEXT DEFAULT '[]';
 -- Verified jobs. How a job earns this isn't settled yet; for now a job is
 -- verified when this flag is set or its poster is ID-verified.
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0;
+
+-- Social links on a profile: a JSON list of { kind, value }, where value
+-- is a handle (instagram, x, …) or a full https link (website, other).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS socials TEXT DEFAULT '[]';
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -454,6 +458,7 @@ export function publicUser(row) {
     ...visibleLocation(row), color: row.color, bio: row.bio,
     interests: json(row.interests), goals: json(row.goals), skills: json(row.skills),
     portfolio: json(row.portfolio),
+    socials: json(row.socials),
     idVerified: !!row.id_verified,
   }
 }

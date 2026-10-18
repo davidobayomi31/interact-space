@@ -8,7 +8,7 @@ import { useCommunities, findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar, EventCard, PostCard } from '../components/bits.jsx'
+import { Avatar, EventCard, PostCard, FavoriteButton } from '../components/bits.jsx'
 import { LiveTab, LiveBadge } from '../components/Live.jsx'
 import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
 import { MediaButtons, MediaTray } from '../components/Media.jsx'
@@ -90,6 +90,7 @@ export default function Community() {
             </div>
           </div>
           <div className="community-banner-actions">
+            <FavoriteButton label item={{ kind: 'community', id: community.id, title: community.name, subtitle: community.tagline, href: `/community/${community.id}` }} />
             {joined ? (
               <>
                 <span className="joined-note"><Icon name="check" size={14} /> You’re a member</span>

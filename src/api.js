@@ -100,7 +100,7 @@ export const joinChat = (id) => req(`/chats/${id}/join`, { method: 'POST' }).the
 export const listChatMessages = (id) => req(`/chats/${id}/messages`).then((d) => d.messages)
 export const sendChatMessage = (id, body, media = []) => req(`/chats/${id}/messages`, { method: 'POST', body: { body, media } }).then((d) => d.message)
 
-// Community partners (stored as "ads" in the API)
+// Ads
 export const listAds = () => req('/ads').then((d) => d.ads)
 export const listMyAds = () => req('/ads/mine').then((d) => d.ads)
 export const createAd = (body) => req('/ads', { method: 'POST', body }).then((d) => d.ad)

@@ -7,6 +7,7 @@ import { useApp } from '../state.jsx'
 import { GOAL_OPTIONS } from '../data/seed.js'
 import { extractTags, tagLabel, matchCommunities, matchPeople, matchEvents } from '../ai.js'
 import { Icon } from '../components/Icons.jsx'
+import { Eagle } from '../components/Eagle.jsx'
 import { CommunityCard, PersonCard, EventCard } from '../components/bits.jsx'
 
 const AREAS = ['Yaba', 'Lekki', 'Ikeja', 'Surulere', 'Victoria Island', 'Ikorodu', 'Somewhere else in Lagos']
@@ -234,7 +235,7 @@ export default function Onboarding() {
             }
             return (
               <div key={i} className={`bubble-row ${m.role}`}>
-                {m.role === 'ai' && <div className="assistant-orb small"><Icon name="sparkle" size={13} /></div>}
+                {m.role === 'ai' && <div className="assistant-orb small"><Eagle size={24} /></div>}
                 <div className={`bubble ${m.role}`}>{m.text}</div>
               </div>
             )

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useLocation } fr
 import { AppProvider, useApp } from './state.jsx'
 import { Icon } from './components/Icons.jsx'
 import { VoidajMark } from './components/VoidajMark.jsx'
+import { Eagle } from './components/Eagle.jsx'
 import { Avatar } from './components/bits.jsx'
 import Assistant from './components/Assistant.jsx'
 import { AdsRail } from './components/AdsRail.jsx'
@@ -23,18 +24,21 @@ import Explore from './pages/Explore.jsx'
 import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
+import Favorites from './pages/Favorites.jsx'
 import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
 // The places a member moves between (see VOIDAJ-Blueprint.md §13). My City
-// now lives inside Home. Notifications, Chat and Profile sit to the right,
+// now lives inside Home. They run down the left side on larger screens and
+// along the bottom on phones. Notifications, Chat and Profile sit top right,
 // reachable from anywhere.
 const PRIMARY = [
   { to: '/home', icon: 'home', label: 'Home', short: 'Home' },
   { to: '/explore', icon: 'search', label: 'Explore', short: 'Explore' },
   { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', short: 'Jobs' },
   { to: '/add', icon: 'plus-circle', label: 'Add Hub', short: 'Add' },
+  { to: '/favorites', icon: 'heart', label: 'Favorites', short: 'Saved' },
 ]
 
 // Unread messages plus open reports for moderators — the bell's number.
@@ -54,7 +58,9 @@ function useAttentionCount() {
   return count
 }
 
-function ProfileMenu() {
+// `inSide` is the side nav version: the avatar sits beside the member's
+// name and the menu opens upward from the foot of the nav.
+function ProfileMenu({ inSide = false }) {
   const { user, logout } = useApp()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -70,9 +76,10 @@ function ProfileMenu() {
   }, [open])
 
   return (
-    <div className="profile-menu" ref={ref}>
-      <button className="me-chip" aria-label="Profile menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+    <div className={`profile-menu ${inSide ? 'in-side' : ''}`} ref={ref}>
+      <button className="me-chip" aria-label="Profile menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title={user.name}>
         <Avatar user={user} size={32} />
+        {inSide && <span className="me-chip-name"><strong>{user.name}</strong><em>{user.handle}</em></span>}
       </button>
       {open && (
         <div className="profile-menu-list" role="menu">
@@ -83,6 +90,7 @@ function ProfileMenu() {
           <Link role="menuitem" to="/profile/me"><Icon name="user" size={15} /> My Profile</Link>
           <Link role="menuitem" to="/home"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
+          <Link role="menuitem" to="/favorites"><Icon name="heart" size={15} /> Favorites</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
           <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
@@ -100,20 +108,15 @@ function Header() {
 
   return (
     <header className="topbar">
-      <Link to="/home" className="brand">
-        <span className="brand-mark"><VoidajMark size={22} /></span>
+      {/* On larger screens the brand sits at the top of the side nav. */}
+      <Link to="/home" className="brand topbar-brand">
+        <span className="brand-mark"><VoidajMark size={34} /></span>
         <span className="brand-name">Voidaj <em>Interact Space</em></span>
       </Link>
 
-      <nav className="topnav" aria-label="Primary">
-        {PRIMARY.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end}><Icon name={n.icon} size={16} /> {n.label}</NavLink>
-        ))}
-      </nav>
-
       <div className="topbar-right">
         <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}>
-          <Icon name="sparkle" size={15} /> Companion
+          <Eagle size={20} /> Companion
         </button>
         {user ? (
           <>
@@ -134,6 +137,57 @@ function Header() {
   )
 }
 
+// The main places, down the left side of the screen from top to bottom,
+// with the Companion, notifications, chat and the member's own menu at its
+// foot. On larger screens this replaces the top bar; phones keep the top
+// bar and use the bottom bar for the main places (MobileNav).
+function SideNav() {
+  const { user, setAssistantOpen } = useApp()
+  const location = useLocation()
+  const attention = useAttentionCount()
+  const hidden = IMMERSIVE.includes(location.pathname)
+
+  // Like the ads rail, the page makes room for the nav rather than sliding under it.
+  useEffect(() => {
+    if (hidden) return
+    document.body.classList.add('has-sidenav')
+    return () => document.body.classList.remove('has-sidenav')
+  }, [hidden])
+
+  if (hidden) return null
+  return (
+    <nav className="sidenav" aria-label="Primary">
+      <Link to="/home" className="brand sidenav-brand">
+        <span className="brand-mark"><VoidajMark size={34} /></span>
+        <span className="brand-name">Voidaj <em>Interact Space</em></span>
+      </Link>
+      <div className="sidenav-links">
+        {PRIMARY.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.end} title={n.label}><Icon name={n.icon} size={18} /> <span>{n.label}</span></NavLink>
+        ))}
+      </div>
+      <div className="sidenav-foot">
+        <button className="btn brand-outline small sidenav-companion" onClick={() => setAssistantOpen(true)} title="Companion">
+          <Eagle size={22} /> <span>Companion</span>
+        </button>
+        {user ? (
+          <>
+            <NavLink to="/notifications" title="Notifications" aria-label={attention ? `Notifications, ${attention} new` : 'Notifications'}>
+              <span className="sidenav-icon"><Icon name="bell" size={18} />{attention > 0 && <b className="bar-badge">{attention > 9 ? '9+' : attention}</b>}</span>
+              <span>Notifications</span>
+            </NavLink>
+            <NavLink to="/chats" title="Chat"><Icon name="message-circle" size={18} /> <span>Chat</span></NavLink>
+            <NavLink to="/settings" title="Settings"><Icon name="edit" size={18} /> <span>Settings</span></NavLink>
+            <ProfileMenu inSide />
+          </>
+        ) : (
+          <Link to="/auth" className="btn primary small sidenav-join">Join the city</Link>
+        )}
+      </div>
+    </nav>
+  )
+}
+
 function MobileNav() {
   const location = useLocation()
   if (IMMERSIVE.includes(location.pathname)) return null
@@ -151,12 +205,11 @@ function Footer() {
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <footer className="footer">
-      <span className="footer-mark"><VoidajMark size={30} /></span>
+      <span className="footer-mark"><VoidajMark size={48} /></span>
       <div className="footer-text">
         <div className="footer-brand">Voidaj <em>Interact Space</em></div>
         <div className="footer-line">People · Communities · Opportunities — the intelligent community network.</div>
       </div>
-      <div className="footer-meta">A Mirac Inc prototype</div>
     </footer>
   )
 }
@@ -166,6 +219,7 @@ export default function App() {
     <AppProvider>
       <BrowserRouter>
         <div className="app-shell">
+          <SideNav />
           <Header />
           <main className="main">
             <Routes>
@@ -180,6 +234,7 @@ export default function App() {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/:section" element={<Settings />} />
+              <Route path="/favorites" element={<Favorites />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />

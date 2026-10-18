@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
+import { Eagle } from './Eagle.jsx'
 import { CommunityCard, PersonCard, PostCard } from './bits.jsx'
 
 const SUGGESTIONS = [
@@ -108,7 +109,7 @@ export default function Assistant() {
     if (location.pathname.startsWith('/chats') || heroInView) return null
     return (
       <button className="assistant-fab" onClick={() => setAssistantOpen(true)} aria-label="Open AI companion">
-        <Icon name="sparkle" size={22} />
+        <Eagle size={30} />
         <span>Companion</span>
       </button>
     )
@@ -118,7 +119,7 @@ export default function Assistant() {
     <div className="assistant-drawer" role="dialog" aria-label="AI Companion">
       <div className="assistant-head">
         <div className="assistant-title">
-          <div className="assistant-orb"><Icon name="sparkle" size={16} /></div>
+          <div className="assistant-orb"><Eagle size={30} /></div>
           <div>
             <strong>Your Companion</strong>
             <div className="meta-dim">Guides you to people — never replaces them</div>

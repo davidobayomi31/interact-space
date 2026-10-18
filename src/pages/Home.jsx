@@ -1,7 +1,7 @@
 // Home — the feed and My City in one place (My City is no longer its own
 // tab). Top to bottom: a slideshow of everything happening on Interact
 // Space (latest posts and activity, events, jobs), a quick search, My City
-// (the map of Nigeria, Community partners, communities to join, what's on)
+// (the map of Nigeria, ads, communities to join, what's on)
 // and, for members, their own space. Explore stays separate: Home shows
 // what's happening around you; Explore is where you go looking.
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -10,10 +10,11 @@ import { COMMUNITIES, EVENTS, PURPOSE, CHARTER, CITY_LINES, JOB_CATEGORIES } fro
 import { CommunityCard, EventCard, SectionHead, CityLine } from '../components/bits.jsx'
 import { useCommunities, findCommunity } from '../communities.js'
 import { Icon } from '../components/Icons.jsx'
+import { Eagle } from '../components/Eagle.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { NigeriaMap } from '../components/NigeriaMap.jsx'
-import { CommunityPartners, useAds, pickSearchAd, SearchAd } from '../components/AdsRail.jsx'
+import { HomeAds, useAds, pickSearchAd, SearchAd } from '../components/AdsRail.jsx'
 import MySpace from './MySpace.jsx'
 
 const SLIDE_MS = 6000
@@ -85,7 +86,7 @@ function HomeSearch({ communities, posts, jobs, events }) {
     ...jobs.filter((j) => has(j.title, j.area, j.category)).map((j) => ({ id: j.id, icon: 'wrench', kind: 'Job', title: j.title, to: `/jobs?job=${j.id}` })),
     ...posts.filter((p) => has(p.title, p.body)).map((p) => ({ id: p.id, icon: 'chat', kind: 'Post', title: p.title, to: `/post/${p.id}` })),
   ].slice(0, 5)), [term, communities, events, jobs, posts]) // eslint-disable-line
-  const partner = pickSearchAd(useAds(), term)
+  const searchAd = pickSearchAd(useAds(), term)
   const submit = (e) => { e.preventDefault(); navigate(term ? `/explore?q=${encodeURIComponent(q.trim())}` : '/explore') }
 
   return (
@@ -107,7 +108,7 @@ function HomeSearch({ communities, posts, jobs, events }) {
               ))}
             </ul>
           ) : <p className="hx-none">Nothing here for “{q.trim()}” yet.</p>}
-          {partner && <SearchAd ad={partner} />}
+          {searchAd && <SearchAd ad={searchAd} />}
           <Link to={`/explore?q=${encodeURIComponent(q.trim())}`} className="btn ghost small">See everything in Explore <Icon name="arrow" size={13} /></Link>
         </div>
       )}
@@ -184,7 +185,7 @@ export default function Home() {
             <p className="meta-dim">{PURPOSE}</p>
             <div className="hero-actions">
               <Link to="/auth" className="btn primary">Enter the city <Icon name="arrow" size={15} /></Link>
-              <button className="btn brand-outline" onClick={() => setAssistantOpen(true)}><Icon name="sparkle" size={15} /> Ask the Companion</button>
+              <button className="btn brand-outline" onClick={() => setAssistantOpen(true)}><Eagle size={20} /> Ask the Companion</button>
             </div>
           </>
         )}
@@ -202,7 +203,7 @@ export default function Home() {
         <SectionHead icon="map-pin" title="My City" sub="You’re looking at Lagos, Nigeria — the communities, events and local businesses around you" />
         <div className="city-band">
           <NigeriaMap liveCount={COMMUNITIES.filter((c) => c.scope === 'local').length + created.filter((c) => c.city === 'Lagos').length} startTo={startTo} />
-          <CommunityPartners />
+          <HomeAds />
         </div>
       </section>
 

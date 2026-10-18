@@ -6,11 +6,12 @@ import * as api from '../api.js'
 import { useApp } from '../state.jsx'
 import { USERS, COMMUNITIES } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar, CommunityCard, TagPills } from '../components/bits.jsx'
+import { Avatar, CommunityCard, TagPills, FavoriteButton } from '../components/bits.jsx'
 import { PortfolioSection } from '../components/Portfolio.jsx'
 import { JobHistory } from '../components/JobHistory.jsx'
 import { VoicesSection, CopyLink } from '../components/Voices.jsx'
 import { VoiceSections } from './Voice.jsx'
+import { AboutSection } from '../components/Socials.jsx'
 
 const PRIVACY_LEVELS = [
   { id: 'exact', label: 'Exact area' },
@@ -33,14 +34,14 @@ function presenceText(user) {
   return d < 7 ? `Active ${d}d ago` : null
 }
 
-// Other members' presence comes from the API; the seeded profile data
-// doesn't know when anyone was last around.
+// Other members' presence and social links come from the API; the seeded
+// profile data doesn't know when anyone was last around.
 function usePresence(id, skip) {
   const [presence, setPresence] = useState(null)
   useEffect(() => {
     setPresence(null)
     if (skip || !id) return
-    api.getUser(id).then((u) => setPresence({ active: u.active, lastSeenAt: u.lastSeenAt })).catch(() => {})
+    api.getUser(id).then((u) => setPresence({ active: u.active, lastSeenAt: u.lastSeenAt, ...(u.socials?.length ? { socials: u.socials } : {}) })).catch(() => {})
   }, [id, skip])
   return presence
 }
@@ -131,13 +132,14 @@ export default function Profile() {
             <span className="meta-dim">{picked ? `@${picked.handle}` : user.handle ?? ''}</span>
             {seen && <span className={`presence-text ${user.active ? 'on' : ''}`}>{user.active && <span className="presence-dot" aria-hidden="true" />}{seen}</span>}
           </div>
-          <p className="profile-bio">{picked ? picked.headline || user.bio : user.bio}</p>
+          {picked && <p className="profile-bio">{picked.headline || user.bio}</p>}
         </div>
         <div className="profile-hero-actions">
           {isMe ? (
             <Link to="/home" className="btn ghost"><Icon name="home" size={15} /> Home</Link>
           ) : (
             <>
+              <FavoriteButton label item={{ kind: 'person', id: user.id, title: user.name, subtitle: user.title, href: `/profile/${user.id}` }} />
               <Link to={`/chats?dm=${user.id}`} className="btn brand-outline"><Icon name="message-circle" size={15} /> Message</Link>
               <button className={connected ? 'btn ghost' : 'btn primary'} onClick={() => connect(user.id)} disabled={connected}>
                 {connected ? <><Icon name="check" size={15} /> Connected</> : 'Connect'}
@@ -162,6 +164,8 @@ export default function Profile() {
           {resolved ? <VoiceSections voice={resolved} /> : <p className="meta-dim vv-empty">Loading…</p>}
         </section>
       ) : <>
+      <AboutSection bio={user.bio} socials={user.socials} editable={isMe} onSave={saveProfile} />
+
       {isMe && (
         <section className="card privacy-card">
           <div className="side-card-head"><Icon name="eye" size={15} /> Location privacy</div>

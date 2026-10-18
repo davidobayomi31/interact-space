@@ -7,7 +7,7 @@ import { useApp } from '../state.jsx'
 import { JOB_CATEGORIES } from '../data/seed.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar, SectionHead, CityLine } from '../components/bits.jsx'
+import { Avatar, SectionHead, CityLine, FavoriteButton } from '../components/bits.jsx'
 import { CITY_LINES } from '../data/seed.js'
 
 const catInfo = (id) => JOB_CATEGORIES.find((c) => c.id === id) || { label: id, icon: 'briefcase' }
@@ -165,6 +165,7 @@ export function JobCard({ job }) {
       <div className="card-actions">
         <span className="meta-dim"><Icon name="users" size={13} /> {job.interested} interested</span>
         {job.iInterested && <span className="meta-dim"><Icon name="check" size={13} /> You offered to do this</span>}
+        <FavoriteButton item={{ kind: 'job', id: job.id, title: job.title, subtitle: [info.label, job.area, job.budget].filter(Boolean).join(' · '), href: `/jobs?job=${job.id}` }} />
       </div>
     </div>
   )

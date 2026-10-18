@@ -6,7 +6,7 @@ import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar } from '../components/bits.jsx'
+import { Avatar, FavoriteButton } from '../components/bits.jsx'
 import { Vote } from '../components/Vote.jsx'
 import { ReportButton } from '../components/ReportButton.jsx'
 import { MediaView } from '../components/Media.jsx'
@@ -122,6 +122,7 @@ export default function Thread() {
             <div className="post-stats">
               <span className="post-stat"><Icon name="chat" size={14} /> {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}</span>
               <ReportButton targetType="post" targetId={post.id} />
+              <FavoriteButton label item={{ kind: 'post', id: post.id, title: post.title, subtitle: community ? `in ${community.name}` : '', href: `/post/${post.id}` }} />
             </div>
           </div>
         </div>
