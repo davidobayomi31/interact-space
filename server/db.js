@@ -389,6 +389,22 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS socials TEXT DEFAULT '[]';
 -- sign-up numbers and a CSV download. Set by hand in the database.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;
 
+-- The company's own accounts (Wix, Supabase, Vercel…): which login
+-- controls each service, who owns it, what it costs. Never passwords —
+-- those live in a password manager. Admins only.
+CREATE TABLE IF NOT EXISTS company_accounts (
+  id TEXT PRIMARY KEY,
+  service TEXT NOT NULL,
+  purpose TEXT DEFAULT '',
+  login TEXT DEFAULT '',
+  url TEXT DEFAULT '',
+  owner TEXT DEFAULT '',
+  plan TEXT DEFAULT '',
+  notes TEXT DEFAULT '',
+  created_at BIGINT,
+  updated_at BIGINT
+);
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data

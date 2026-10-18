@@ -287,3 +287,28 @@
 .admin-name { display: block; font-weight: 700; color: var(--ink); }
 .admin-name:hover { text-decoration: underline; }
 .admin-table td a[href^="mailto"] { color: var(--brand-strong); }
+
+/* Admin → Company accounts */
+.acct-wrap { margin-top: 20px; }
+.acct-warning {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px;
+  background: var(--gold-soft); color: #4d3a0b; font-size: 13.5px; line-height: 1.5;
+}
+.acct-warning .icon { flex-shrink: 0; margin-top: 2px; color: var(--gold-strong); }
+.acct-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 12px; }
+.acct-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.acct-card { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; }
+.acct-card header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.acct-card header strong { font-family: var(--font-display); font-size: 17px; font-weight: 800; }
+.acct-plan { padding: 3px 10px; border-radius: var(--radius-pill); background: var(--surface-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.acct-purpose { font-size: 13.5px; color: var(--text-dim); }
+.acct-card dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
+.acct-card dt { color: var(--text-dim); }
+.acct-card dd { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.acct-card code { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.acct-notes { white-space: pre-line; }
+.acct-copy { width: 26px; height: 26px; flex-shrink: 0; }
+.acct-card footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
+.acct-form { display: flex; flex-direction: column; gap: 10px; padding: 18px; margin-bottom: 16px; max-width: 640px; }
+.acct-form textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.admin-page .view-switch { margin-top: 16px; }

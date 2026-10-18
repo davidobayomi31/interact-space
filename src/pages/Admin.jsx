@@ -3,10 +3,11 @@
 // downloads as a spreadsheet. Only accounts marked admin can open it (the
 // server checks; this page just explains if you aren't one).
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
+import { AdminAccounts } from '../components/AdminAccounts.jsx'
 
 const DAY = 24 * 3600 * 1000
 const fmt = (ts) => (ts ? new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
@@ -36,6 +37,9 @@ export default function Admin() {
   const [q, setQ] = useState('')
   const [samples, setSamples] = useState(false)
   const [sort, setSort] = useState({ by: 'joinedAt', desc: true })
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'accounts' ? 'accounts' : 'members'
+  const setTab = (t) => setParams((p) => { t === 'accounts' ? p.set('tab', 'accounts') : p.delete('tab'); return p }, { replace: true })
 
   useEffect(() => {
     if (!user?.isAdmin) return
@@ -90,10 +94,21 @@ export default function Admin() {
       <section className="page-head">
         <div>
           <h1><Icon name="shield" size={22} /> Admin</h1>
-          <p className="meta-dim">Everyone on VOIDAJ. Only admins can see this page.</p>
+          <p className="meta-dim">Only admins can see this page.</p>
         </div>
-        <a href={api.adminUsersCsvUrl} className="btn primary small" download><Icon name="arrow-down" size={14} /> Download CSV</a>
+        {tab === 'members' && <a href={api.adminUsersCsvUrl} className="btn primary small" download><Icon name="arrow-down" size={14} /> Download CSV</a>}
       </section>
+
+      <div className="view-switch" role="tablist" aria-label="Admin">
+        <button role="tab" aria-selected={tab === 'members'} className={tab === 'members' ? 'on' : ''} onClick={() => setTab('members')}>
+          <Icon name="users" size={15} /> Members
+        </button>
+        <button role="tab" aria-selected={tab === 'accounts'} className={tab === 'accounts' ? 'on' : ''} onClick={() => setTab('accounts')}>
+          <Icon name="lock" size={15} /> Company accounts
+        </button>
+      </div>
+
+      {tab === 'accounts' ? <AdminAccounts /> : <>
 
       <div className="admin-stats">
         {stats.map((s) => (
@@ -152,6 +167,7 @@ export default function Admin() {
           </table>
         </div>
       )}
+      </>}
     </div>
   )
 }

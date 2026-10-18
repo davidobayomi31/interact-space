@@ -382,6 +382,45 @@ app.get('/api/admin/users.csv', requireAuth, requireAdmin, async (_req, res) => 
   res.send('\uFEFF' + [head.join(','), ...lines].join('\r\n'))
 })
 
+// Company accounts: which login controls each service the company uses.
+// Plain text fields only; the page and this check both refuse anything
+// that looks like a password.
+const ACCOUNT_FIELDS = { service: 80, purpose: 200, login: 160, url: 300, owner: 120, plan: 120, notes: 600 }
+function cleanAccount(b = {}) {
+  const out = {}
+  for (const [k, max] of Object.entries(ACCOUNT_FIELDS)) out[k] = String(b[k] ?? '').trim().slice(0, max)
+  if (out.url && !/^https?:\/\//i.test(out.url)) out.url = `https://${out.url}`
+  return out
+}
+const looksLikePassword = (a) => /\b(pass(word)?|pwd|pin)\s*[:=]/i.test(`${a.login} ${a.notes} ${a.plan}`)
+const accountOut = (r) => ({ id: r.id, service: r.service, purpose: r.purpose, login: r.login, url: r.url, owner: r.owner, plan: r.plan, notes: r.notes, updatedAt: r.updated_at })
+
+app.get('/api/admin/accounts', requireAuth, requireAdmin, async (_req, res) => {
+  res.json({ accounts: (await q.all('SELECT * FROM company_accounts ORDER BY lower(service)')).map(accountOut) })
+})
+app.post('/api/admin/accounts', requireAuth, requireAdmin, async (req, res) => {
+  const a = cleanAccount(req.body)
+  if (!a.service) return err(res, 400, 'Give the service a name.')
+  if (looksLikePassword(a)) return err(res, 400, 'Passwords don’t go here. Keep them in your password manager.')
+  const id = uid('acct')
+  await q.run('INSERT INTO company_accounts (id, service, purpose, login, url, owner, plan, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    id, a.service, a.purpose, a.login, a.url, a.owner, a.plan, a.notes, now(), now())
+  res.json({ account: accountOut(await q.get('SELECT * FROM company_accounts WHERE id = ?', id)) })
+})
+app.patch('/api/admin/accounts/:id', requireAuth, requireAdmin, async (req, res) => {
+  const a = cleanAccount(req.body)
+  if (!a.service) return err(res, 400, 'Give the service a name.')
+  if (looksLikePassword(a)) return err(res, 400, 'Passwords don’t go here. Keep them in your password manager.')
+  const r = await q.run('UPDATE company_accounts SET service=?, purpose=?, login=?, url=?, owner=?, plan=?, notes=?, updated_at=? WHERE id=?',
+    a.service, a.purpose, a.login, a.url, a.owner, a.plan, a.notes, now(), req.params.id)
+  if (!r.changes) return err(res, 404, 'That account isn’t listed any more.')
+  res.json({ account: accountOut(await q.get('SELECT * FROM company_accounts WHERE id = ?', req.params.id)) })
+})
+app.delete('/api/admin/accounts/:id', requireAuth, requireAdmin, async (req, res) => {
+  await q.run('DELETE FROM company_accounts WHERE id = ?', req.params.id)
+  res.json({ ok: true })
+})
+
 // Simulated ID verification — instant demo "badge", no real KYC provider.
 app.post('/api/auth/verify-id', requireAuth, async (req, res) => {
   const { idNumber } = req.body || {}
