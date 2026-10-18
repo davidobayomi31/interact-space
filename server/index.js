@@ -550,10 +550,39 @@ app.post('/api/users/:id/connect', requireAuth, async (req, res) => {
   res.json({ user: await selfUser(await getUserById(req.userId)) })
 })
 
+// A person's profile: what publicUser shows, plus their communities,
+// counts for the profile header, and recent public activity. ":id" can
+// also be "@handle", for shareable voidaj.com/u/<handle> links.
 app.get('/api/users/:id', async (req, res) => {
-  const row = await getUserById(req.params.id)
-  if (!row) return err(res, 404, 'Person not found.')
-  res.json({ user: publicUser(row) })
+  const key = req.params.id
+  const row = key.startsWith('@')
+    ? await q.get('SELECT * FROM users WHERE LOWER(handle) = LOWER(?)', key)
+    : await getUserById(key)
+  if (!row || row.deleted_at) return err(res, 404, 'Person not found.')
+  const id = row.id
+  const [comms, conns, posts, events, jobs, hired] = await Promise.all([
+    q.all('SELECT m.community_id, m.created_at, c.name FROM memberships m LEFT JOIN communities c ON c.id = m.community_id WHERE m.user_id = ? ORDER BY m.created_at DESC', id),
+    q.get('SELECT COUNT(*)::int AS n FROM connections WHERE user_id = ?', id),
+    q.all('SELECT p.id, p.title, p.created_at, c.name AS community FROM posts p LEFT JOIN communities c ON c.id = p.community_id WHERE p.author_id = ? ORDER BY p.created_at DESC', id),
+    q.all('SELECT e.id, e.title, e.community_id, e.created_at FROM events e WHERE e.creator_id = ? ORDER BY e.created_at DESC', id),
+    q.all("SELECT id, title, created_at FROM jobs WHERE poster_id = ? ORDER BY created_at DESC", id),
+    q.get("SELECT COUNT(*)::int AS n FROM job_interests WHERE user_id = ? AND status = 'hired'", id),
+  ])
+  // Public things they did, newest first. Offers on jobs stay private.
+  const activity = [
+    ...posts.slice(0, 6).map((p) => ({ kind: 'post', text: `Posted “${p.title}”${p.community ? ` in ${p.community}` : ''}`, at: p.created_at, to: `/post/${p.id}` })),
+    ...comms.slice(0, 6).map((m) => ({ kind: 'community', text: `Joined ${m.name || 'a community'}`, at: m.created_at, to: `/community/${m.community_id}` })),
+    ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: `/community/${e.community_id}?tab=events` })),
+    ...jobs.slice(0, 4).map((j) => ({ kind: 'job', text: `Posted a quick job: ${j.title}`, at: j.created_at, to: `/jobs?job=${j.id}` })),
+  ].filter((a) => a.at).sort((a, b) => b.at - a.at).slice(0, 10)
+  res.json({ user: {
+    ...publicUser(row),
+    communities: comms.map((m) => m.community_id),
+    jobSkills: parseJson(row.job_skills),
+    joinedAt: row.created_at,
+    stats: { connections: conns.n, communities: comms.length, events: events.length, posts: posts.length, jobsPosted: jobs.length, jobsDone: hired.n },
+    activity,
+  } })
 })
 
 // ── Posts + comments ─────────────────────────────────────────────────

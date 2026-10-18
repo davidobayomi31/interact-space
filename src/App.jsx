@@ -27,6 +27,7 @@ import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
+import IdCard from './pages/IdCard.jsx'
 import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
@@ -91,6 +92,7 @@ function ProfileMenu({ inSide = false }) {
             <span className="meta-dim">{user.handle}</span>
           </div>
           <Link role="menuitem" to="/profile/me"><Icon name="user" size={15} /> My Profile</Link>
+          <Link role="menuitem" to="/id"><Icon name="badge-check" size={15} /> VOIDAJ ID</Link>
           <Link role="menuitem" to="/home"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
           <Link role="menuitem" to="/saved"><Icon name="heart" size={15} /> Saved</Link>
@@ -250,6 +252,8 @@ export default function App() {
               <Route path="/voices/:id" element={<VoiceBuilder />} />
               <Route path="/mod" element={<Moderation />} />
               <Route path="/profile/:id" element={<Profile />} />
+              <Route path="/u/:handle" element={<Profile />} />
+              <Route path="/id" element={<IdCard />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/chats" element={<Chats />} />
               <Route path="/vision" element={<ProfileVision />} />
