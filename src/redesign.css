@@ -1,0 +1,186 @@
+/* ── VOIDAJ redesign ──────────────────────────────────────────────────
+   Layered over styles.css. Phone first, laid out like the VOIDAJ app
+   screens; wider screens get the same pieces in grids. Colours are the
+   logo's ink and paper plus terracotta, green and gold (tokens in
+   styles.css :root). Flat fills only. */
+
+/* Wordmark: VOIDAJ in spaced capitals, as on the logo. */
+.brand-word {
+  font-family: var(--font-display); font-weight: 800; font-size: 17px;
+  letter-spacing: 0.32em; text-transform: uppercase; color: var(--ink);
+}
+.sidenav-brand .brand-word { font-size: 15px; letter-spacing: 0.26em; }
+.sidenav-brand .brand-name em { color: var(--text-dim); }
+
+/* Buttons: the main action is terracotta; ink stays for quiet emphasis. */
+.btn.primary { background: var(--brand); color: #fff; box-shadow: none; }
+.btn.primary:hover { background: var(--brand-strong); box-shadow: none; }
+.btn.primary:disabled { background: var(--surface-2); color: var(--text-dim); }
+
+/* ── Phone top bar and bottom bar ── */
+@media (max-width: 680px) {
+  .topbar { padding: 10px 16px; gap: 10px; background: rgba(246, 244, 239, 0.96); }
+  .topbar-brand { gap: 8px; }
+  .topbar-brand .brand-mark { width: 32px; height: 32px; }
+  .page { padding: 0 16px 48px; }
+  .mobile-nav { background: rgba(255, 255, 255, 0.97); }
+  .mobile-nav a { color: var(--text-dim); font-size: 10.5px; }
+  .mobile-nav a .icon { padding: 3px 12px; box-sizing: content-box; border-radius: var(--radius-pill); transition: background 0.15s; }
+  .mobile-nav a.active { color: var(--brand); }
+  .mobile-nav a.active .icon { background: var(--brand-soft); }
+}
+
+/* Side nav: active place in terracotta rather than solid black. */
+.sidenav-links > a.active, .sidenav-foot > a.active:not(.btn) { background: var(--brand-soft); color: var(--brand-strong); }
+
+/* ── Shared row heads ("Nearby Events … See all →") ── */
+.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.row-head h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.row-head a { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--brand); white-space: nowrap; }
+
+/* Colour tones for icon tiles and quick actions. */
+.tone-terracotta { --tone: var(--brand); --tone-soft: var(--brand-soft); }
+.tone-green { --tone: var(--green); --tone-soft: var(--green-soft); }
+.tone-gold { --tone: var(--gold-strong); --tone-soft: var(--gold-soft); }
+.tone-ink { --tone: #fff; --tone-soft: var(--ink); }
+
+/* ── Home ── */
+.home2 { display: flex; flex-direction: column; gap: 26px; padding-top: 22px; max-width: 1080px; }
+.home-greeting h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.home-greeting p { margin-top: 2px; }
+
+.welcome-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+  background: var(--ink); color: #fff; border-radius: var(--radius); padding: 28px 24px;
+}
+.welcome-card h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; max-width: 22ch; }
+.welcome-card p { color: #c9c4ba; font-size: 14.5px; max-width: 60ch; }
+.welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.welcome-card .btn.ghost { background: transparent; color: #fff; border-color: #4a4640; }
+.welcome-card .btn.ghost:hover { background: #1f1d1a; }
+
+.home2 .home-search { margin-top: 0; }
+.search-pill {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill);
+  padding: 0 18px; height: 48px; color: var(--text-dim);
+}
+.search-pill:focus-within { border-color: var(--ink); }
+.search-pill input { flex: 1; min-width: 0; border: 0; background: none; font-size: 15px; color: var(--text); outline: none; }
+
+.home-top { display: flex; flex-direction: column; gap: 14px; }
+.city-hero {
+  position: relative; overflow: hidden; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  min-height: 156px; padding: 20px 20px 72px; border-radius: var(--radius);
+  background: var(--ink); color: #fff;
+}
+.city-hero-text { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; }
+.city-hero-text strong { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.city-hero-text span { color: #c9c4ba; font-size: 13.5px; }
+.city-hero-go {
+  position: relative; z-index: 1; display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 50%; background: var(--brand); color: #fff; transition: transform 0.15s;
+}
+.city-hero:hover .city-hero-go { transform: translateX(3px); }
+.city-hero-skyline { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 58px; }
+
+.shortcut-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.shortcut {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px 8px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border);
+  font-size: 13px; font-weight: 600; text-align: center; transition: border-color 0.15s, transform 0.15s;
+}
+.shortcut:hover { border-color: var(--tone); transform: translateY(-2px); }
+.shortcut-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--tone-soft); color: var(--tone); }
+
+/* Rows you swipe through on phones. */
+.rail {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+  margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none;
+}
+.rail::-webkit-scrollbar { display: none; }
+.rail > * { scroll-snap-align: start; flex-shrink: 0; }
+
+.tile {
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+}
+.tile.card-link:hover { border-color: var(--ink); transform: translateY(-2px); }
+.tile-top {
+  display: flex; align-items: flex-start; justify-content: space-between; padding: 12px;
+  height: 92px; background: var(--accent); color: #fff;
+}
+.tile-top > .icon { margin-left: auto; align-self: flex-end; opacity: 0.9; }
+.tile-date {
+  display: flex; flex-direction: column; align-items: center; line-height: 1.05;
+  background: #fff; color: var(--ink); border-radius: 10px; padding: 5px 8px;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.tile-date b { font-size: 17px; letter-spacing: 0; }
+.tile-body { display: flex; flex-direction: column; gap: 4px; padding: 12px; flex: 1; }
+.tile-title { font-weight: 700; font-size: 14.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile-meta { display: flex; align-items: center; gap: 5px; color: var(--text-dim); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .btn { margin-top: auto; align-self: flex-start; min-height: 32px; padding: 6px 14px; font-size: 13px; }
+.tile-body .btn { margin-top: 8px; }
+/* Beats the generic .card-link button rule, which would make it static. */
+.tile .tile-fav { position: absolute; top: 10px; right: 10px; z-index: 2; background: #fff; border-color: transparent; }
+.event-tile .tile-top > .icon { margin-right: 40px; }
+
+.event-tile { width: 232px; }
+.community-tile { width: 168px; }
+.community-tile .tile-top { height: 78px; justify-content: center; align-items: center; }
+.community-tile .tile-top > .icon { margin: 0; align-self: center; }
+.person-tile { width: 156px; align-items: center; text-align: center; gap: 6px; padding: 18px 12px 14px; }
+.person-tile .tile-meta { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.6em; justify-content: center; }
+.person-tile .btn { align-self: center; }
+
+.quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.quick-action { display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; text-align: center; }
+.quick-action-icon {
+  display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%;
+  background: var(--tone-soft); color: var(--tone); transition: transform 0.15s;
+}
+.quick-action:hover .quick-action-icon { transform: scale(1.06); }
+
+.feed-list { display: flex; flex-direction: column; gap: 12px; }
+
+/* Wider screens: the same pieces, side by side and in grids. */
+@media (min-width: 900px) {
+  .home2 { gap: 34px; padding-top: 30px; }
+  .home-greeting h1, .welcome-card h1 { font-size: 32px; }
+  .home-top { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: stretch; }
+  .city-hero { min-height: 200px; padding: 26px 26px 96px; }
+  .city-hero-skyline { height: 80px; }
+  .city-hero-text strong { font-size: 28px; }
+  .shortcut-tiles { grid-template-columns: 1fr; }
+  .shortcut { flex-direction: row; justify-content: flex-start; padding: 12px 16px; font-size: 14px; }
+  .rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); margin: 0; padding: 0; overflow: visible; }
+  .rail > * { width: auto; }
+  .rail > :nth-child(n + 9) { display: none; }
+  .quick-actions { grid-template-columns: repeat(4, minmax(0, 140px)); justify-content: start; gap: 18px; }
+}
+
+/* ── Page heads and filter chips (My City and others) ── */
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-top: 24px; }
+.page-head h1 { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.city-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius-pill);
+  background: var(--green-soft); color: var(--green); font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.chip-row { display: flex; gap: 8px; overflow-x: auto; margin: 16px -16px 0; padding: 0 16px 4px; scrollbar-width: none; }
+.chip-row::-webkit-scrollbar { display: none; }
+.chip-row button {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  padding: 8px 15px; border-radius: var(--radius-pill); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600;
+}
+.chip-row button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+@media (min-width: 681px) { .chip-row { margin: 18px 0 0; padding: 0; flex-wrap: wrap; } }
+.city-page .section { margin-top: 26px; }
+
+/* On phones the Companion is just the eagle, so it covers less of the page. */
+@media (max-width: 680px) {
+  .assistant-fab { padding: 6px; border-radius: 50%; right: 14px; }
+  .assistant-fab span { display: none; }
+  .assistant-fab .eagle { margin: 0; width: 38px; height: 38px; }
+}

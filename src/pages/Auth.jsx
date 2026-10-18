@@ -1,13 +1,15 @@
 // Sign in / create account. Real accounts replace the old fake profile.
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { Icon } from '../components/Icons.jsx'
 
 export default function Auth() {
   const { login, register } = useApp()
   const navigate = useNavigate()
-  const [mode, setMode] = useState('register')
+  // ?mode=login opens on sign-in (the "Log in" link on the welcome card).
+  const [params] = useSearchParams()
+  const [mode, setMode] = useState(params.get('mode') === 'login' ? 'login' : 'register')
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)

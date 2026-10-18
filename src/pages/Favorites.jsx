@@ -1,5 +1,5 @@
-// Favorites — everything the member has hearted, in one place, filterable
-// by kind. Saved in this browser for now (see favorites.js).
+// Saved — everything the member has hearted, in one place, filterable by
+// kind. Reached from the profile menu. Saved in this browser for now (see favorites.js).
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/Icons.jsx'
@@ -24,8 +24,8 @@ export default function Favorites() {
   return (
     <div className="page notif-page">
       <section className="discover-hero">
-        <h1><Icon name="heart" size={24} /> Favorites</h1>
-        <p className="meta-dim">Communities, posts, people, jobs and events you’ve saved to come back to.</p>
+        <h1><Icon name="heart" size={24} /> Saved</h1>
+        <p className="meta-dim">Your favorites: communities, posts, people, jobs and events you’ve hearted to come back to.</p>
       </section>
 
       <div className="filter-row" role="tablist" aria-label="What to show">

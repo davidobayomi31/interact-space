@@ -2,7 +2,7 @@
 // to the flow that already owns that thing (a post lives in a community, a
 // job in Quick Jobs), so there is one way to make each of them, not two.
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { useCommunities } from '../communities.js'
 import { Icon } from '../components/Icons.jsx'
@@ -21,7 +21,9 @@ const TILES = [
 export default function AddHub() {
   const { user, profile, loading } = useApp()
   const { all } = useCommunities()
-  const [picking, setPicking] = useState(null)
+  // ?pick=post or ?pick=event (from Home's Quick Actions) opens that tile.
+  const [params] = useSearchParams()
+  const [picking, setPicking] = useState(() => (['post', 'event'].includes(params.get('pick')) ? params.get('pick') : null))
 
   if (loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
   if (!user) return <Navigate to="/auth" replace />

@@ -4,20 +4,28 @@
    them. */
 
 :root {
-  --bg: #ffffff;
-  --bg-raised: #faf9f7;
+  /* Colours come from the logo: ink black on warm paper, with three
+     grounded accents used sparingly. Flat fills, no gradients. */
+  --ink: #0b0b0b;
+  --bg: #f6f4ef;
+  --bg-raised: #fbfaf7;
   --surface: #ffffff;
-  --surface-2: #f0eeea;
-  --border: #e7e2da;
-  --border-soft: #eeeae3;
-  --border-strong: #cfc8bd;
-  --text: #000000;
-  --text-dim: #4a4a4a;
-  --brand: #c0342a;
-  --brand-strong: #9e2a22;
-  --brand-soft: #f7e7e5;
-  --silver: #4a4a4a;
-  --danger: #c0342a;
+  --surface-2: #efece5;
+  --border: #e4dfd5;
+  --border-soft: #ece8e0;
+  --border-strong: #ccc5b8;
+  --text: #0b0b0b;
+  --text-dim: #57534b;
+  --brand: #c2462e;          /* terracotta: main actions */
+  --brand-strong: #9f3522;
+  --brand-soft: #f8e6e0;
+  --green: #1e6b4f;          /* verified, success, local */
+  --green-soft: #e2efe8;
+  --gold: #d99a1e;           /* events, highlights */
+  --gold-strong: #9a6a0c;
+  --gold-soft: #fbf0d8;
+  --silver: #57534b;
+  --danger: #c2462e;
   --radius: 22px;
   --radius-sm: 12px;
   --radius-pill: 999px;
@@ -54,7 +62,7 @@ input { font-family: inherit; }
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; gap: 20px;
   padding: 12px 24px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(246, 244, 239, 0.94);
   backdrop-filter: blur(14px);
   border-bottom: 2px solid var(--border);
 }
@@ -2208,7 +2216,7 @@ html.pref-reduce-motion *, html.pref-reduce-motion *::before, html.pref-reduce-m
 .home-search-results .hx-results a .icon { color: var(--text-dim); }
 .city-band { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .ng-map { border: 2px solid var(--border); border-radius: var(--radius); background: var(--bg-raised); padding: 16px 16px 12px; }
-.ng-map svg { display: block; width: 100%; height: auto; max-height: 380px; overflow: visible; }
+.ng-map svg:not(.icon) { display: block; width: 100%; height: auto; max-height: 380px; overflow: visible; }
 .ng-land { fill: #e9efe4; stroke: #1b7f3b; stroke-width: 2; stroke-linejoin: round; }
 .ng-river { fill: none; stroke: #6aa6d8; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
 .ng-city { cursor: pointer; outline: none; }

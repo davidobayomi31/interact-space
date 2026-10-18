@@ -25,20 +25,22 @@ import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
+import MyCity from './pages/MyCity.jsx'
 import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
-// The places a member moves between (see VOIDAJ-Blueprint.md §13). My City
-// now lives inside Home. They run down the left side on larger screens and
-// along the bottom on phones. Notifications, Chat and Profile sit top right,
-// reachable from anywhere.
+// The five main places, as the VOIDAJ feature map sets them out. They run
+// down the left side on larger screens and along the bottom on phones.
+// Notifications, Chat and Profile are reachable from anywhere: top right on
+// phones, at the foot of the side nav otherwise. Everything personal (Saved,
+// My Jobs, Settings…) lives in the profile menu.
 const PRIMARY = [
   { to: '/home', icon: 'home', label: 'Home', short: 'Home' },
   { to: '/explore', icon: 'search', label: 'Explore', short: 'Explore' },
+  { to: '/city', icon: 'map-pin', label: 'My City', short: 'My City' },
   { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', short: 'Jobs' },
   { to: '/add', icon: 'plus-circle', label: 'Add Hub', short: 'Add' },
-  { to: '/favorites', icon: 'heart', label: 'Favorites', short: 'Saved' },
 ]
 
 // Unread messages plus open reports for moderators — the bell's number.
@@ -90,7 +92,7 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/profile/me"><Icon name="user" size={15} /> My Profile</Link>
           <Link role="menuitem" to="/home"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
-          <Link role="menuitem" to="/favorites"><Icon name="heart" size={15} /> Favorites</Link>
+          <Link role="menuitem" to="/saved"><Icon name="heart" size={15} /> Saved</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
           <button role="menuitem" onClick={logout}><Icon name="log-out" size={15} /> Sign out</button>
@@ -109,9 +111,9 @@ function Header() {
   return (
     <header className="topbar">
       {/* On larger screens the brand sits at the top of the side nav. */}
-      <Link to="/home" className="brand topbar-brand">
-        <span className="brand-mark"><VoidajMark size={34} /></span>
-        <span className="brand-name">Voidaj <em>Interact Space</em></span>
+      <Link to="/home" className="brand topbar-brand" aria-label="VOIDAJ home">
+        <span className="brand-mark"><VoidajMark size={32} /></span>
+        <span className="brand-word">VOIDAJ</span>
       </Link>
 
       <div className="topbar-right">
@@ -157,9 +159,9 @@ function SideNav() {
   if (hidden) return null
   return (
     <nav className="sidenav" aria-label="Primary">
-      <Link to="/home" className="brand sidenav-brand">
+      <Link to="/home" className="brand sidenav-brand" aria-label="VOIDAJ home">
         <span className="brand-mark"><VoidajMark size={34} /></span>
-        <span className="brand-name">Voidaj <em>Interact Space</em></span>
+        <span className="brand-name"><span className="brand-word">VOIDAJ</span> <em>Interact Space</em></span>
       </Link>
       <div className="sidenav-links">
         {PRIMARY.map((n) => (
@@ -234,7 +236,9 @@ export default function App() {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/:section" element={<Settings />} />
-              <Route path="/favorites" element={<Favorites />} />
+              <Route path="/saved" element={<Favorites />} />
+              <Route path="/favorites" element={<Navigate to="/saved" replace />} />
+              <Route path="/city" element={<MyCity />} />
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />
