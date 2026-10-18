@@ -8,6 +8,7 @@ import { JOB_CATEGORIES } from '../data/seed.js'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, SectionHead, CityLine, FavoriteButton } from '../components/bits.jsx'
+import { JobPeople } from '../components/JobPeople.jsx'
 import { CITY_LINES } from '../data/seed.js'
 
 const catInfo = (id) => JOB_CATEGORIES.find((c) => c.id === id) || { label: id, icon: 'briefcase' }
@@ -51,9 +52,9 @@ function VerifyModal({ onClose, onVerified }) {
   )
 }
 
-function PostJobForm({ onCreated, startOpen = false }) {
+function PostJobForm({ onCreated, startOpen = false, startCategory }) {
   const [open, setOpen] = useState(startOpen)
-  const [form, setForm] = useState({ title: '', category: JOB_CATEGORIES[0].id, area: '', budget: '', description: '', verifiedOnly: false })
+  const [form, setForm] = useState({ title: '', category: JOB_CATEGORIES.some((c) => c.id === startCategory) ? startCategory : JOB_CATEGORIES[0].id, area: '', budget: '', description: '', verifiedOnly: false })
   const [busy, setBusy] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
 
@@ -274,9 +275,12 @@ export default function Jobs() {
   const [showVerify, setShowVerify] = useState(false)
   const [toast, setToast] = useState(null)
   const [stray, setStray] = useState(null)
-  // Add Hub sends people here with ?post=1 to open the form straight away;
-  // ?job=<id> opens that job.
+  // Add Hub sends people here with ?post=1 to open the form straight away
+  // (with &category= when offering a job from someone's card); ?job=<id>
+  // opens that job; ?view=people shows Find people.
   const [params, setParams] = useSearchParams()
+  const view = params.get('view') === 'people' ? 'people' : 'work'
+  const setView = (v) => setParams((p) => { v === 'people' ? p.set('view', 'people') : p.delete('view'); return p }, { replace: true })
   const openId = params.get('job')
   const openJob = [...matched, ...jobs].find((j) => j.id === openId) || (stray?.id === openId ? stray : null)
   const closeJob = () => setParams((p) => { p.delete('job'); return p }, { replace: true })
@@ -336,6 +340,15 @@ export default function Jobs() {
       </section>
       <CityLine {...CITY_LINES.work} className="compact" />
 
+      <div className="view-switch" role="tablist" aria-label="Quick Jobs">
+        <button role="tab" aria-selected={view === 'work'} className={view === 'work' ? 'on' : ''} onClick={() => setView('work')}>
+          <Icon name="briefcase" size={15} /> Find work
+        </button>
+        <button role="tab" aria-selected={view === 'people'} className={view === 'people' ? 'on' : ''} onClick={() => setView('people')}>
+          <Icon name="users" size={15} /> Find people
+        </button>
+      </div>
+
       {toast && (
         <div className="job-toast">
           <Icon name="bell" size={15} /> {toast}
@@ -350,10 +363,11 @@ export default function Jobs() {
         </div>
       )}
 
+      {view === 'people' ? <JobPeople /> : (
       <div className="space-grid" style={{ marginTop: 24 }}>
         <div className="space-main">
           <div className="job-toolbar">
-            {user ? <PostJobForm startOpen={params.get('post') === '1'} onCreated={(j) => setJobs((js) => [j, ...js])} /> : <span />}
+            {user ? <PostJobForm startOpen={params.get('post') === '1'} startCategory={params.get('category')} onCreated={(j) => setJobs((js) => [j, ...js])} /> : <span />}
           </div>
 
           {matched.length > 0 && (
@@ -404,6 +418,7 @@ export default function Jobs() {
           </aside>
         )}
       </div>
+      )}
 
       {openJob && <JobSheet job={openJob} onInterest={onInterest} onClose={closeJob} />}
 

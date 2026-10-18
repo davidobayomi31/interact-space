@@ -70,6 +70,7 @@ export const resolveReport = (id, action) => req(`/reports/${id}/resolve`, { met
 export const rateCommunity = (id, stars, review) => req(`/communities/${id}/rate`, { method: 'POST', body: { stars, review } })
 
 // Quick Jobs
+export const listPros = () => req('/pros').then((d) => d.pros)
 export const listJobs = (params = {}) => {
   const q = new URLSearchParams(params).toString()
   return req('/jobs' + (q ? `?${q}` : '')).then((d) => d.jobs)

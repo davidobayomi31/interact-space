@@ -762,6 +762,18 @@ app.post('/api/jobs/:id/interest', requireAuth, async (req, res) => {
 // "applied" reads as "waiting to hear back" in the UI.
 const APPLICATION_STATUSES = ['applied', 'talking', 'hired', 'declined', 'withdrawn']
 
+// People who do work, for Quick Jobs → Find people: everyone who has listed
+// the kinds of job they do, with how many jobs they've been hired for.
+// Only what publicUser already shows (location follows their privacy).
+app.get('/api/pros', async (req, res) => {
+  const [rows, hired] = await Promise.all([
+    q.all("SELECT * FROM users WHERE job_skills IS NOT NULL AND job_skills <> '[]' AND deleted_at IS NULL ORDER BY COALESCE(id_verified, 0) DESC, last_seen_at DESC NULLS LAST"),
+    q.all("SELECT user_id, COUNT(*)::int AS n FROM job_interests WHERE status = 'hired' GROUP BY user_id"),
+  ])
+  const done = Object.fromEntries(hired.map((h) => [h.user_id, h.n]))
+  res.json({ pros: rows.filter((r) => r.id !== req.userId).map((r) => ({ ...publicUser(r), jobSkills: parseJson(r.job_skills), jobsDone: done[r.id] || 0 })) })
+})
+
 app.get('/api/me/jobs', requireAuth, async (req, res) => {
   const [interests, postedRows] = await Promise.all([
     q.all('SELECT * FROM job_interests WHERE user_id = ? ORDER BY created_at DESC', req.userId),
