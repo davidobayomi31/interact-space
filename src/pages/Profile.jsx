@@ -62,7 +62,7 @@ function locationFor(user, isMe) {
 // shouldn't lead back to the personal one.
 function useMyVoices(enabled) {
   const [voices, setVoices] = useState([])
-  const [max, setMax] = useState(4)
+  const [max, setMax] = useState(2)
   useEffect(() => {
     if (!enabled) return
     api.listVoices().then((d) => { setVoices(d.voices); setMax(d.max) }).catch(() => {})
@@ -90,7 +90,7 @@ function VoiceTabs({ voices, max, active, onPick }) {
         <button key={v.id} type="button" role="tab" aria-selected={active === v.id} className={active === v.id ? 'on' : ''} onClick={() => onPick(v.id)}>{v.name}</button>
       ))}
       {voices.length + 1 < max && (
-        <Link to="/voices/new" className="profile-voice-add"><Icon name="plus" size={12} /> Add a voice</Link>
+        <Link to="/voices/new" className="profile-voice-add" aria-label="Add a VIS"><Icon name="plus" size={12} /> VIS</Link>
       )}
     </div>
   )

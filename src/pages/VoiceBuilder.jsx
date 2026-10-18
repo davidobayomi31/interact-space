@@ -128,7 +128,7 @@ export default function VoiceBuilder() {
   return (
     <div className="page voice-builder">
       <Link to="/profile/me" className="thread-breadcrumb"><Icon name="back" size={13} /> Back to your profile</Link>
-      <h1 className="vb-title">{editing ? `Edit your ${name || ''} voice` : 'Add a voice'}</h1>
+      <h1 className="vb-title">{editing ? `Edit your ${name || ''} voice` : 'New VIS'}</h1>
       <p className="meta-dim vb-lede">A separate version of you with its own username. People who have it see only what you put here — never your main profile.</p>
 
       <form onSubmit={save} className="vb-form">

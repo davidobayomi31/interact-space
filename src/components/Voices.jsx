@@ -47,19 +47,19 @@ export function VoicesSection({ profile }) {
   }
 
   const voices = state?.voices ?? []
-  const max = state?.max ?? 4
+  const max = state?.max ?? 2
   const used = voices.length + 1 // the main profile counts as one
 
   return (
     <section className="section voices">
       <div className="section-head">
         <div>
-          <h2 className="section-title"><Icon name="layers" size={18} /> Your voices</h2>
-          <p className="section-sub">Different versions of you for different people. Give colleagues your work voice; everyone else sees your main profile. {used} of {max} used.</p>
+          <h2 className="section-title"><Icon name="layers" size={18} /> Your VIS</h2>
+          <p className="section-sub">A second version of you for different people. Give colleagues your work VIS; everyone else sees your main profile. You can have one.</p>
         </div>
         {used < max
-          ? <Link to="/voices/new" className="btn primary small"><Icon name="plus" size={13} /> Add a voice</Link>
-          : <span className="meta-dim">You’ve used all {max}.</span>}
+          ? <Link to="/voices/new" className="btn primary small" aria-label="Add a VIS"><Icon name="plus" size={13} /> VIS</Link>
+          : <span className="meta-dim">You have your VIS.</span>}
       </div>
 
       {error && <p className="auth-error">{error}</p>}

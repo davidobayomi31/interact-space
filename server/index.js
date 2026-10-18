@@ -797,7 +797,9 @@ app.patch('/api/jobs/:id/application', requireAuth, async (req, res) => {
 // A member has their main profile plus up to three voices (four in all).
 // Each voice has its own handle and shows only the sections picked for it;
 // the public view never reveals which account it belongs to.
-const MAX_PROFILES = 4
+// Your main profile plus one VIS. Members who made more before the limit
+// keep them; they just can't add another.
+const MAX_PROFILES = 2
 const VOICE_SECTIONS = ['about', 'interests', 'skills', 'work', 'communities', 'posts', 'offers', 'portfolio']
 const HANDLE_RE = /^[a-z0-9][a-z0-9._]{1,28}[a-z0-9]$/
 
@@ -861,7 +863,7 @@ app.get('/api/voices', requireAuth, async (req, res) => {
 
 app.post('/api/voices', requireAuth, async (req, res) => {
   const { n } = await q.get('SELECT COUNT(*)::int AS n FROM voices WHERE user_id = ?', req.userId)
-  if (n + 1 >= MAX_PROFILES) return err(res, 400, `You can have up to ${MAX_PROFILES} profiles, including your main one.`)
+  if (n + 1 >= MAX_PROFILES) return err(res, 400, 'You can have one VIS besides your main profile.')
   const v = await readVoiceBody(req, res)
   if (!v || res.headersSent) return
   const id = uid('v')
