@@ -4,14 +4,15 @@ import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom'
 import { ModerationPanel } from './Moderation.jsx'
 import { useEffect, useState } from 'react'
 import { USERS, EVENTS, CHARTER } from '../data/seed.js'
-import { useCommunities, findCommunity } from '../communities.js'
+import { useCommunities, findCommunity, setCommunityCover } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
 import { Avatar, EventCard, PostCard, FavoriteButton } from '../components/bits.jsx'
 import { LiveTab, LiveBadge } from '../components/Live.jsx'
 import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
-import { MediaButtons, MediaTray } from '../components/Media.jsx'
+import { MediaButtons, MediaTray, compressPhoto } from '../components/Media.jsx'
+import { CoverPicker } from '../components/CoverPicker.jsx'
 
 export default function Community() {
   const { id } = useParams()
@@ -71,8 +72,10 @@ export default function Community() {
 
   return (
     <div className="page community-page" style={{ '--accent': community.accent }}>
-      <section className="community-banner">
+      <section className={`community-banner ${community.cover ? 'has-cover' : ''}`}>
         <div className="community-banner-art" aria-hidden="true" />
+        {community.cover && <img className="community-cover" src={community.cover} alt="" />}
+        {isMod && <CoverEdit community={community} />}
         <div className="community-banner-content">
           <div className="community-glyph large"><Icon name={community.icon} size={30} /></div>
           <div className="community-banner-text">
@@ -231,12 +234,37 @@ export default function Community() {
   )
 }
 
+// Staff can change the cover photo from the banner itself.
+function CoverEdit({ community }) {
+  const [busy, setBusy] = useState(false)
+  const pick = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    try {
+      const photo = await compressPhoto(file)
+      const url = await api.uploadImage(photo.src, 'community')
+      const saved = await api.setCommunityCover(community.id, url)
+      setCommunityCover(community.id, saved.cover)
+    } catch (err) { alert(err.message) }
+    setBusy(false)
+  }
+  return (
+    <label className={`cover-edit ${community.cover ? '' : 'no-cover'}`}>
+      <Icon name={busy ? 'clock' : 'image'} size={14} /> {busy ? 'Uploading…' : community.cover ? 'Change cover' : 'Add cover photo'}
+      <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" hidden onChange={pick} disabled={busy} />
+    </label>
+  )
+}
+
 // Any member can put an event on the community's calendar.
 function NewEvent({ community, onCreated }) {
-  const blank = { title: '', date: '', time: '', venue: '', description: '' }
+  const blank = { title: '', date: '', time: '', venue: '', description: '', cover: '' }
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(blank)
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const today = new Date().toISOString().slice(0, 10)
 
@@ -270,9 +298,10 @@ function NewEvent({ community, onCreated }) {
       </div>
       <input className="job-input" value={form.venue} onChange={set('venue')} placeholder="Where? (venue, area, or Online)" maxLength={100} aria-label="Venue" />
       <textarea className="composer-body" value={form.description} onChange={set('description')} placeholder="Tell people what to expect (optional)" rows={3} maxLength={600} />
+      <CoverPicker kind="event" label="Event photo (optional)" value={form.cover} onChange={(cover) => setForm((f) => ({ ...f, cover }))} onBusy={setUploading} />
       <div className="composer-foot">
         <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Cancel</button>
-        <button className="btn primary small" disabled={!form.title.trim() || !form.date || busy}>{busy ? 'Creating…' : 'Create event'}</button>
+        <button className="btn primary small" disabled={!form.title.trim() || !form.date || busy || uploading}>{busy ? 'Creating…' : 'Create event'}</button>
       </div>
     </form>
   )

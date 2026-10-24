@@ -45,6 +45,16 @@ const PRIMARY = [
   { to: '/add', icon: 'plus-circle', label: 'Add Hub', short: 'Add' },
 ]
 
+// The phone's bottom bar, as on the VOIDAJ app screens. Quick Jobs and
+// Add Hub stay one tap away in Home's shortcut tiles and quick actions.
+const MOBILE = [
+  { to: '/home', icon: 'home', short: 'Home' },
+  { to: '/explore', icon: 'search', short: 'Explore' },
+  { to: '/city', icon: 'map-pin', short: 'Map' },
+  { to: '/chats', icon: 'message-circle', short: 'Messages' },
+  { to: '/profile/me', icon: 'user', short: 'Profile' },
+]
+
 // Unread messages plus open reports for moderators — the bell's number.
 function useAttentionCount() {
   const { user } = useApp()
@@ -116,8 +126,7 @@ function Header() {
     <header className="topbar">
       {/* On larger screens the brand sits at the top of the side nav. */}
       <Link to="/home" className="brand topbar-brand" aria-label="VOIDAJ home">
-        <span className="brand-mark"><VoidajMark size={32} /></span>
-        <span className="brand-word">VOIDAJ</span>
+        <VoidajMark size={19} />
       </Link>
 
       <div className="topbar-right">
@@ -130,7 +139,7 @@ function Header() {
               <Icon name="bell" size={18} />
               {attention > 0 && <span className="bar-badge">{attention > 9 ? '9+' : attention}</span>}
             </NavLink>
-            <NavLink to="/chats" className="icon-btn subtle bar-icon" aria-label="Chat">
+            <NavLink to="/chats" className="icon-btn subtle bar-icon bar-chat" aria-label="Chat">
               <Icon name="message-circle" size={18} />
             </NavLink>
             <ProfileMenu />
@@ -164,8 +173,7 @@ function SideNav() {
   return (
     <nav className="sidenav" aria-label="Primary">
       <Link to="/home" className="brand sidenav-brand" aria-label="VOIDAJ home">
-        <span className="brand-mark"><VoidajMark size={34} /></span>
-        <span className="brand-name"><span className="brand-word">VOIDAJ</span> <em>Interact Space</em></span>
+        <VoidajMark size={19} />
       </Link>
       <div className="sidenav-links">
         {PRIMARY.map((n) => (
@@ -199,8 +207,8 @@ function MobileNav() {
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <nav className="mobile-nav" aria-label="Primary (mobile)">
-      {PRIMARY.map((n) => (
-        <NavLink key={n.to} to={n.to} end={n.end}><Icon name={n.icon} size={19} /><span>{n.short}</span></NavLink>
+      {MOBILE.map((n) => (
+        <NavLink key={n.to} to={n.to}><Icon name={n.icon} size={21} /><span>{n.short}</span></NavLink>
       ))}
     </nav>
   )
@@ -211,9 +219,9 @@ function Footer() {
   if (IMMERSIVE.includes(location.pathname)) return null
   return (
     <footer className="footer">
-      <span className="footer-mark"><VoidajMark size={48} /></span>
+      <span className="footer-mark"><VoidajMark size={18} /></span>
       <div className="footer-text">
-        <div className="footer-brand">Voidaj <em>Interact Space</em></div>
+        <div className="footer-brand"><em>Interact Space</em></div>
         <div className="footer-line">People · Communities · Opportunities — the intelligent community network.</div>
       </div>
     </footer>

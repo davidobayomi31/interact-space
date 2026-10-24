@@ -381,6 +381,11 @@ ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS media TEXT DEFAULT '[]';
 -- verified when this flag is set or its poster is ID-verified.
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS verified INTEGER DEFAULT 0;
 
+-- Cover photos: a public link into the Supabase Storage bucket (see
+-- server/storage.js), or a bundled /images/ path. Empty means none.
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
+
 -- Social links on a profile: a JSON list of { kind, value }, where value
 -- is a handle (instagram, x, …) or a full https link (website, other).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS socials TEXT DEFAULT '[]';
@@ -511,6 +516,7 @@ export const DEFAULT_SETTINGS = {
   reduceMotion: false,
   largeText: false,
   language: 'en',
+  theme: 'system', // 'system' | 'light' | 'dark'
 }
 export function readSettings(row) {
   const s = json(row?.settings, {})
@@ -622,7 +628,7 @@ export async function serializeCommunity(row, viewerId) {
   ])
   return {
     id: row.id, name: row.name, tagline: row.tagline, description: row.description,
-    scope: row.scope, city: row.city, accent: row.accent, icon: row.icon,
+    scope: row.scope, city: row.city, accent: row.accent, icon: row.icon, cover: row.cover || '',
     tags: json(row.tags), rules: json(row.rules), modRules: json(row.mod_rules), memberCount: row.member_count,
     createdBy: row.created_by ?? null,
     trending: !!row.trending,
@@ -693,7 +699,7 @@ export function serializeEvent(row) {
   return {
     id: row.id, communityId: row.community_id, creatorId: row.creator_id,
     title: row.title, date: row.date, time: row.time, venue: row.venue,
-    description: row.description, attending: row.attending,
+    description: row.description, attending: row.attending, cover: row.cover || '',
   }
 }
 

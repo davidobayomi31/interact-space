@@ -187,7 +187,7 @@ export const DEFAULT_PROFILE = {
 // ── Communities ──────────────────────────────────────────────────────
 export const COMMUNITIES = [
   {
-    id: 'lagos-entrepreneurs', name: 'Lagos Entrepreneurs', scope: 'local', city: 'Lagos',
+    id: 'lagos-entrepreneurs', cover: '/images/communities/lagos-entrepreneurs.jpg', name: 'Lagos Entrepreneurs', scope: 'local', city: 'Lagos',
     tagline: 'Builders of the city’s next businesses',
     description: 'A community of founders, side-hustlers and operators building businesses in Lagos. Weekly meetups, honest pitch feedback, and members who actually reply.',
     tags: ['entrepreneurship', 'business', 'startups', 'mentorship', 'networking'],
@@ -202,7 +202,7 @@ export const COMMUNITIES = [
     ],
   },
   {
-    id: 'african-startup-network', name: 'African Startup Network', scope: 'global', city: 'Pan-African',
+    id: 'african-startup-network', cover: '/images/communities/african-startup-network.jpg', name: 'African Startup Network', scope: 'global', city: 'Pan-African',
     tagline: 'One network, 54 countries, infinite hustle',
     description: 'The global home for African founders, operators and investors on Interact Space. Cross-border intros, funding announcements, and city chapters from Lagos to Nairobi to Accra.',
     tags: ['startups', 'tech', 'finance', 'networking', 'entrepreneurship'],
@@ -217,7 +217,7 @@ export const COMMUNITIES = [
     ],
   },
   {
-    id: 'lagos-lens-collective', name: 'Lagos Lens Collective', scope: 'local', city: 'Lagos',
+    id: 'lagos-lens-collective', cover: '/images/communities/lagos-lens-collective.jpg', name: 'Lagos Lens Collective', scope: 'local', city: 'Lagos',
     tagline: 'The city, one frame at a time',
     description: 'Street photographers, portrait shooters and filmmakers documenting Lagos. Monthly photo walks, critique circles, and an annual open-air exhibition.',
     tags: ['photography', 'art', 'community'],
@@ -232,7 +232,7 @@ export const COMMUNITIES = [
     ],
   },
   {
-    id: 'naija-devs', name: 'Naija Devs Learning Circle', scope: 'local', city: 'Lagos',
+    id: 'naija-devs', cover: '/images/communities/naija-devs.jpg', name: 'Naija Devs Learning Circle', scope: 'local', city: 'Lagos',
     tagline: 'Learn in public, grow together',
     description: 'A learning-first coding community. Weekly study groups, code reviews from senior engineers, and a no-stupid-questions policy that is actually enforced.',
     tags: ['coding', 'web-development', 'learning', 'mentorship', 'tech', 'data'],
@@ -247,7 +247,7 @@ export const COMMUNITIES = [
     ],
   },
   {
-    id: 'balogun-market-hub', name: 'Balogun Makers & Market Hub', scope: 'local', city: 'Lagos',
+    id: 'balogun-market-hub', cover: '/images/communities/balogun-market-hub.jpg', name: 'Balogun Makers & Market Hub', scope: 'local', city: 'Lagos',
     tagline: 'Small businesses, big neighborhood',
     description: 'Makers, bakers, tailors and traders supporting each other’s hustle. Weekend pop-up markets, bulk-buying groups, and honest advice on pricing your work.',
     tags: ['small-business', 'marketplace', 'food', 'fashion', 'business'],
@@ -262,7 +262,7 @@ export const COMMUNITIES = [
     ],
   },
   {
-    id: 'green-lagos', name: 'Green Lagos Initiative', scope: 'local', city: 'Lagos',
+    id: 'green-lagos', cover: '/images/communities/green-lagos.jpg', name: 'Green Lagos Initiative', scope: 'local', city: 'Lagos',
     tagline: 'Growing a cooler, greener megacity',
     description: 'Urban farmers, solar engineers and sustainability advocates making Lagos livable. Community gardens, cleanup days, and practical workshops on growing food in small spaces.',
     tags: ['sustainability', 'farming', 'agriculture', 'urban-farming', 'renewable-energy', 'community'],
@@ -281,56 +281,56 @@ export const COMMUNITIES = [
 // ── Events (dates relative to demo today: 2026-07-17) ────────────────
 export const EVENTS = [
   {
-    id: 'ev-pitch-night', communityId: 'lagos-entrepreneurs',
+    id: 'ev-pitch-night', cover: '/images/events/ev-pitch-night.jpg', communityId: 'lagos-entrepreneurs',
     title: 'First-Cheque Pitch Night', date: '2026-07-21', time: '6:00 PM',
     venue: 'Workbay, Yaba', mode: 'in-person',
     description: 'Six founders, five minutes each, real investors in the room. Yemi Ogunleye hosts.',
     tags: ['startups', 'entrepreneurship', 'networking'], attending: 87, host: 'u-yemi',
   },
   {
-    id: 'ev-photo-walk', communityId: 'lagos-lens-collective',
+    id: 'ev-photo-walk', cover: '/images/events/ev-photo-walk.jpg', communityId: 'lagos-lens-collective',
     title: 'Makoko at Golden Hour — Photo Walk', date: '2026-07-19', time: '4:30 PM',
     venue: 'Makoko Waterfront (meet at Third Mainland gate)', mode: 'in-person',
     description: 'Monthly photo walk. Bring any camera — phones welcome. Zainab leads, consent cards provided.',
     tags: ['photography', 'art'], attending: 34, host: 'u-zainab',
   },
   {
-    id: 'ev-solar-workshop', communityId: 'green-lagos',
+    id: 'ev-solar-workshop', cover: '/images/events/ev-solar-workshop.jpg', communityId: 'green-lagos',
     title: 'Home Solar 101: Off the Generator', date: '2026-07-25', time: '10:00 AM',
     venue: 'Green Hub, Ajah', mode: 'in-person',
     description: 'Emeka walks through sizing, pricing and installing a starter home solar setup. Live demo rig.',
     tags: ['renewable-energy', 'sustainability'], attending: 52, host: 'u-emeka',
   },
   {
-    id: 'ev-balcony-farm', communityId: 'green-lagos',
+    id: 'ev-balcony-farm', cover: '/images/events/ev-balcony-farm.jpg', communityId: 'green-lagos',
     title: 'Balcony Farming Starter Workshop', date: '2026-07-23', time: '9:00 AM',
     venue: 'Freedom Park, Lagos Island', mode: 'in-person',
     description: 'Halima teaches container growing: soil mix, what grows in Lagos heat, and pest control without chemicals. Free seedlings for the first 30.',
     tags: ['urban-farming', 'farming', 'agriculture', 'food'], attending: 41, host: 'u-halima',
   },
   {
-    id: 'ev-js-study', communityId: 'naija-devs',
+    id: 'ev-js-study', cover: '/images/events/ev-js-study.jpg', communityId: 'naija-devs',
     title: 'Weekly Study Group: JavaScript Deep Dive', date: '2026-07-18', time: '11:00 AM',
     venue: 'Online (community video room)', mode: 'online',
     description: 'This week: closures and the event loop, explained with danfo bus analogies. Beginners very welcome.',
     tags: ['coding', 'web-development', 'learning'], attending: 126, host: 'u-tunde',
   },
   {
-    id: 'ev-market-popup', communityId: 'balogun-market-hub',
+    id: 'ev-market-popup', cover: '/images/events/ev-market-popup.jpg', communityId: 'balogun-market-hub',
     title: 'Weekend Makers Pop-Up Market', date: '2026-07-19', time: '10:00 AM',
     venue: 'Hearts Garden, Surulere', mode: 'in-person',
     description: '30 member stalls: food, fashion, crafts. Free table for first-time sellers — DM Funke.',
     tags: ['small-business', 'marketplace', 'food', 'fashion'], attending: 210, host: 'u-funke',
   },
   {
-    id: 'ev-asn-demo-day', communityId: 'african-startup-network',
+    id: 'ev-asn-demo-day', cover: '/images/events/ev-asn-demo-day.jpg', communityId: 'african-startup-network',
     title: 'Pan-African Virtual Demo Day', date: '2026-08-02', time: '3:00 PM',
     venue: 'Online (global stream)', mode: 'online',
     description: '12 startups from 6 countries pitch to a pan-African investor panel. Lagos watch party at Workbay.',
     tags: ['startups', 'finance', 'tech'], attending: 942, host: 'u-david',
   },
   {
-    id: 'ev-farm-tour', communityId: 'green-lagos',
+    id: 'ev-farm-tour', cover: '/images/events/ev-farm-tour.jpg', communityId: 'green-lagos',
     title: 'Container Farm Open Day', date: '2026-08-08', time: '12:00 PM',
     venue: 'Chidi’s Farm, Ikorodu', mode: 'in-person',
     description: 'Tour a working vertical farm in shipping containers. See hydroponics up close, taste the harvest.',

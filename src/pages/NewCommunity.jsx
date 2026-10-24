@@ -7,6 +7,7 @@ import * as api from '../api.js'
 import { addCommunity } from '../communities.js'
 import { CHARTER } from '../data/seed.js'
 import { Icon } from '../components/Icons.jsx'
+import { CoverPicker } from '../components/CoverPicker.jsx'
 
 const ICONS = ['community', 'users', 'briefcase', 'camera', 'code', 'store', 'leaf', 'book', 'megaphone', 'heart', 'globe', 'star', 'wrench', 'smile']
 const ACCENTS = ['#C0342A', '#1F5FA8', '#1B7F3B', '#6B3FA0', '#B45309', '#0F6E6E', '#8A5D0B', '#A8306A']
@@ -16,9 +17,10 @@ export default function NewCommunity() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '', tagline: '', description: '', scope: 'local', city: '',
-    tags: '', rules: ['', ''], icon: 'community', accent: ACCENTS[0],
+    tags: '', rules: ['', ''], icon: 'community', accent: ACCENTS[0], cover: '',
   })
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const pick = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -80,6 +82,8 @@ export default function NewCommunity() {
           <input className="job-input" value={form.tags} onChange={set('tags')} placeholder="running, fitness, mornings" maxLength={150} />
         </label>
 
+        <CoverPicker kind="community" value={form.cover} onChange={(url) => pick('cover', url)} onBusy={setUploading} />
+
         <div className="field">
           <span>Look</span>
           <div className="choice-row" role="radiogroup" aria-label="Icon">
@@ -112,7 +116,7 @@ export default function NewCommunity() {
 
         <div className="composer-foot">
           <span className="meta-dim"><Icon name="sparkle" size={13} /> You’ll be its owner — you can add admins and moderators later.</span>
-          <button className="btn primary" disabled={form.name.trim().length < 3 || busy}>{busy ? 'Starting…' : 'Start community'}</button>
+          <button className="btn primary" disabled={form.name.trim().length < 3 || busy || uploading}>{busy ? 'Starting…' : 'Start community'}</button>
         </div>
       </form>
     </div>

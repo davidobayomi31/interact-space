@@ -89,7 +89,9 @@ export function CommunityCard({ community, shared = [], source, because, compact
     <div className={`card community-card card-link ${compact ? 'compact' : ''}`} style={{ '--accent': community.accent }}>
       <div className="community-card-head">
         <div className="community-glyph" style={{ color: community.accent }}>
-          <Icon name={community.icon} size={compact ? 18 : 22} />
+          {community.cover
+            ? <img className="community-glyph-photo" src={community.cover} alt="" loading="lazy" />
+            : <Icon name={community.icon} size={compact ? 18 : 22} />}
         </div>
         <div className="community-card-title">
           <Link to={`/community/${community.id}`} className="card-title stretched">{community.name}</Link>
@@ -152,6 +154,7 @@ export function EventCard({ event, shared = [], source, because }) {
   const month = d.toLocaleDateString('en-GB', { month: 'short' })
   return (
     <div className={`card event-card ${community ? 'card-link' : ''}`}>
+      {(event.cover ?? community?.cover) && <img className="event-card-photo" src={event.cover ?? community.cover} alt="" loading="lazy" />}
       <div className="event-head">
         <div className="date-block" style={{ '--accent': community?.accent ?? 'var(--gold)' }}>
           <span className="date-day">{day}</span>

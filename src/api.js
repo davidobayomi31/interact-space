@@ -50,6 +50,8 @@ export const listEvents = (params = {}) => {
   const q = new URLSearchParams(params).toString()
   return req('/events' + (q ? `?${q}` : '')).then((d) => d.events)
 }
+export const uploadImage = (image, kind) => req('/uploads', { method: 'POST', body: { image, kind } }).then((d) => d.url)
+export const setCommunityCover = (id, cover) => req(`/communities/${id}/cover`, { method: 'PUT', body: { cover } }).then((d) => d.community)
 export const createEvent = (communityId, body) => req(`/communities/${communityId}/events`, { method: 'POST', body }).then((d) => d.event)
 
 // Posts, comments, votes

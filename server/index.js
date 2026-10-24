@@ -16,6 +16,7 @@ import q, {
 import { seedIfEmpty, seedExtras } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
+import { storageReady, uploadImage, readImage, cleanCover } from './storage.js'
 
 const app = express()
 // Photos, voice notes and short videos travel inline in JSON for now, so
@@ -154,6 +155,7 @@ function cleanSettings(input, current) {
   const next = { ...current, notify: { ...current.notify } }
   if (MESSAGE_LEVELS.includes(input.messages)) next.messages = input.messages
   for (const k of ['reduceMotion', 'largeText']) if (typeof input[k] === 'boolean') next[k] = input[k]
+  if (['system', 'light', 'dark'].includes(input.theme)) next.theme = input.theme
   if (typeof input.language === 'string' && /^[a-z]{2}$/.test(input.language)) next.language = input.language
   for (const k of Object.keys(DEFAULT_SETTINGS.notify)) {
     if (typeof input.notify?.[k] === 'boolean') next.notify[k] = input.notify[k]
@@ -460,10 +462,13 @@ app.post('/api/communities', requireAuth, async (req, res) => {
   const tags = cleanList(b.tags, 6, 24).map((t) => t.toLowerCase())
   const rules = cleanList(b.rules, 8, 160)
   if (!rules.some((r) => /charter/i.test(r))) rules.push('Follow the Interact Space Charter at all times.')
-  await q.run(`INSERT INTO communities (id, name, tagline, description, scope, city, accent, icon, tags, rules, member_count, trending, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)`,
+  let cover
+  try { cover = cleanCover(b.cover) } catch (e) { return err(res, 400, e.message) }
+  if (cover === null) return err(res, 400, 'That cover photo can’t be used. Upload it again.')
+  await q.run(`INSERT INTO communities (id, name, tagline, description, scope, city, accent, icon, tags, rules, member_count, trending, created_by, created_at, cover)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`,
     id, name, String(b.tagline || '').trim().slice(0, 120), String(b.description || '').trim().slice(0, 1000),
-    scope, city, accent, icon, JSON.stringify(tags), JSON.stringify(rules), req.userId, now())
+    scope, city, accent, icon, JSON.stringify(tags), JSON.stringify(rules), req.userId, now(), cover)
   await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'owner', ?)", req.userId, id, now())
   await logAction(id, req.userId, 'community.created', { summary: name })
   const row = await q.get('SELECT * FROM communities WHERE id = ?', id)
@@ -480,6 +485,35 @@ app.put('/api/communities/:id/mod-rules', requireAuth, async (req, res) => {
   await q.run('UPDATE communities SET mod_rules = ? WHERE id = ?', JSON.stringify(rules), row.id)
   await logAction(row.id, req.userId, 'rules.updated', { summary: rules.length ? rules.join(' · ') : 'Cleared the moderators’ rules' })
   res.json({ community: await serializeCommunity(await q.get('SELECT * FROM communities WHERE id = ?', row.id), req.userId) })
+})
+
+// Owners, admins and moderators can change the community's cover photo.
+app.put('/api/communities/:id/cover', requireAuth, async (req, res) => {
+  const row = await q.get('SELECT * FROM communities WHERE id = ?', req.params.id)
+  if (!row) return err(res, 404, 'Community not found.')
+  if (!isStaff(await roleIn(req.userId, row.id))) return err(res, 403, 'Only moderators can change the cover photo.')
+  let cover
+  try { cover = cleanCover(req.body?.cover) } catch (e) { return err(res, 400, e.message) }
+  if (cover === null) return err(res, 400, 'That cover photo can’t be used. Upload it again.')
+  await q.run('UPDATE communities SET cover = ? WHERE id = ?', cover, row.id)
+  await logAction(row.id, req.userId, 'cover.updated', { summary: cover ? 'Changed the cover photo' : 'Removed the cover photo' })
+  res.json({ community: await serializeCommunity(await q.get('SELECT * FROM communities WHERE id = ?', row.id), req.userId) })
+})
+
+// ── Photo uploads ────────────────────────────────────────────────────
+// Takes a photo the browser has already shrunk (a data URL) and returns a
+// link to store as a cover. With Supabase Storage set up the photo goes to
+// the bucket; locally without it, the data URL comes straight back.
+const UPLOAD_FOLDERS = { community: 'communities', event: 'events' }
+app.post('/api/uploads', requireAuth, async (req, res) => {
+  const folder = UPLOAD_FOLDERS[req.body?.kind]
+  if (!folder) return err(res, 400, 'Unknown upload type.')
+  try {
+    if (storageReady()) return res.json({ url: await uploadImage(req.body?.image, folder) })
+    if (process.env.VERCEL) return err(res, 503, 'Photo uploads aren’t switched on yet.')
+    readImage(req.body?.image)
+    res.json({ url: req.body.image, local: true })
+  } catch (e) { err(res, 400, e.message) }
 })
 
 // ── Events ───────────────────────────────────────────────────────────
@@ -501,10 +535,13 @@ app.post('/api/communities/:id/events', requireAuth, async (req, res) => {
   if (title.length < 3) return err(res, 400, 'Give the event a title.')
   const date = String(b.date || '')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return err(res, 400, 'Pick a date for the event.')
+  let cover
+  try { cover = cleanCover(b.cover) } catch (e) { return err(res, 400, e.message) }
+  if (cover === null) return err(res, 400, 'That cover photo can’t be used. Upload it again.')
   const id = uid('ev')
-  await q.run(`INSERT INTO events (id, community_id, creator_id, title, date, time, venue, description, attending, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`, id, community.id, req.userId, title, date,
-    String(b.time || '').trim().slice(0, 20), String(b.venue || '').trim().slice(0, 100), String(b.description || '').trim().slice(0, 600), now())
+  await q.run(`INSERT INTO events (id, community_id, creator_id, title, date, time, venue, description, attending, created_at, cover)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`, id, community.id, req.userId, title, date,
+    String(b.time || '').trim().slice(0, 20), String(b.venue || '').trim().slice(0, 100), String(b.description || '').trim().slice(0, 600), now(), cover)
   res.json({ event: serializeEvent(await q.get('SELECT * FROM events WHERE id = ?', id)) })
 })
 

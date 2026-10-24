@@ -7,10 +7,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@600;700&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <title>Voidaj — Voices Of Individuals, Discovered Anywhere</title>
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Apply the saved theme before the first paint, so dark mode never flashes white.
+      try { var t = localStorage.getItem('voidaj-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch (e) {}
+    </script>
+    <title>VOIDAJ — People, Communities &amp; Opportunities</title>
   </head>
   <body>
     <div id="root"></div>

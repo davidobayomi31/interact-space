@@ -12,6 +12,8 @@ const SEED_IDS = new Set(COMMUNITIES.map((c) => c.id))
 const shape = (c) => ({ ...c, memberIds: [], moderators: [], created: true })
 
 let created = []
+// Cover photos moderators have set on the seeded communities, by id.
+let seedCovers = {}
 let loading = null
 let loaded = false
 const listeners = new Set()
@@ -19,7 +21,10 @@ const notify = () => listeners.forEach((f) => f())
 
 export function refreshCommunities() {
   loading = api.listCommunities()
-    .then((all) => { created = all.filter((c) => !SEED_IDS.has(c.id)).map(shape) })
+    .then((all) => {
+      created = all.filter((c) => !SEED_IDS.has(c.id)).map(shape)
+      seedCovers = Object.fromEntries(all.filter((c) => SEED_IDS.has(c.id) && c.cover).map((c) => [c.id, c.cover]))
+    })
     .catch(() => {})
     .finally(() => { loaded = true; notify() })
   return loading
@@ -30,9 +35,19 @@ export function addCommunity(c) {
   notify()
 }
 
-export const allCommunities = () => [...COMMUNITIES, ...created]
+export function setCommunityCover(id, cover) {
+  if (SEED_IDS.has(id)) seedCovers = { ...seedCovers, [id]: cover }
+  else created = created.map((c) => (c.id === id ? { ...c, cover } : c))
+  notify()
+}
+
+const withCover = (c) => (seedCovers[c.id] ? { ...c, cover: seedCovers[c.id] } : c)
+export const allCommunities = () => [...COMMUNITIES.map(withCover), ...created]
 export const createdCommunities = () => created
-export const findCommunity = (id) => COMMUNITIES.find((c) => c.id === id) || created.find((c) => c.id === id)
+export function findCommunity(id) {
+  const seeded = COMMUNITIES.find((c) => c.id === id)
+  return seeded ? withCover(seeded) : created.find((c) => c.id === id)
+}
 
 export function useCommunities() {
   const [, redraw] = useState(0)

@@ -16,6 +16,7 @@ const TILES = [
   { id: 'business', icon: 'store', title: 'Business', sub: 'A page for your shop, brand or company', soon: true },
   { id: 'organization', icon: 'layers', title: 'Organization', sub: 'Schools, NGOs, churches, associations', soon: true },
   { id: 'service', icon: 'briefcase', title: 'Service', sub: 'List what you offer so people can hire you', soon: true },
+  { id: 'tripping', icon: 'truck', title: 'Tripping 🚙🚐', sub: 'Road trips and group travel — find people going your way', soon: true },
 ]
 
 export default function AddHub() {
@@ -43,7 +44,7 @@ export default function AddHub() {
           const body = (
             <>
               <span className="addhub-icon"><Icon name={t.icon} size={22} /></span>
-              <span className="addhub-title">{t.title}{t.soon && <span className="addhub-soon">Soon</span>}</span>
+              <span className="addhub-title">{t.title}{t.soon && <span className="addhub-soon">Coming soon</span>}</span>
               <span className="meta-dim">{t.sub}</span>
             </>
           )

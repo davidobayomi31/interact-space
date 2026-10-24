@@ -5,7 +5,7 @@
 // the member's own space. On wider screens the rows become grids.
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { COMMUNITIES, EVENTS, USERS, PURPOSE } from '../data/seed.js'
+import { EVENTS, USERS, PURPOSE } from '../data/seed.js'
 import { Avatar, PostCard, FavoriteButton } from '../components/bits.jsx'
 import { useCommunities, findCommunity } from '../communities.js'
 import { Icon } from '../components/Icons.jsx'
@@ -61,31 +61,46 @@ function HomeSearch({ communities, posts, jobs, events }) {
   )
 }
 
-// A flat, hand-drawn skyline: blocks of ink with a few lit windows. No
-// photos, no gradients.
+// A city at dusk: towers in deep navy against a blue sky, lit windows
+// picked out in warm gold and white. Drawn, so it loads instantly.
 function Skyline() {
+  const towers = [
+    [0, 62, 22], [20, 40, 18], [36, 70, 26], [60, 24, 16], [74, 50, 22], [94, 12, 14], [106, 44, 24],
+    [128, 30, 18], [144, 58, 26], [168, 6, 16], [182, 36, 22], [202, 52, 20], [220, 20, 18], [236, 46, 26],
+    [260, 30, 16], [274, 60, 22], [294, 38, 26],
+  ]
   return (
-    <svg className="city-hero-skyline" viewBox="0 0 320 90" preserveAspectRatio="none" aria-hidden="true">
-      <g fill="#262420">
-        <rect x="10" y="48" width="26" height="42" /><rect x="40" y="30" width="20" height="60" />
-        <rect x="64" y="56" width="30" height="34" /><rect x="98" y="18" width="24" height="72" />
-        <rect x="126" y="40" width="18" height="50" /><rect x="148" y="8" width="22" height="82" />
-        <rect x="174" y="44" width="30" height="46" /><rect x="208" y="26" width="20" height="64" />
-        <rect x="232" y="52" width="26" height="38" /><rect x="262" y="34" width="22" height="56" />
-        <rect x="288" y="58" width="28" height="32" />
+    <svg className="city-hero-skyline" viewBox="0 0 320 100" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <g fill="#0A1A33" opacity="0.55">
+        {towers.map(([x, y, w], i) => <rect key={i} x={x + 6} y={y + 14} width={w} height={100 - y} />)}
       </g>
-      <g fill="#d99a1e">
-        <rect x="104" y="28" width="4" height="4" /><rect x="112" y="40" width="4" height="4" /><rect x="154" y="20" width="4" height="4" />
-        <rect x="160" y="44" width="4" height="4" /><rect x="214" y="36" width="4" height="4" /><rect x="46" y="42" width="4" height="4" />
-        <rect x="268" y="46" width="4" height="4" /><rect x="180" y="56" width="4" height="4" />
+      <g fill="#081429">
+        {towers.map(([x, y, w], i) => <rect key={i} x={x} y={y + 24} width={w - 2} height={100 - y} />)}
+      </g>
+      <g>
+        {towers.flatMap(([x, y, w], i) => Array.from({ length: Math.floor((76 - y) / 9) }, (_, r) =>
+          (i * 7 + r * 3) % 4 === 0 ? null : (
+            <rect key={`${i}-${r}`} x={x + 3 + ((r + i) % 2) * (w / 2 - 3)} y={y + 30 + r * 9} width="3" height="3"
+              fill={(i + r) % 3 === 0 ? '#FFD27A' : '#BFD6FF'} opacity={(i + r) % 2 ? 0.9 : 0.55} />
+          )))}
       </g>
     </svg>
   )
 }
 
+// A photo that quietly removes itself if it fails to load, leaving the
+// drawn fallback (icon or skyline) underneath.
+function Cover({ src, className = 'tile-photo' }) {
+  const [ok, setOk] = useState(true)
+  if (!src || !ok) return null
+  return <img className={className} src={src} alt="" loading="lazy" decoding="async" onError={() => setOk(false)} />
+}
+
+// Drop a photo at public/images/city/<city>.jpg (lower case) and the hero uses it.
 function CityHero({ city }) {
   return (
     <Link to="/city" className="city-hero">
+      <Cover src={`/images/city/${city.toLowerCase()}.jpg`} className="city-hero-photo" />
       <div className="city-hero-text">
         <strong>Explore your city</strong>
         <span>Events, jobs, hubs and more in {city}</span>
@@ -97,16 +112,16 @@ function CityHero({ city }) {
 }
 
 const SHORTCUTS = [
-  { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', tone: 'terracotta' },
-  { to: '/add', icon: 'plus-circle', label: 'Add Hub', tone: 'green' },
-  { to: '/city', icon: 'map-pin', label: 'My City', tone: 'gold' },
+  { to: '/jobs', icon: 'briefcase', label: 'Quick Jobs', tone: 'blue' },
+  { to: '/add', icon: 'plus', label: 'Add Hub', tone: 'teal' },
+  { to: '/city', icon: 'map-pin', label: 'My City', tone: 'purple' },
 ]
 
 const QUICK_ACTIONS = [
-  { to: '/add?pick=post', icon: 'edit', label: 'Post', tone: 'ink' },
-  { to: '/add?pick=event', icon: 'calendar', label: 'Create Event', tone: 'gold' },
-  { to: '/jobs', icon: 'briefcase', label: 'Find Job', tone: 'terracotta' },
-  { to: '/add', icon: 'plus', label: 'Add Hub', tone: 'green' },
+  { to: '/add?pick=post', icon: 'send', label: 'Post', tone: 'blue' },
+  { to: '/add?pick=event', icon: 'calendar', label: 'Create Event', tone: 'blue' },
+  { to: '/jobs', icon: 'briefcase', label: 'Find Job', tone: 'blue' },
+  { to: '/add', icon: 'map-pin', label: 'Add Hub', tone: 'teal' },
 ]
 
 // A titled row of cards: swipe sideways on phones, a grid on wider screens.
@@ -128,13 +143,19 @@ function EventTile({ event }) {
   return (
     <div className="tile event-tile card-link" style={{ '--accent': c?.accent ?? 'var(--gold)' }}>
       <div className="tile-top">
+        <Cover src={event.cover ?? c?.cover} />
         <span className="tile-date"><b>{day(event.date)}</b>{month(event.date)}</span>
         <Icon name={c?.icon ?? 'calendar'} size={30} />
+        <span className="tile-kind">{c ? c.name.split(' ')[0] : 'Event'}</span>
       </div>
       <div className="tile-body">
         <Link to={to} className="tile-title stretched">{event.title}</Link>
-        <span className="tile-meta"><Icon name="clock" size={12} /> {event.time}{event.venue ? ` · ${event.venue}` : ''}</span>
-        <span className="tile-meta"><Icon name="users" size={12} /> {event.attending} going</span>
+        <span className="tile-meta"><Icon name="clock" size={12} /> {day(event.date)} {month(event.date)} · {event.time}</span>
+        {event.venue && <span className="tile-meta"><Icon name="map-pin" size={12} /> {event.venue}</span>}
+        <span className="tile-going">
+          <span className="tile-faces" aria-hidden="true">{USERS.slice(0, 3).map((u) => <Avatar key={u.id} user={u} size={20} />)}</span>
+          {event.attending} going
+        </span>
       </div>
       <FavoriteButton className="tile-fav" item={{ kind: 'event', id: event.id, title: event.title, subtitle: `${event.date} · ${event.time}${c ? ` · ${c.name}` : ''}`, href: to }} />
     </div>
@@ -147,10 +168,10 @@ function CommunityTile({ community: c }) {
   const joined = profile.communities.includes(c.id)
   return (
     <div className="tile community-tile card-link" style={{ '--accent': c.accent }}>
-      <div className="tile-top"><Icon name={c.icon} size={34} /></div>
+      <div className="tile-top"><Icon name={c.icon} size={34} /><Cover src={c.cover} /></div>
       <div className="tile-body">
         <Link to={`/community/${c.id}`} className="tile-title stretched">{c.name}</Link>
-        <span className="tile-meta"><Icon name={c.scope === 'global' ? 'globe' : 'map-pin'} size={12} /> {c.memberCount.toLocaleString()} members</span>
+        <span className="tile-meta"><Icon name={c.scope === 'global' ? 'globe' : 'map-pin'} size={12} /> {c.memberCount >= 1000 ? `${(c.memberCount / 1000).toFixed(1)}k` : c.memberCount} members</span>
         <button className={`btn small ${joined ? 'ghost' : 'primary'}`} disabled={joined}
           onClick={() => (user ? joinCommunity(c.id) : navigate('/auth'))}>
           {joined ? <><Icon name="check" size={13} /> Joined</> : 'Join'}
@@ -181,7 +202,7 @@ function PersonTile({ person }) {
 function Welcome() {
   return (
     <section className="welcome-card">
-      <VoidajMark size={84} />
+      <VoidajMark size={30} light />
       <h1>A new space for people, communities &amp; opportunities.</h1>
       <p>{PURPOSE}</p>
       <div className="welcome-actions">
@@ -210,7 +231,7 @@ export default function Home() {
 
   // Events members have planned come first, then the city calendar.
   const events = [...madeEvents, ...[...EVENTS].sort((a, b) => a.date.localeCompare(b.date))].slice(0, 8)
-  const trending = COMMUNITIES.filter((c) => c.trending || c.scope === 'global').slice(0, 8)
+  const trending = communities.filter((c) => c.trending || c.scope === 'global' || c.cover).slice(0, 8)
   const people = USERS.filter((u) => u.id !== profile.id && !profile.connections.includes(u.id)).slice(0, 8)
   const latest = [...posts].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4)
   const first = profile.name?.split(' ')[0]

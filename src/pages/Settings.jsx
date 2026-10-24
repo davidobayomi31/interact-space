@@ -14,7 +14,7 @@ const SECTIONS = [
   { id: 'privacy', icon: 'eye', label: 'Privacy', sub: 'Who sees your location and can message you' },
   { id: 'security', icon: 'lock', label: 'Security', sub: 'Sign-ins and devices' },
   { id: 'notifications', icon: 'bell', label: 'Notifications', sub: 'What you hear about, and how' },
-  { id: 'preferences', icon: 'sparkle', label: 'Preferences', sub: 'Language, location, accessibility, interests' },
+  { id: 'preferences', icon: 'sparkle', label: 'Preferences', sub: 'Theme, language, location, accessibility, interests' },
   { id: 'help', icon: 'info', label: 'Help & Support', sub: 'Get help or report a problem' },
   { id: 'data', icon: 'layers', label: 'Data', sub: 'Download your data or delete your account' },
 ]
@@ -329,6 +329,31 @@ function Notifications() {
   )
 }
 
+// ── Appearance ───────────────────────────────────────────────────────
+const THEME_OPTIONS = [
+  { id: 'system', icon: 'monitor', label: 'System', sub: 'Match this device' },
+  { id: 'light', icon: 'sun', label: 'Light', sub: 'Always light' },
+  { id: 'dark', icon: 'moon', label: 'Dark', sub: 'Always dark' },
+]
+
+function ThemeBlock() {
+  const { theme, setTheme } = useApp()
+  return (
+    <Block title="Appearance" sub="Choose how VOIDAJ looks. System follows your phone or computer’s setting.">
+      <div className="theme-picker" role="radiogroup" aria-label="Theme">
+        {THEME_OPTIONS.map((o) => (
+          <button key={o.id} type="button" role="radio" aria-checked={theme === o.id} aria-label={`${o.label} theme`}
+            className={`theme-option theme-${o.id} ${theme === o.id ? 'on' : ''}`} onClick={() => setTheme(o.id).catch(() => {})}>
+            <span className="theme-swatch" aria-hidden="true"><span /><span /></span>
+            <span className="theme-option-label"><Icon name={o.icon} size={15} /> {o.label}</span>
+            <span className="meta-dim">{o.sub}</span>
+          </button>
+        ))}
+      </div>
+    </Block>
+  )
+}
+
 // ── Preferences ──────────────────────────────────────────────────────
 function Preferences() {
   const { user, saveProfile } = useApp()
@@ -341,6 +366,8 @@ function Preferences() {
 
   return (
     <>
+      <ThemeBlock />
+
       <Block title="Language">
         <Field label="App language">
           <select className="job-select" value={settings.language} onChange={(e) => set({ language: e.target.value })}>

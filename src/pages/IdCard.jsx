@@ -47,8 +47,7 @@ export default function IdCard() {
 
       <article className="id-card" aria-label="Your VOIDAJ ID card">
         <header className="id-card-top">
-          <VoidajMark size={34} />
-          <span className="brand-word">VOIDAJ</span>
+          <VoidajMark size={18} light />
           <span className="id-card-kind">ID</span>
         </header>
         <div className="id-card-person">

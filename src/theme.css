@@ -1,0 +1,476 @@
+/* ── VOIDAJ blue theme ────────────────────────────────────────────────
+   Loaded after styles.css and redesign.css. The brand palette from the
+   VOIDAJ guide: deep navy ink, electric blue for actions, teal for
+   community and growth, white cards on a light blue-gray ground. The
+   blue→teal gradient is kept for highlights, main buttons and heroes. */
+
+:root {
+  --ink: #0B1F3B;
+  --bg: #EDF4FE;
+  --bg-raised: #F5F9FF;
+  --surface: #FFFFFF;
+  --surface-2: #E6EFFC;
+  --border: #DCE6F3;
+  --border-soft: #E8EEF7;
+  --border-strong: #C3D2E6;
+  --text: #0B1F3B;
+  --text-dim: #5E6E88;
+  --brand: #3878F6;          /* electric blue: actions, active states */
+  --brand-strong: #1F5FD9;
+  --brand-soft: #E6EFFE;
+  --teal: #00C9B0;           /* community, growth */
+  --teal-strong: #009C89;
+  --teal-soft: #DDF8F4;
+  --purple: #7B5CF5;
+  --purple-soft: #EEE9FE;
+  --green: #16A34A;          /* verified, success */
+  --green-soft: #E3F6EA;
+  --gold: #F5A524;
+  --gold-strong: #B97806;
+  --gold-soft: #FEF3DC;
+  --orange: #FF8A00;
+  --silver: #5E6E88;
+  --danger: #E5484D;
+  --grad: linear-gradient(90deg, #3878F6 0%, #00C9B0 100%);
+  --grad-btn: linear-gradient(90deg, #2F6BF0 0%, #3E8BFA 100%);
+  --night: linear-gradient(180deg, #0B1F3B 0%, #1B3F8A 55%, #3878F6 100%);
+  --radius: 20px;
+  --radius-sm: 12px;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-logo: 'Montserrat', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --shadow: 0 1px 2px rgba(11, 31, 59, 0.04), 0 8px 24px -12px rgba(30, 70, 140, 0.18);
+  --shadow-lift: 0 2px 4px rgba(11, 31, 59, 0.05), 0 18px 36px -14px rgba(30, 70, 140, 0.28);
+}
+
+body { background: var(--bg); font-size: 15px; }
+
+/* ── Logo: VOIDAJ spelled out ── */
+.voidaj-logo {
+  display: inline-flex; align-items: center; line-height: 1;
+  font-family: var(--font-logo); font-weight: 700; letter-spacing: 0.28em;
+  color: var(--ink); white-space: nowrap; margin-right: -0.28em;
+}
+.voidaj-logo-a { color: var(--brand); }
+.voidaj-logo.light { color: #fff; }
+.voidaj-logo.light .voidaj-logo-a { color: #6FA3FF; }
+.brand .voidaj-logo { padding: 6px 0; }
+
+/* ── Buttons: soft, rounded, sentence case ── */
+.btn {
+  border-width: 1px; border-radius: 12px; text-transform: none; letter-spacing: 0;
+  font-size: 14px; font-weight: 600;
+}
+.btn.large { font-size: 15px; }
+.btn.primary, .btn.primary:hover { background: var(--grad-btn); color: #fff; border-color: transparent; box-shadow: 0 6px 16px -8px rgba(56, 120, 246, 0.7); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.primary:disabled { background: var(--surface-2); color: var(--text-dim); box-shadow: none; filter: none; }
+.btn.ghost, .btn.brand-outline { background: var(--surface); border-color: var(--border); color: var(--ink); }
+.btn.ghost:hover, .btn.brand-outline:hover { background: var(--surface-2); color: var(--ink); border-color: var(--border-strong); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.icon-btn { border-width: 1px; border-radius: 12px; }
+.icon-btn.subtle { border-color: transparent; }
+
+/* ── Headings: no shouting caps ── */
+.section-title, .hero h1, .space-hero h1, .profile-hero h1,
+.community-banner h1, .discover-hero h1, .thread-title, .auth-card h1 {
+  text-transform: none; letter-spacing: -0.01em;
+}
+h1, h2, h3 { letter-spacing: -0.01em; }
+.section-title .icon { color: var(--brand); }
+
+/* ── Cards: white, hairline, soft blue shadow ── */
+.card { border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow); }
+.card:hover { border-color: var(--border); }
+.card-link:hover { border-color: var(--border-strong); box-shadow: var(--shadow-lift); }
+.pill { background: var(--surface-2); border-color: transparent; }
+.pill.skill { color: var(--brand-strong); border-color: var(--brand-soft); background: var(--brand-soft); }
+
+/* Inputs */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+select:focus, textarea:focus { outline: none; border-color: var(--brand) !important; box-shadow: 0 0 0 3px var(--brand-soft); }
+
+/* ── Top bar (phones) ── */
+.topbar {
+  background: rgba(255, 255, 255, 0.92); border-bottom: 1px solid var(--border-soft);
+  box-shadow: 0 4px 18px -14px rgba(30, 70, 140, 0.35);
+}
+.topbar-right .bar-icon { color: var(--ink); }
+.topbar-right .bar-icon.active { color: var(--brand); background: var(--brand-soft); }
+.bar-badge { background: var(--danger); color: #fff; }
+.me-chip .avatar { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--brand-soft); }
+
+/* ── Side nav (tablet and desktop) ── */
+.sidenav { background: var(--surface); border-right: 1px solid var(--border-soft); }
+.sidenav-brand { padding-left: 6px; }
+.sidenav-links > a, .sidenav-foot > a:not(.btn) { border-radius: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.sidenav-links > a:hover, .sidenav-foot > a:not(.btn):hover { background: var(--surface-2); color: var(--ink); }
+.sidenav-links > a.active, .sidenav-foot > a.active:not(.btn) { background: var(--brand-soft); color: var(--brand-strong); }
+.sidenav-links > a.active .icon { color: var(--brand); }
+@media (min-width: 681px) and (max-width: 1000px) {
+  .sidenav .voidaj-logo { font-size: 11px !important; letter-spacing: 0.06em; margin-right: 0; }
+}
+
+/* ── Bottom bar (phones) ── */
+@media (max-width: 680px) {
+  .topbar { padding: 10px 16px; background: rgba(255, 255, 255, 0.94); }
+  .topbar-right .bar-chat { display: none; }
+  .mobile-nav {
+    background: rgba(255, 255, 255, 0.97); border-top: 1px solid var(--border-soft);
+    box-shadow: 0 -6px 20px -16px rgba(30, 70, 140, 0.4); padding-top: 8px;
+  }
+  .mobile-nav a { color: #7D8BA3; font-size: 11px; font-weight: 600; gap: 3px; }
+  .mobile-nav a .icon { padding: 0; background: none !important; }
+  .mobile-nav a.active { color: var(--brand); }
+  .mobile-nav a.active .icon { stroke-width: 2.4; }
+  .app-shell { padding-bottom: 66px; }
+}
+
+/* ── Tones ── */
+.tone-blue, .tone-terracotta { --tone: var(--brand); --tone-soft: var(--brand-soft); }
+.tone-teal, .tone-green { --tone: var(--teal-strong); --tone-soft: var(--teal-soft); }
+.tone-purple, .tone-gold { --tone: var(--purple); --tone-soft: var(--purple-soft); }
+.tone-navy, .tone-ink { --tone: #fff; --tone-soft: var(--ink); }
+
+/* ── Home ── */
+.row-head h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.row-head a { color: var(--brand); font-size: 13px; }
+.home2 { gap: 22px; padding-top: 14px; }
+.home-greeting h1 { font-size: 24px; }
+
+.search-pill { background: var(--surface-2); border-color: transparent; height: 46px; border-radius: 14px; color: #7D8BA3; }
+.search-pill:focus-within { background: var(--surface); border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.search-pill input { font-size: 14.5px; }
+
+.city-hero {
+  min-height: 150px; padding: 20px; align-items: flex-end; border-radius: 18px;
+  background: var(--night); box-shadow: 0 14px 30px -18px rgba(30, 80, 200, 0.75);
+}
+.city-hero::after {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(180deg, rgba(11, 31, 59, 0) 30%, rgba(11, 31, 59, 0.85) 100%);
+}
+.city-hero-text strong { font-size: 21px; font-weight: 700; }
+.city-hero-text span { color: #D6E2F8; font-size: 13px; }
+.city-hero-go { background: var(--brand); box-shadow: 0 0 0 4px rgba(56, 120, 246, 0.3); }
+.city-hero-skyline { top: auto; bottom: 0; height: 78%; }
+.rail { scroll-padding-inline: 16px; }
+
+.shortcut {
+  gap: 10px; padding: 16px 8px 14px; border-radius: 16px; border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow); font-size: 13px; color: var(--ink);
+}
+.shortcut:hover { border-color: var(--border); }
+.shortcut-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--tone); color: #fff; box-shadow: 0 6px 14px -8px var(--tone); }
+
+/* Event cards: picture left, details right */
+.tile { border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow); }
+.tile.card-link:hover { border-color: var(--border); }
+.event-tile { width: 300px; flex-direction: row; }
+.event-tile .tile-top {
+  position: relative; width: 108px; height: auto; flex-shrink: 0; flex-direction: column; justify-content: space-between;
+  align-items: flex-start; padding: 8px; margin: 8px 0 8px 8px; border-radius: 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 70%, #fff), var(--accent));
+}
+.event-tile .tile-top > .icon { margin: 0; align-self: center; opacity: 0.95; }
+.tile-kind {
+  align-self: stretch; padding: 3px 6px; border-radius: 8px; text-align: center;
+  background: rgba(11, 31, 59, 0.55); color: #fff; font-size: 10.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tile-date { border-radius: 8px; padding: 3px 6px; font-size: 9.5px; color: var(--ink); }
+.tile-date b { font-size: 14px; }
+.event-tile .tile-body { padding: 12px 12px 12px 12px; gap: 3px; min-width: 0; }
+.event-tile .tile-title { padding-right: 26px; font-size: 14px; }
+.tile-meta { font-size: 12px; }
+.tile-meta .icon { color: var(--text-dim); }
+.tile-going { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 6px; font-size: 11.5px; color: var(--text-dim); }
+.tile-faces { display: inline-flex; }
+.tile-faces .avatar { box-shadow: 0 0 0 2px #fff; }
+.tile-faces .avatar + .avatar { margin-left: -6px; }
+.tile .tile-fav { top: 8px; right: 8px; width: 28px; height: 28px; box-shadow: var(--shadow); }
+.event-tile .tile-top > .icon { margin-right: 0; }
+
+/* Community cards: picture on top, name and members below */
+.community-tile { width: 132px; }
+.community-tile .tile-top {
+  height: 92px; margin: 6px 6px 0; border-radius: 12px;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 65%, #fff), var(--accent));
+}
+.community-tile .tile-body { padding: 8px 10px 10px; gap: 2px; }
+.community-tile .tile-title { font-size: 13px; }
+.community-tile .tile-meta .icon { color: var(--brand); }
+@media (max-width: 680px) { .community-tile .btn { display: none; } }
+
+.person-tile { border-radius: 16px; }
+
+/* Quick actions: soft blue tiles with a solid icon */
+.quick-actions { gap: 10px; }
+.quick-action {
+  gap: 8px; padding: 12px 4px 10px; border-radius: 14px; background: var(--tone-soft);
+  font-size: 11.5px; color: var(--ink);
+}
+.quick-action-icon { width: 36px; height: 36px; background: var(--tone); color: #fff; box-shadow: 0 6px 14px -8px var(--tone); }
+
+/* Signed-out welcome, like the splash screen */
+.welcome-card { background: var(--night); border-radius: 20px; padding: 30px 24px; box-shadow: 0 18px 36px -20px rgba(30, 80, 200, 0.8); }
+.welcome-card p { color: #D6E2F8; }
+.welcome-card .btn.ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+.welcome-card .btn.ghost:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+@media (max-width: 680px) {
+  .home2 .home-greeting { display: none; }
+  .home2 .welcome-card + .home-search { margin-top: 0; }
+}
+@media (min-width: 900px) {
+  .home2 { gap: 30px; padding-top: 28px; }
+  .city-hero { min-height: 220px; padding: 28px; }
+  .city-hero-text strong { font-size: 28px; }
+  .shortcut { flex-direction: row; justify-content: flex-start; padding: 14px 16px; }
+  .rail { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .rail:has(.community-tile) { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .event-tile { width: auto; }
+  .quick-actions { grid-template-columns: repeat(4, minmax(0, 150px)); }
+}
+
+/* ── Page heads, chips, tabs ── */
+.page-head h1 { font-size: 24px; font-weight: 700; }
+.city-chip { background: var(--brand-soft); color: var(--brand-strong); }
+.chip-row button, .filter-row button { border-color: var(--border); border-radius: 999px; }
+.chip-row button.on, .filter-row button.on, .filter-row button.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.view-switch { background: var(--surface-2); }
+.view-switch button.on { color: var(--brand-strong); }
+.tabs button.active, .tabs a.active { color: var(--brand); border-color: var(--brand); }
+
+/* ── Profile ── */
+.pf-hero { border: 1px solid var(--border-soft); border-radius: 20px; box-shadow: var(--shadow); }
+.pf-cover { background: var(--night) !important; position: relative; }
+.pf-gear { background: rgba(255, 255, 255, 0.92); color: var(--ink); box-shadow: var(--shadow); }
+.pf-tick { background: var(--brand); }
+.pf-id h1 { font-size: 24px; font-weight: 700; }
+.pf-stats b { font-size: 20px; font-weight: 700; }
+.pf-badge.tone-blue, .pf-badge.tone-terracotta { background: var(--brand-soft); color: var(--brand-strong); }
+.pf-badge.tone-green, .pf-badge.tone-teal { background: var(--green-soft); color: var(--green); }
+.pf-badge.tone-gold, .pf-badge.tone-purple { background: var(--purple-soft); color: var(--purple); }
+.pf-badge.tone-ink { background: var(--surface-2); color: var(--ink); }
+.pf-badge { --tone: var(--brand); }
+.pf-tabs { border-bottom-color: var(--border-soft); }
+.pf-tabs button { font-size: 14px; font-weight: 600; }
+.pf-tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
+.pf-id-link { color: var(--brand); }
+.pf-activity-icon { background: var(--brand-soft); color: var(--brand); }
+.pf-impact-tile { border-color: var(--border-soft); box-shadow: var(--shadow); }
+.pf-impact-tile .icon { color: var(--brand); }
+.pf-facts > div > .icon { color: var(--brand); }
+
+/* ── ID card ── */
+.id-card { background: linear-gradient(150deg, #0B1F3B 0%, #163A7A 60%, #2F6BF0 100%); border-top: 0; }
+.id-card-kind { border-color: rgba(255, 255, 255, 0.3); color: #D6E2F8; }
+.id-card-handle, .id-card-city { color: #C7D6F2; }
+.id-verified { background: var(--teal-strong); }
+
+/* ── Footer ── */
+.footer { border-top: 1px solid var(--border-soft); background: var(--surface); }
+.footer-brand em { color: var(--brand); }
+
+/* ── Admin ── */
+.admin-stat:first-child { background: var(--night); border-color: transparent; }
+.admin-stat:first-child span { color: #D6E2F8; }
+.acct-warning { background: var(--gold-soft); }
+
+/* VIS switch on a profile */
+.profile-voice-tabs { background: var(--surface-2); border-color: transparent; box-shadow: none; }
+.profile-voice-tabs button, .profile-voice-add { font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text-dim); }
+.profile-voice-tabs button.on { background: var(--surface); color: var(--brand-strong); box-shadow: 0 1px 3px rgba(11, 31, 59, 0.12); }
+.profile-voice-add { color: var(--brand); }
+
+/* Selected chips and switches: blue rather than the old near-black. */
+.hx-tabs button.on, .mod-scope button.on, .filter-row button.on, .settings-tag.on,
+.category-chip.on, .camera-modes button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.hx-dots button.on { background: var(--brand); }
+.role-badge.owner, .mod-activity-icon.role, .mod-activity-icon.community { background: var(--ink); color: #fff; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Dark mode — true black ground, near-black cards, the same
+   electric blue. Applies when Settings → Theme is Dark, or System on a
+   device set to dark. data-theme on <html> is set by index.html before
+   the first paint and kept in sync by state.jsx.
+   ══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #F5F7FA;
+  --bg: #000000;
+  --bg-raised: #0A0A0B;
+  --surface: #121214;
+  --surface-2: #1C1C20;
+  --border: #2A2A30;
+  --border-soft: #1E1E23;
+  --border-strong: #3A3A42;
+  --text: #F5F7FA;
+  --text-dim: #A1A1AA;
+  --brand: #4C8DFF;
+  --brand-strong: #7AAAFF;
+  --brand-soft: rgba(76, 141, 255, 0.16);
+  --teal-strong: #12D3BA;
+  --teal-soft: rgba(0, 201, 176, 0.15);
+  --purple: #9B82FF;
+  --purple-soft: rgba(123, 92, 245, 0.18);
+  --green: #3DD68C;
+  --green-soft: rgba(34, 197, 94, 0.15);
+  --gold-soft: rgba(245, 165, 36, 0.14);
+  --gold-strong: #F5B94A;
+  --night: linear-gradient(180deg, #05070D 0%, #0E2557 58%, #2F6BF0 100%);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px -14px rgba(0, 0, 0, 0.7);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 40px -16px rgba(0, 0, 0, 0.8);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ink: #F5F7FA; --bg: #000000; --bg-raised: #0A0A0B; --surface: #121214; --surface-2: #1C1C20;
+    --border: #2A2A30; --border-soft: #1E1E23; --border-strong: #3A3A42; --text: #F5F7FA; --text-dim: #A1A1AA;
+    --brand: #4C8DFF; --brand-strong: #7AAAFF; --brand-soft: rgba(76, 141, 255, 0.16);
+    --teal-strong: #12D3BA; --teal-soft: rgba(0, 201, 176, 0.15); --purple: #9B82FF; --purple-soft: rgba(123, 92, 245, 0.18);
+    --green: #3DD68C; --green-soft: rgba(34, 197, 94, 0.15); --gold-soft: rgba(245, 165, 36, 0.14); --gold-strong: #F5B94A;
+    --night: linear-gradient(180deg, #05070D 0%, #0E2557 58%, #2F6BF0 100%);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px -14px rgba(0, 0, 0, 0.7);
+    --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 40px -16px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Component fixes in dark mode. */
+:root[data-theme="dark"] .voidaj-logo-a { color: #4C8DFF; }
+:root[data-theme="dark"] .topbar, :root[data-theme="dark"] .mobile-nav { background: rgba(0, 0, 0, 0.92); border-color: var(--border-soft); }
+:root[data-theme="dark"] .sidenav { background: var(--bg-raised); }
+:root[data-theme="dark"] .footer { background: var(--bg-raised); }
+:root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: #71717A; }
+:root[data-theme="dark"] .search-pill { background: var(--surface); border-color: var(--border-soft); }
+.search-pill input, .search-pill input:focus { background: none !important; border: 0 !important; box-shadow: none !important; }
+:root[data-theme="dark"] .btn.ghost, :root[data-theme="dark"] .btn.brand-outline { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+:root[data-theme="dark"] .btn.ghost:hover, :root[data-theme="dark"] .btn.brand-outline:hover { background: var(--border); color: var(--text); }
+:root[data-theme="dark"] .btn.primary:disabled { background: var(--surface-2); color: var(--text-dim); }
+:root[data-theme="dark"] .tile-date, :root[data-theme="dark"] .tile .tile-fav, :root[data-theme="dark"] .pf-gear, :root[data-theme="dark"] .city-line-mark, :root[data-theme="dark"] .choice-icon, :root[data-theme="dark"] .mod-scope button, :root[data-theme="dark"] .role-select, :root[data-theme="dark"] .profile-voice-tabs button.on { background: var(--surface-2); color: var(--text); }
+:root[data-theme="dark"] .profile-voice-tabs { background: var(--bg-raised); }
+:root[data-theme="dark"] .profile-voice-tabs button.on { color: var(--brand-strong); }
+:root[data-theme="dark"] .tile-faces .avatar, :root[data-theme="dark"] .me-chip .avatar { box-shadow: 0 0 0 2px var(--surface); }
+:root[data-theme="dark"] .dm { --dm-line: var(--border); --dm-soft: var(--surface-2); --dm-hover: var(--surface-2); --dm-muted: var(--text-dim); background: var(--surface); }
+:root[data-theme="dark"] .dm-modal, :root[data-theme="dark"] .profile-menu-list, :root[data-theme="dark"] .report-menu, :root[data-theme="dark"] .assistant-drawer { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .dm-person:hover { background: var(--surface-2); }
+:root[data-theme="dark"] .hx-ideas button:hover, :root[data-theme="dark"] .hx-link, :root[data-theme="dark"] .hx-label { color: var(--text); }
+:root[data-theme="dark"] .role-badge.owner, :root[data-theme="dark"] .mod-activity-icon.role, :root[data-theme="dark"] .mod-activity-icon.community { background: var(--brand); }
+:root[data-theme="dark"] .tone-navy, :root[data-theme="dark"] .tone-ink { --tone: #fff; --tone-soft: var(--brand); }
+:root[data-theme="dark"] .pf-tick { border-color: var(--surface); }
+:root[data-theme="dark"] .pf-photo .avatar { border-color: var(--surface); }
+:root[data-theme="dark"] .pf-badge.tone-ink { background: var(--surface-2); color: var(--text); }
+:root[data-theme="dark"] .acct-warning { color: #F7D9A0; }
+:root[data-theme="dark"] .welcome-card, :root[data-theme="dark"] .city-hero, :root[data-theme="dark"] .id-card { color: #fff; }
+:root[data-theme="dark"] .card .card { background: var(--surface-2); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .voidaj-logo-a { color: #4C8DFF; }
+  :root:not([data-theme="light"]) .topbar, :root:not([data-theme="light"]) .mobile-nav { background: rgba(0, 0, 0, 0.92); border-color: var(--border-soft); }
+  :root:not([data-theme="light"]) .sidenav { background: var(--bg-raised); }
+  :root:not([data-theme="light"]) .footer { background: var(--bg-raised); }
+  :root:not([data-theme="light"]) input, :root:not([data-theme="light"]) select, :root:not([data-theme="light"]) textarea { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  :root:not([data-theme="light"]) input::placeholder, :root:not([data-theme="light"]) textarea::placeholder { color: #71717A; }
+  :root:not([data-theme="light"]) .search-pill { background: var(--surface); border-color: var(--border-soft); }
+.search-pill input, .search-pill input:focus { background: none !important; border: 0 !important; box-shadow: none !important; }
+  :root:not([data-theme="light"]) .btn.ghost, :root:not([data-theme="light"]) .btn.brand-outline { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+  :root:not([data-theme="light"]) .btn.ghost:hover, :root:not([data-theme="light"]) .btn.brand-outline:hover { background: var(--border); color: var(--text); }
+  :root:not([data-theme="light"]) .btn.primary:disabled { background: var(--surface-2); color: var(--text-dim); }
+  :root:not([data-theme="light"]) .tile-date, :root:not([data-theme="light"]) .tile .tile-fav, :root:not([data-theme="light"]) .pf-gear, :root:not([data-theme="light"]) .city-line-mark, :root:not([data-theme="light"]) .choice-icon, :root:not([data-theme="light"]) .mod-scope button, :root:not([data-theme="light"]) .role-select, :root:not([data-theme="light"]) .profile-voice-tabs button.on { background: var(--surface-2); color: var(--text); }
+  :root:not([data-theme="light"]) .profile-voice-tabs { background: var(--bg-raised); }
+  :root:not([data-theme="light"]) .profile-voice-tabs button.on { color: var(--brand-strong); }
+  :root:not([data-theme="light"]) .tile-faces .avatar, :root:not([data-theme="light"]) .me-chip .avatar { box-shadow: 0 0 0 2px var(--surface); }
+  :root:not([data-theme="light"]) .dm { --dm-line: var(--border); --dm-soft: var(--surface-2); --dm-hover: var(--surface-2); --dm-muted: var(--text-dim); background: var(--surface); }
+  :root:not([data-theme="light"]) .dm-modal, :root:not([data-theme="light"]) .profile-menu-list, :root:not([data-theme="light"]) .report-menu, :root:not([data-theme="light"]) .assistant-drawer { background: var(--surface); color: var(--text); border-color: var(--border); }
+  :root:not([data-theme="light"]) .dm-person:hover { background: var(--surface-2); }
+  :root:not([data-theme="light"]) .hx-ideas button:hover, :root:not([data-theme="light"]) .hx-link, :root:not([data-theme="light"]) .hx-label { color: var(--text); }
+  :root:not([data-theme="light"]) .role-badge.owner, :root:not([data-theme="light"]) .mod-activity-icon.role, :root:not([data-theme="light"]) .mod-activity-icon.community { background: var(--brand); }
+  :root:not([data-theme="light"]) .tone-navy, :root:not([data-theme="light"]) .tone-ink { --tone: #fff; --tone-soft: var(--brand); }
+  :root:not([data-theme="light"]) .pf-tick { border-color: var(--surface); }
+  :root:not([data-theme="light"]) .pf-photo .avatar { border-color: var(--surface); }
+  :root:not([data-theme="light"]) .pf-badge.tone-ink { background: var(--surface-2); color: var(--text); }
+  :root:not([data-theme="light"]) .acct-warning { color: #F7D9A0; }
+  :root:not([data-theme="light"]) .welcome-card, :root:not([data-theme="light"]) .city-hero, :root:not([data-theme="light"]) .id-card { color: #fff; }
+  :root:not([data-theme="light"]) .card .card { background: var(--surface-2); }
+}
+
+/* Solid fills that used the text colour: blue instead, so they stay
+   readable when the text colour turns light in dark mode. */
+.assistant-fab, .bubble.user, .voice-tag, .vb-num, .section-card.on, .pill.removable button:hover,
+.jh-filters .toggle-seg.active, .settings-toggle input:checked + .switch, .pro-actions .btn.primary:hover {
+  background: var(--brand); color: #fff;
+}
+.assistant-fab { background: var(--grad-btn); }
+
+/* Settings → Appearance: three cards, each with a little preview. */
+.theme-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme-option {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 10px 12px;
+  border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); text-align: left;
+}
+.theme-option:hover { border-color: var(--border-strong); }
+.theme-option.on { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.theme-option-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.theme-option.on .theme-option-label { color: var(--brand); }
+.theme-option .meta-dim { font-size: 12px; }
+.theme-swatch { position: relative; display: flex; width: 100%; height: 54px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-soft); }
+.theme-swatch span { flex: 1; }
+.theme-light .theme-swatch span, .theme-system .theme-swatch span:first-child { background: linear-gradient(180deg, #fff 0 28%, #EDF4FE 28%); }
+.theme-dark .theme-swatch span, .theme-system .theme-swatch span:last-child { background: linear-gradient(180deg, #121214 0 28%, #000 28%); }
+.theme-swatch::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: 10px; height: 10px; border-radius: 6px; background: var(--grad); }
+@media (max-width: 420px) { .theme-option .meta-dim { display: none; } }
+
+/* Real photos on cards and the city hero. They sit over the drawn
+   fallback, so a missing photo just shows the icon or skyline. */
+.tile-top { position: relative; overflow: hidden; }
+.tile-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.tile-top > :not(.tile-photo) { position: relative; z-index: 1; }
+.tile-top:has(.tile-photo) > .icon { display: none; }
+.city-hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.city-hero:has(.city-hero-photo) .city-hero-skyline { display: none; }
+
+/* Community page: the cover photo across the top of the banner. */
+.community-banner-art { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface)) !important; }
+.community-cover { position: relative; display: block; width: calc(100% + 56px); height: 190px; margin: 0 -28px; object-fit: cover; }
+.community-banner.has-cover .community-banner-content { padding-top: 0; }
+.community-banner.has-cover .community-glyph.large { margin-top: -34px; border: 4px solid var(--surface); background: var(--surface); }
+@media (max-width: 680px) {
+  .community-banner { padding: 0 18px; }
+  .community-cover { width: calc(100% + 36px); margin: 0 -18px; height: 150px; }
+}
+.community-glyph:has(.community-glyph-photo) { overflow: hidden; padding: 0; }
+.community-glyph-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.event-card-photo { display: block; width: calc(100% + 36px); height: 130px; margin: -18px -18px 4px; object-fit: cover; border-radius: 16px 16px 0 0; }
+
+/* Cover photo picker (New community, New event) */
+.cover-picker { display: flex; flex-direction: column; gap: 8px; }
+.cover-picker-label { font-size: 13px; font-weight: 600; }
+.cover-picker-frame {
+  position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 7; overflow: hidden; padding: 0;
+  border: 1.5px dashed var(--border-strong); border-radius: 14px; background: var(--surface-2); color: var(--brand);
+}
+.cover-picker-frame:hover { border-color: var(--brand); }
+.cover-picker-frame.has-photo { border-style: solid; border-color: var(--border); }
+.cover-picker-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cover-picker-cta { position: relative; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+.cover-picker-frame.has-photo .cover-picker-cta { padding: 7px 12px; border-radius: 999px; background: rgba(11, 31, 59, 0.7); color: #fff; }
+.cover-picker-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; }
+
+/* "Change cover" on the community banner, for staff */
+.cover-edit {
+  position: absolute; top: 12px; right: 12px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: 999px; background: rgba(11, 31, 59, 0.72); color: #fff;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; backdrop-filter: blur(6px);
+}
+.cover-edit:hover { background: rgba(11, 31, 59, 0.88); }
+.cover-edit.no-cover { position: relative; top: auto; right: auto; float: right; margin-top: 14px; background: var(--brand-soft); color: var(--brand-strong); }
+
+/* Explore's search box, matching Home's */
+.explore-search { background: var(--surface-2) !important; border: 1px solid transparent !important; border-radius: 14px !important; box-shadow: none !important; }
+.explore-search:focus-within { background: var(--surface) !important; border-color: var(--brand) !important; box-shadow: 0 0 0 3px var(--brand-soft) !important; outline: none !important; }
+.explore-search input { background: none !important; border: 0 !important; box-shadow: none !important; }
+
+/* Footer: the wordmark, then the line beneath it */
+.footer-mark { width: auto; height: auto; }
+.footer { gap: 8px 18px; }
