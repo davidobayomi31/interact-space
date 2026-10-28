@@ -4,7 +4,7 @@
 // Oct 25: "anytime someone taps on a place on the map everything
 // switches to suggestions of the things there … same with the ads").
 // Businesses and Trips are coming soon.
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { COMMUNITIES, EVENTS } from '../data/seed.js'
 import { CommunityCard, EventCard } from '../components/bits.jsx'
@@ -12,7 +12,9 @@ import { useCommunities, findCommunity } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
-import { NigeriaMap, CITIES } from '../components/NigeriaMap.jsx'
+import { CITIES } from '../components/NigeriaMap.jsx'
+// The map library is big, so it loads only when My City opens.
+const CityMap = lazy(() => import('../components/CityMap.jsx').then((m) => ({ default: m.CityMap })))
 import { HomeAds } from '../components/AdsRail.jsx'
 import { JobCard } from './Jobs.jsx'
 
@@ -89,8 +91,8 @@ export default function MyCity() {
       ) : (
         <>
           <section className="city-map-card">
-            <NigeriaMap value={city} onPick={setPlace} counts={counts} caption={false} liveCount={local.length} startTo={startTo} />
-            <div className="city-place" key={city}>
+            <Suspense fallback={<div className="cm"><div className="cm-canvas" /></div>}><CityMap value={city} onPick={setPlace} counts={counts} /></Suspense>
+            <div className="city-place glass" key={city}>
               {photo ? <img className="city-place-photo" src={photo} alt="" /> : <IconTile name="map-pin" tone="grad" size={44} />}
               <div>
                 <strong>{city}</strong>
@@ -102,7 +104,7 @@ export default function MyCity() {
 
           {filter === 'all' && (
             <div className="city-tiles stagger" key={`tiles-${city}`}>
-              <button className="city-tile" onClick={() => setFilter('events')} style={{ '--img': `url(${events[0]?.cover ?? '/images/events/ev-market-popup.jpg'})` }}>
+              <button className="city-tile" onClick={() => setFilter('events')} style={{ '--img': `url(${events.find((e) => e.cover)?.cover || '/images/events/ev-market-popup.jpg'})` }}>
                 <b>Events</b><span>{events.length ? `${events.length} this month` : 'None yet'}</span>
               </button>
               <button className="city-tile" onClick={() => setFilter('jobs')} style={{ '--img': 'url(/images/events/ev-solar-workshop.jpg)' }}>

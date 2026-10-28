@@ -629,7 +629,7 @@ a.pf2-idcard:hover { box-shadow: var(--glow-strong); }
 .cm-row-text i { color: var(--brand); font-weight: 600; }
 .cm-row .cm-join, .cm-row .cm-joined { margin: 0; }
 .cm-create { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 14px; color: var(--text); }
-.cm-create span { flex: 1; display: flex; flex-direction: column; }
+.cm-create span:not(.itile) { flex: 1; display: flex; flex-direction: column; }
 .cm-create em { font-style: normal; font-size: 13px; color: var(--text-dim); }
 
 /* ══ My City ═════════════════════════════════════════════════════════ */
