@@ -455,6 +455,10 @@ CREATE TABLE IF NOT EXISTS status_views (
   PRIMARY KEY (status_id, user_id)
 );
 
+-- A profile photo and a cover photo (links, like community covers).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS photo TEXT DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
@@ -549,6 +553,7 @@ export function publicUser(row) {
     interests: json(row.interests), goals: json(row.goals), skills: json(row.skills),
     portfolio: json(row.portfolio),
     socials: json(row.socials),
+    photo: row.photo || '', cover: row.cover || '',
     idVerified: !!row.id_verified,
   }
 }

@@ -218,6 +218,13 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
   }
   const settings = cleanSettings(b.settings, readSettings(cur))
   const city = b.city != null ? (String(b.city).trim().slice(0, 60) || cur.city) : cur.city
+  let photo = cur.photo || ''
+  let cover = cur.cover || ''
+  try {
+    if (b.photo != null) { photo = cleanCover(b.photo); if (photo === null) return err(res, 400, 'That photo link isn’t one we stored.') }
+    if (b.cover != null) { cover = cleanCover(b.cover); if (cover === null) return err(res, 400, 'That photo link isn’t one we stored.') }
+  } catch (e) { return err(res, 400, e.message) }
+  await q.run('UPDATE users SET photo = ?, cover = ? WHERE id = ?', photo, cover, cur.id)
 
   await q.run(`UPDATE users SET handle=?, phone=?, settings=?, city=?, socials=? WHERE id=?`,
     handle, phone, JSON.stringify(settings ?? readSettings(cur)), city,
@@ -504,7 +511,7 @@ app.put('/api/communities/:id/cover', requireAuth, async (req, res) => {
 // Takes a photo the browser has already shrunk (a data URL) and returns a
 // link to store as a cover. With Supabase Storage set up the photo goes to
 // the bucket; locally without it, the data URL comes straight back.
-const UPLOAD_FOLDERS = { community: 'communities', event: 'events' }
+const UPLOAD_FOLDERS = { community: 'communities', event: 'events', avatar: 'avatars', 'profile-cover': 'profile-covers' }
 app.post('/api/uploads', requireAuth, async (req, res) => {
   const folder = UPLOAD_FOLDERS[req.body?.kind]
   if (!folder) return err(res, 400, 'Unknown upload type.')
@@ -653,10 +660,11 @@ app.get('/api/users/:id', async (req, res) => {
 
 // ── Posts + comments ─────────────────────────────────────────────────
 app.get('/api/posts', async (req, res) => {
-  const { community, pinned, limit } = req.query
+  const { community, pinned, limit, author } = req.query
   let sql = 'SELECT * FROM posts WHERE hidden = 0'
   const args = []
   if (community) { sql += ' AND community_id = ?'; args.push(community) }
+  if (author) { sql += ' AND author_id = ?'; args.push(author) }
   if (pinned === '1') sql += ' AND pinned = 1'
   sql += ' ORDER BY pinned DESC, created_at DESC'
   if (limit) { sql += ' LIMIT ?'; args.push(Number(limit)) }

@@ -1,18 +1,27 @@
-// Profile — laid out like the VOIDAJ app's profile screen: a cover, the
-// photo with a verified tick, name, @username, headline and location,
-// counts (connections, communities, events), actions, badges, then tabs:
-// About · Activity · Communities · Impact.
+// Profile — laid out like Nuel's mockup: a cover photo, the profile photo
+// in a glowing ring with a verified tick, name, @username, headline and
+// location, then Posts · Followers · Following · Connections, actions,
+// badges, the VOIDAJ ID card, and tabs: Posts · About · Communities ·
+// Activity · Badges (· Saved on your own).
+// Followers and connections are different things (Nuel, Oct 25):
+// followers are anyone who follows you; connections are the people you
+// pick out — "I would wanna check out your connections not your followers".
 // Works for everyone: your own (/profile/me), any member (/profile/:id)
 // and shareable links (/u/:handle). Your own adds the VIS tabs, location
 // privacy, editing, and your private job tracker.
 import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { useParams, Link, Navigate, useSearchParams, useNavigate } from 'react-router-dom'
 import * as api from '../api.js'
 import { useApp } from '../state.jsx'
 import { COMMUNITIES } from '../data/seed.js'
 import { useCommunities } from '../communities.js'
-import { Icon } from '../components/Icons.jsx'
+import { Icon, IconTile } from '../components/Icons.jsx'
 import { Avatar, CommunityCard, TagPills, FavoriteButton } from '../components/bits.jsx'
+import { VoidajMark } from '../components/VoidajMark.jsx'
+import { CoverPicker } from '../components/CoverPicker.jsx'
+import { FeedPost } from '../components/Feed.jsx'
+import { useFavorites } from '../favorites.js'
 import { PortfolioSection } from '../components/Portfolio.jsx'
 import { JobHistory } from '../components/JobHistory.jsx'
 import { VoicesSection, CopyLink } from '../components/Voices.jsx'
@@ -26,11 +35,19 @@ const PRIVACY_LEVELS = [
   { id: 'hidden', label: 'Hidden' },
 ]
 const TABS = [
+  { id: 'posts', label: 'Posts' },
   { id: 'about', label: 'About' },
-  { id: 'activity', label: 'Activity' },
   { id: 'communities', label: 'Communities' },
-  { id: 'impact', label: 'Impact' },
+  { id: 'activity', label: 'Activity' },
+  { id: 'badges', label: 'Badges' },
+  { id: 'saved', label: 'Saved', mine: true },
 ]
+const LISTS = [
+  { id: 'followers', label: 'Followers' },
+  { id: 'following', label: 'Following' },
+  { id: 'connections', label: 'Connections' },
+]
+const listOfWords = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean)
 const ACTIVITY_ICON = { post: 'chat', community: 'community', event: 'calendar', job: 'wrench' }
 
 // "Active now", or roughly when they were last around.
@@ -117,33 +134,222 @@ function ShareButton({ user }) {
   )
 }
 
-// A flat cover in the person's colour with a few hand-placed shapes:
-// no stock photo. (Cover photos come with photo uploads.)
-function Cover({ color }) {
+// The cover: their photo if they've added one, otherwise a city at night
+// in their colour.
+function Cover({ user }) {
   return (
-    <div className="pf-cover" style={{ '--pf': color || '#c2462e' }} aria-hidden="true">
-      <svg viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice">
-        <circle cx="330" cy="30" r="46" fill="rgba(255,255,255,0.12)" />
-        <circle cx="365" cy="95" r="22" fill="rgba(0,0,0,0.12)" />
-        <path d="M0 96 L60 70 L110 88 L170 54 L240 84 L300 62 L400 92 L400 120 L0 120 Z" fill="rgba(0,0,0,0.16)" />
-        <path d="M0 108 L80 92 L150 104 L230 86 L320 100 L400 90 L400 120 L0 120 Z" fill="rgba(0,0,0,0.2)" />
-      </svg>
+    <div className="pf2-cover" style={{ '--pf': user.color || '#3B82F6' }} aria-hidden="true">
+      {user.cover ? <img src={user.cover} alt="" /> : (
+        <svg viewBox="0 0 400 140" preserveAspectRatio="xMidYMax slice">
+          <defs><linearGradient id="pfsky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#0B1F3B" /><stop offset="0.6" stopColor="var(--pf)" /><stop offset="1" stopColor="#7C3AED" /></linearGradient></defs>
+          <rect width="400" height="140" fill="url(#pfsky)" />
+          <circle cx="320" cy="34" r="40" fill="rgba(255,255,255,0.10)" />
+          {[[10, 70, 26], [40, 52, 20], [64, 84, 30], [98, 40, 18], [120, 62, 26], [150, 30, 20], [174, 74, 28], [206, 46, 22], [232, 66, 30], [266, 36, 20], [290, 80, 26], [320, 54, 24], [348, 70, 30], [380, 44, 20]].map(([x, y, w], i) => (
+            <rect key={i} x={x} y={y} width={w} height={140 - y} fill="rgba(3,8,23,0.55)" />
+          ))}
+        </svg>
+      )}
     </div>
+  )
+}
+
+// Followers, following or connections, as a sheet with a search box.
+function PeopleSheet({ user, list, onList, onClose }) {
+  const { user: me, profile, follow } = useApp()
+  const navigate = useNavigate()
+  const [people, setPeople] = useState(null)
+  const [q, setQ] = useState('')
+  useEffect(() => { setPeople(null); api.people(user.id, list).then(setPeople).catch(() => setPeople([])) }, [user.id, list])
+  const term = q.trim().toLowerCase()
+  const shown = (people || []).filter((p) => !term || `${p.name} ${p.handle} ${p.title}`.toLowerCase().includes(term))
+  return (
+    <div className="modal-backdrop sheet-backdrop" onClick={onClose}>
+      <div className="sheet people-sheet" role="dialog" aria-label={`${user.name}’s ${list}`} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head">
+          <strong>{user.name}</strong>
+          <button className="icon-btn subtle" onClick={onClose} aria-label="Close"><Icon name="x" size={18} /></button>
+        </div>
+        <div className="seg" role="tablist">
+          {LISTS.map((l) => <button key={l.id} role="tab" aria-selected={list === l.id} className={list === l.id ? 'on' : ''} onClick={() => onList(l.id)}>{l.label}</button>)}
+        </div>
+        {list === 'connections' && <p className="meta-dim people-note">People {user.id === me?.id ? 'you’ve' : `${user.name.split(' ')[0]} has`} picked out from everyone they follow and meet.</p>}
+        <label className="search-pill"><Icon name="search" size={16} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" /></label>
+        <ul className="people-list">
+          {people === null && <li className="meta-dim">Loading…</li>}
+          {people && shown.length === 0 && <li className="meta-dim">{term ? 'No one matches that.' : 'No one here yet.'}</li>}
+          {shown.map((p) => {
+            const following = (profile.following ?? []).includes(p.id)
+            return (
+              <li key={p.id}>
+                <Link to={`/profile/${p.id}`} onClick={onClose} className="people-row">
+                  <Avatar user={p} size={42} />
+                  <span><b>{p.name}{p.idVerified && <Icon name="badge-check" size={13} className="fp-tick" />}</b><em>{p.title || p.handle}</em></span>
+                </Link>
+                {p.id !== me?.id && (
+                  <button className={`btn small ${following ? 'ghost' : 'primary'}`} onClick={() => (me ? follow(p.id) : navigate('/auth'))}>
+                    {following ? 'Following' : 'Follow'}
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
+// Edit everything on the profile in one sheet.
+function EditSheet({ onClose }) {
+  const { profile, saveProfile } = useApp()
+  const [f, setF] = useState({
+    name: profile.name, title: profile.title || '', bio: profile.bio || '', area: profile.area || '', city: profile.city || '',
+    interests: (profile.interests || []).join(', '), skills: (profile.skills || []).join(', '), goals: (profile.goals || []).join(', '),
+    photo: profile.photo || '', cover: profile.cover || '',
+  })
+  const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
+  const save = async (e) => {
+    e.preventDefault()
+    setBusy(true); setError('')
+    try {
+      await saveProfile({ ...f, interests: listOfWords(f.interests), skills: listOfWords(f.skills), goals: listOfWords(f.goals) })
+      onClose()
+    } catch (err) { setError(err.message) }
+    setBusy(false)
+  }
+  return (
+    <div className="modal-backdrop sheet-backdrop" onClick={onClose}>
+      <form className="sheet edit-sheet" onSubmit={save} onClick={(e) => e.stopPropagation()} aria-label="Edit profile">
+        <div className="sheet-head">
+          <IconTile name="edit" tone="grad" size={36} />
+          <strong>Edit profile</strong>
+          <button type="button" className="icon-btn subtle" onClick={onClose} aria-label="Close"><Icon name="x" size={18} /></button>
+        </div>
+        <div className="edit-photos">
+          <CoverPicker value={f.photo} onChange={(v) => setF((x) => ({ ...x, photo: v }))} kind="avatar" onBusy={setUploading} label="Profile photo" />
+          <CoverPicker value={f.cover} onChange={(v) => setF((x) => ({ ...x, cover: v }))} kind="profile-cover" onBusy={setUploading} label="Cover photo" />
+        </div>
+        <label className="field"><span>Name</span><input value={f.name} onChange={set('name')} maxLength={60} /></label>
+        <label className="field"><span>Headline</span><input value={f.title} onChange={set('title')} placeholder="e.g. Plumber in Yaba · Photographer" maxLength={80} /></label>
+        <label className="field"><span>Bio</span><textarea value={f.bio} onChange={set('bio')} rows={3} maxLength={300} placeholder="A line or two about you" /></label>
+        <div className="field-row">
+          <label className="field"><span>Area</span><input value={f.area} onChange={set('area')} placeholder="e.g. Yaba" /></label>
+          <label className="field"><span>City</span><input value={f.city} onChange={set('city')} placeholder="e.g. Lagos" /></label>
+        </div>
+        <label className="field"><span>Interests <em>separate with commas</em></span><input value={f.interests} onChange={set('interests')} placeholder="music, art, tech" /></label>
+        <label className="field"><span>Skills</span><input value={f.skills} onChange={set('skills')} placeholder="photography, web design" /></label>
+        <label className="field"><span>Goals</span><input value={f.goals} onChange={set('goals')} placeholder="Meet people, find work" /></label>
+        {error && <p className="auth-error">{error}</p>}
+        <div className="composer-foot">
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button className="btn primary" disabled={busy || uploading}>{busy ? 'Saving…' : uploading ? 'Uploading photo…' : 'Save'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// Work, interests, skills and goals, each editable right where they are
+// (Nuel: "there is no edit for this").
+function FactsCard({ user, isMe }) {
+  const { saveProfile } = useApp()
+  const [editing, setEditing] = useState(false)
+  const [f, setF] = useState({})
+  const [busy, setBusy] = useState(false)
+  const start = () => { setF({ title: user.title || '', interests: (user.interests || []).join(', '), skills: (user.skills || []).join(', '), goals: (user.goals || []).join(', ') }); setEditing(true) }
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
+  const save = async (e) => {
+    e.preventDefault(); setBusy(true)
+    try { await saveProfile({ title: f.title, interests: listOfWords(f.interests), skills: listOfWords(f.skills), goals: listOfWords(f.goals) }); setEditing(false) } catch { /* keep the form open */ }
+    setBusy(false)
+  }
+  if (editing) {
+    return (
+      <form className="card pf-facts editing" onSubmit={save}>
+        <div className="pf-facts-head"><strong>Work & interests</strong></div>
+        <label className="field"><span><Icon name="briefcase" size={14} /> Work</span><input value={f.title} onChange={set('title')} placeholder="What you do" /></label>
+        <label className="field"><span><Icon name="heart" size={14} /> Interests</span><input value={f.interests} onChange={set('interests')} placeholder="music, art" /></label>
+        <label className="field"><span><Icon name="zap" size={14} /> Skills</span><input value={f.skills} onChange={set('skills')} placeholder="photography" /></label>
+        <label className="field"><span><Icon name="sparkle" size={14} /> Goals</span><input value={f.goals} onChange={set('goals')} placeholder="Meet people, find opportunities" /></label>
+        <div className="composer-foot">
+          <button type="button" className="btn ghost small" onClick={() => setEditing(false)}>Cancel</button>
+          <button className="btn primary small" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
+    )
+  }
+  return (
+    <section className="card pf-facts">
+      <div className="pf-facts-head">
+        <strong>Work & interests</strong>
+        {isMe && <button className="btn ghost small" onClick={start}><Icon name="edit" size={13} /> Edit</button>}
+      </div>
+      <div><Icon name="briefcase" size={16} /><div><strong>Work</strong><span>{user.title || 'Not set yet'}</span></div></div>
+      {user.jobSkills?.length > 0 && (
+        <div><Icon name="wrench" size={16} /><div><strong>Does quick jobs</strong><span>{user.jobSkills.map((s) => OCCUPATIONS[s]?.role ?? s).join(', ')}</span></div></div>
+      )}
+      <div><Icon name="heart" size={16} /><div><strong>Interests</strong>{user.interests?.length ? <TagPills tags={user.interests} max={10} /> : <span>Not set yet</span>}</div></div>
+      <div><Icon name="zap" size={16} /><div><strong>Skills</strong><span>{user.skills?.length ? user.skills.join(', ') : 'Not set yet'}</span></div></div>
+      <div><Icon name="sparkle" size={16} /><div><strong>Goals</strong><span>{user.goals?.length ? user.goals.join(' · ') : 'Not set yet'}</span></div></div>
+      {joined(user.joinedAt) && <div><Icon name="calendar" size={16} /><div><strong>Joined</strong><span>{joined(user.joinedAt)}</span></div></div>}
+    </section>
+  )
+}
+
+// The VOIDAJ ID, right on the profile, as in the mockup.
+function IdMini({ user, isMe }) {
+  const [qr, setQr] = useState('')
+  const url = `${window.location.origin}${user.handle ? `/u/${user.handle.replace(/^@/, '')}` : `/profile/${user.id}`}`
+  useEffect(() => {
+    QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#0B1F3Bff', light: '#ffffffff' } }).then(setQr).catch(() => {})
+  }, [url])
+  const since = user.joinedAt ? new Date(user.joinedAt).getFullYear() : null
+  const card = (
+    <>
+      <div className="idm-left">
+        <span className="idm-label"><Icon name="badge-check" size={12} /> VOIDAJ ID</span>
+        <VoidajMark size={14} light />
+        <strong>{user.name}</strong>
+        <span>{user.handle}{since ? ` · Member since ${since}` : ''}</span>
+      </div>
+      <div className="idm-qr" dangerouslySetInnerHTML={{ __html: qr }} aria-label="QR code to this profile" />
+    </>
+  )
+  return isMe ? <Link to="/id" className="pf2-idcard">{card}</Link> : <div className="pf2-idcard">{card}</div>
+}
+
+function SavedTab() {
+  const saved = useFavorites()
+  if (!saved.length) return <p className="meta-dim">Nothing saved yet. Tap the bookmark on a post, event or person to keep it here.</p>
+  return (
+    <ul className="card pf-saved">
+      {saved.map((f) => (
+        <li key={`${f.kind}-${f.id}`}><Link to={f.href}><Icon name={{ post: 'chat', event: 'calendar', person: 'user', community: 'community', job: 'wrench' }[f.kind] ?? 'bookmark'} size={15} /><span><b>{f.title}</b>{f.subtitle && <em>{f.subtitle}</em>}</span></Link></li>
+      ))}
+    </ul>
   )
 }
 
 export default function Profile() {
   const { id: idParam, handle } = useParams()
-  const { profile, user: me, loading, saveProfile, connect } = useApp()
+  const { profile, user: me, loading, saveProfile, connect, follow } = useApp()
   const navigate = useNavigate()
   const key = handle ? `@${handle}` : idParam
   const isMe = key === 'me' || (!!me && (key === me.id || key?.toLowerCase() === me.handle?.toLowerCase()))
   const [person, setPerson] = useState(null)
   const [missing, setMissing] = useState(false)
   const [params, setParams] = useSearchParams()
-  const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'about'
-  const setTab = (t) => setParams((p) => { t === 'about' ? p.delete('tab') : p.set('tab', t); return p }, { replace: true })
+  const visibleTabs = TABS.filter((t) => !t.mine || isMe)
+  const tab = visibleTabs.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'posts'
+  const setTab = (t) => setParams((p) => { t === 'posts' ? p.delete('tab') : p.set('tab', t); return p }, { replace: true })
   const { all: allCommunities } = useCommunities()
+  const [list, setList] = useState(null)
+  const [editing, setEditing] = useState(false)
+  const [posts, setPosts] = useState(null)
+  const [followers, setFollowers] = useState(null)
 
   const { voices, max } = useMyVoices(isMe && !loading && profile.onboarded)
   const [activeVoice, setActiveVoice] = useState('main')
@@ -153,11 +359,15 @@ export default function Profile() {
   // Everyone's profile comes from the server: counts, activity, and (for
   // other people) only what their privacy settings allow.
   useEffect(() => {
-    setPerson(null); setMissing(false)
+    setPerson(null); setMissing(false); setFollowers(null)
     const target = isMe ? me?.id : key
     if (!target) return
     api.getUser(target).then(setPerson).catch(() => setMissing(true))
   }, [key, isMe, me?.id])
+  useEffect(() => {
+    setPosts(null)
+    if (person?.id) api.listPosts({ author: person.id }).then(setPosts).catch(() => setPosts([]))
+  }, [person?.id])
 
   if (isMe && loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
   if (key === 'me' && !me) return <Navigate to="/auth?mode=login" replace />
@@ -177,32 +387,47 @@ export default function Profile() {
   // Your own view uses your live account (so edits show at once), with the
   // server's counts and activity on top.
   const user = isMe ? { ...person, ...profile, stats: person?.stats, activity: person?.activity, joinedAt: person?.joinedAt ?? profile.createdAt } : person
-  const stats = user.stats ?? { connections: profile.connections.length, communities: profile.communities.length, events: 0, posts: 0, jobsPosted: 0, jobsDone: 0 }
+  const stats = user.stats ?? { connections: profile.connections.length, followers: 0, following: (profile.following ?? []).length, communities: profile.communities.length, events: 0, posts: 0, jobsPosted: 0, jobsDone: 0 }
   const seen = presenceText(user)
   const connected = !isMe && profile.connections.includes(user.id)
+  const following = !isMe && (profile.following ?? []).includes(user.id)
   const memberOf = [...COMMUNITIES, ...allCommunities.filter((c) => !COMMUNITIES.some((s) => s.id === c.id))]
     .filter((c) => (user.communities ?? []).includes(c.id))
   const recentlyActive = user.active || (user.lastSeenAt && Date.now() - user.lastSeenAt < 7 * 24 * 3600 * 1000)
   const badges = [
-    user.idVerified && { id: 'verified', icon: 'badge-check', label: 'Verified', tone: 'green' },
-    recentlyActive && { id: 'active', icon: 'zap', label: 'Active', tone: 'terracotta' },
-    stats.posts >= 5 && { id: 'top', icon: 'star', label: 'Top Contributor', tone: 'gold', title: '5 or more posts' },
-    user.jobSkills?.length > 0 && { id: 'pro', icon: 'wrench', label: OCCUPATIONS[user.jobSkills[0]]?.role ?? 'Pro', tone: 'ink' },
+    user.idVerified && { id: 'verified', icon: 'badge-check', label: 'Verified', tone: 'green', note: 'ID checked' },
+    recentlyActive && { id: 'active', icon: 'zap', label: 'Active', tone: 'blue', note: 'Around this week' },
+    stats.posts >= 5 && { id: 'top', icon: 'star', label: 'Top Contributor', tone: 'yellow', note: '5 or more posts' },
+    (followers ?? stats.followers) >= 10 && { id: 'known', icon: 'users', label: 'Well Known', tone: 'violet', note: '10+ followers' },
+    stats.communities >= 3 && { id: 'connector', icon: 'community', label: 'Connector', tone: 'teal', note: 'In 3+ communities' },
+    user.jobSkills?.length > 0 && { id: 'pro', icon: 'wrench', label: OCCUPATIONS[user.jobSkills[0]]?.role ?? 'Pro', tone: 'orange', note: 'Does quick jobs' },
   ].filter(Boolean)
+  const counts = [
+    { id: 'posts', n: stats.posts, label: 'Posts', onClick: () => setTab('posts') },
+    { id: 'followers', n: followers ?? stats.followers ?? 0, label: 'Followers', onClick: () => setList('followers') },
+    { id: 'following', n: isMe ? (profile.following ?? []).length : (stats.following ?? 0), label: 'Following', onClick: () => setList('following') },
+    { id: 'connections', n: isMe ? profile.connections.length : stats.connections, label: 'Connections', onClick: () => setList('connections') },
+  ]
+  const doFollow = async () => {
+    if (!me) return navigate('/auth')
+    const r = await follow(user.id).catch(() => null)
+    if (r) setFollowers(r.followers)
+  }
 
   return (
-    <div className="page profile-page pf">
-      <section className="pf-hero">
-        <Cover color={user.color} />
-        {isMe && <Link to="/settings" className="pf-gear" aria-label="Settings"><Icon name="edit" size={16} /></Link>}
-        <div className="pf-photo">
-          <Avatar user={user} size={104} />
+    <div className="page profile-page pf pf2">
+      <section className="card pf2-hero">
+        <Cover user={user} />
+        {isMe && <button className="pf2-cover-edit" onClick={() => setEditing(true)} aria-label="Change cover photo"><Icon name="camera" size={15} /></button>}
+        <div className="pf2-photo">
+          <Avatar user={user} size={112} />
           {user.idVerified && <span className="pf-tick" title="ID verified"><Icon name="badge-check" size={18} /></span>}
         </div>
-        <div className="pf-id">
+        <div className="pf2-id">
           <h1>{user.name} {isMe && <span className="you-badge">You</span>}</h1>
           <div className="pf-handle">{picked ? `@${picked.handle}` : user.handle}</div>
           {(picked?.headline || user.title) && <p className="pf-headline">{picked ? picked.headline || user.title : user.title}</p>}
+          {user.bio && !picked && <p className="pf2-bio">{user.bio}</p>}
           <div className="pf-meta">
             <span><Icon name="map-pin" size={13} /> {locationFor(user, isMe)}</span>
             {joined(user.joinedAt) && <span><Icon name="calendar" size={13} /> Joined {joined(user.joinedAt)}</span>}
@@ -210,40 +435,42 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="pf-stats">
-          <div><b>{stats.connections}</b><span>Connections</span></div>
-          <div><b>{stats.communities}</b><span>Communities</span></div>
-          <div><b>{stats.events}</b><span>Events</span></div>
+        <div className="pf2-stats">
+          {counts.map((c) => <button key={c.id} onClick={c.onClick}><b>{c.n >= 1000 ? `${(c.n / 1000).toFixed(1)}k` : c.n}</b><span>{c.label}</span></button>)}
         </div>
 
-        <div className="pf-actions">
+        <div className="pf2-actions">
           {isMe ? (
             <>
-              <button type="button" className="btn primary" onClick={() => { setTab('about'); setTimeout(() => document.querySelector('.about-card .btn')?.click(), 50) }}>
-                <Icon name="edit" size={15} /> Edit profile
-              </button>
+              <button type="button" className="btn primary" onClick={() => setEditing(true)}><Icon name="edit" size={15} /> Edit profile</button>
               <ShareButton user={user} />
+              <Link to="/settings" className="btn ghost icon-only" aria-label="Settings"><Icon name="settings" size={16} /></Link>
             </>
           ) : (
             <>
-              <button className={connected ? 'btn ghost' : 'btn primary'} onClick={() => (me ? connect(user.id) : navigate('/auth'))} disabled={connected}>
-                {connected ? <><Icon name="check" size={15} /> Connected</> : 'Connect'}
+              <button className={following ? 'btn ghost' : 'btn primary'} onClick={doFollow}>
+                {following ? <><Icon name="check" size={15} /> Following</> : <><Icon name="user-plus" size={15} /> Follow</>}
               </button>
-              <Link to={me ? `/chats?dm=${user.id}` : '/auth'} className="btn ghost"><Icon name="message-circle" size={15} /> Message</Link>
+              <button className={`btn ${connected ? 'ghost connected' : 'ghost'}`} onClick={() => (me ? connect(user.id) : navigate('/auth'))}
+                title={connected ? 'Remove from your connections' : 'Add to your connections — the people you pick out'}>
+                <Icon name={connected ? 'user-check' : 'users'} size={15} /> {connected ? 'Connected' : 'Connect'}
+              </button>
+              <Link to={me ? `/chats?dm=${user.id}&from=profile` : '/auth'} className="btn ghost"><Icon name="message-circle" size={15} /> Message</Link>
               <FavoriteButton item={{ kind: 'person', id: user.id, title: user.name, subtitle: user.title, href: `/profile/${user.id}` }} />
             </>
           )}
         </div>
-        {isMe && <Link to="/id" className="pf-id-link"><Icon name="badge-check" size={14} /> Your VOIDAJ ID card <Icon name="arrow" size={13} /></Link>}
 
         {badges.length > 0 && (
           <div className="pf-badges">
-            {badges.map((b) => (
-              <span key={b.id} className={`pf-badge tone-${b.tone}`} title={b.title}><Icon name={b.icon} size={13} /> {b.label}</span>
+            {badges.slice(0, 4).map((b) => (
+              <span key={b.id} className={`pf2-badge itone-${b.tone}`} title={b.note}><Icon name={b.icon} size={13} /> {b.label}</span>
             ))}
           </div>
         )}
       </section>
+
+      <IdMini user={user} isMe={isMe} />
 
       {isMe && <VoiceTabs voices={voices} max={max} active={picked ? picked.id : 'main'} onPick={setActiveVoice} />}
 
@@ -260,26 +487,24 @@ export default function Profile() {
           {resolved ? <VoiceSections voice={resolved} /> : <p className="meta-dim vv-empty">Loading…</p>}
         </section>
       ) : <>
-        <nav className="pf-tabs" role="tablist" aria-label="Profile">
-          {TABS.map((t) => (
+        <nav className="pf-tabs pf2-tabs" role="tablist" aria-label="Profile">
+          {visibleTabs.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
           ))}
         </nav>
 
+        {tab === 'posts' && (
+          <div className="pf-panel feed-list">
+            {posts === null && <p className="meta-dim">Loading…</p>}
+            {posts?.length === 0 && <p className="meta-dim">{isMe ? <>You haven’t posted yet. <Link to="/add?pick=post">Share something</Link>.</> : 'No posts yet.'}</p>}
+            {posts?.map((p) => <FeedPost key={p.id} post={p} />)}
+          </div>
+        )}
+
         {tab === 'about' && (
           <div className="pf-panel">
             <AboutSection bio={user.bio} socials={user.socials} editable={isMe} onSave={saveProfile} />
-
-            <section className="card pf-facts">
-              {user.title && <div><Icon name="briefcase" size={16} /><div><strong>Work</strong><span>{user.title}</span></div></div>}
-              {user.jobSkills?.length > 0 && (
-                <div><Icon name="wrench" size={16} /><div><strong>Does quick jobs</strong><span>{user.jobSkills.map((s) => OCCUPATIONS[s]?.role ?? s).join(', ')}</span></div></div>
-              )}
-              <div><Icon name="heart" size={16} /><div><strong>Interests</strong>{user.interests?.length ? <TagPills tags={user.interests} max={10} /> : <span>Not set yet</span>}</div></div>
-              {user.skills?.length > 0 && <div><Icon name="zap" size={16} /><div><strong>Skills</strong><span>{user.skills.join(', ')}</span></div></div>}
-              {user.goals?.length > 0 && <div><Icon name="sparkle" size={16} /><div><strong>Goals</strong><span>{user.goals.join(' · ')}</span></div></div>}
-              {joined(user.joinedAt) && <div><Icon name="calendar" size={16} /><div><strong>Joined</strong><span>{joined(user.joinedAt)}</span></div></div>}
-            </section>
+            <FactsCard user={user} isMe={isMe} />
 
             {isMe && (
               <section className="card privacy-card">
@@ -325,12 +550,17 @@ export default function Profile() {
           <div className="pf-panel">
             {memberOf.length ? (
               <div className="card-grid three">{memberOf.map((c) => <CommunityCard key={c.id} community={c} compact />)}</div>
-            ) : <p className="meta-dim">{isMe ? <>You haven’t joined a community yet. <Link to="/explore?type=communities">Find one</Link>.</> : 'No communities yet.'}</p>}
+            ) : <p className="meta-dim">{isMe ? <>You haven’t joined a community yet. <Link to="/communities">Find one</Link>.</> : 'No communities yet.'}</p>}
           </div>
         )}
 
-        {tab === 'impact' && (
+        {tab === 'badges' && (
           <div className="pf-panel">
+            <div className="pf2-badge-grid">
+              {badges.length ? badges.map((b) => (
+                <div key={b.id} className="card pf2-badge-card"><IconTile name={b.icon} tone={b.tone} size={46} /><b>{b.label}</b><span className="meta-dim">{b.note}</span></div>
+              )) : <p className="meta-dim">No badges yet. Verify your ID, post, and join communities to earn them.</p>}
+            </div>
             <div className="pf-impact">
               {[
                 ['chat', stats.posts, 'Posts'],
@@ -353,7 +583,12 @@ export default function Profile() {
             </Link>
           </div>
         )}
+
+        {tab === 'saved' && isMe && <div className="pf-panel"><SavedTab /></div>}
       </>}
+
+      {list && <PeopleSheet user={user} list={list} onList={setList} onClose={() => setList(null)} />}
+      {editing && <EditSheet onClose={() => setEditing(false)} />}
     </div>
   )
 }

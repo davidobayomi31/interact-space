@@ -32,7 +32,7 @@ export function Avatar({ user, size = 40 }) {
       }}
       aria-label={user.active ? `${user.name}, active now` : user.name}
     >
-      {initials}
+      {user.photo ? <img className="avatar-photo" src={user.photo} alt="" loading="lazy" /> : initials}
       {user.active && <span className="active-dot" style={{ '--dot': `${Math.max(8, Math.round(size * 0.24))}px` }} aria-hidden="true" />}
     </div>
   )

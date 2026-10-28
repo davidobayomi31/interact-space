@@ -507,3 +507,90 @@ body { background: var(--bg); color: var(--text); }
 .sheet-head { display: flex; align-items: center; gap: 12px; }
 .sheet-head strong { flex: 1; font-size: 17px; }
 .sheet .feed-composer { box-shadow: none; border: 0; padding: 0; background: none !important; }
+.avatar { position: relative; }
+.avatar:has(.avatar-photo) { background: var(--surface-2) !important; overflow: visible; }
+.avatar-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+/* ══ Profile ═════════════════════════════════════════════════════════ */
+.pf2 { max-width: 760px; display: flex; flex-direction: column; gap: 14px; }
+.pf2-hero { position: relative; padding: 0 0 18px; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; }
+.pf2-cover { position: relative; width: 100%; height: 170px; overflow: hidden; background: var(--night); }
+.pf2-cover img, .pf2-cover svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf2-cover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(3, 8, 23, 0.45)); }
+.pf2-cover-edit { position: absolute; top: 12px; right: 12px; z-index: 2; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(3, 8, 23, 0.55); color: #fff; cursor: pointer; backdrop-filter: blur(8px); }
+.pf2-photo { position: relative; margin-top: -68px; z-index: 1; padding: 4px; border-radius: 50%; background: conic-gradient(from 200deg, #3B82F6, #8B5CF6, #00C896, #3B82F6); box-shadow: 0 0 30px -6px rgba(99, 102, 241, 0.8); }
+.pf2-photo .avatar { border: 4px solid var(--surface) !important; }
+:root[data-mode="dark"] .pf2-photo .avatar { border-color: #0A1430 !important; }
+.pf2-photo .pf-tick { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; border: 3px solid var(--surface); }
+.pf2-id { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 18px; }
+.pf2-id h1 { margin: 0; font-size: 24px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; }
+.pf2-id .pf-headline { margin: 2px 0 0; font-weight: 600; }
+.pf2-bio { margin: 4px 0 0; max-width: 520px; color: var(--text-dim); font-size: 14px; line-height: 1.5; }
+.pf2-id .pf-meta { justify-content: center; margin-top: 6px; }
+.pf2-stats { display: grid; grid-template-columns: repeat(4, 1fr); width: calc(100% - 36px); margin: 4px 18px 0; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border-soft); }
+.pf2-stats button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 4px; border: 0; background: none; color: var(--text); cursor: pointer; border-radius: 16px; }
+.pf2-stats button + button { border-left: 1px solid var(--border-soft); border-radius: 0; }
+.pf2-stats button:hover { background: var(--brand-soft); }
+.pf2-stats b { font-size: 19px; font-weight: 800; }
+.pf2-stats span { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+@media (max-width: 400px) { .pf2-stats span { font-size: 10.5px; } .pf2-stats b { font-size: 17px; } }
+.pf2-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 18px; }
+.pf2-actions .btn { min-width: 0; }
+.pf2-actions .btn.primary { min-width: 140px; }
+.btn.icon-only { width: 40px; padding: 0; justify-content: center; }
+.btn.connected { color: var(--teal-strong); border-color: var(--teal); }
+.pf2-hero .pf-badges { justify-content: center; padding: 0 18px; }
+.pf2-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: var(--brand-soft); color: var(--brand-strong); }
+.itone-green { background: var(--green-soft); color: #15803D; } .itone-blue { background: var(--brand-soft); color: var(--brand-strong); }
+.itone-yellow { background: var(--gold-soft); color: var(--gold-strong); } .itone-violet { background: var(--purple-soft); color: var(--violet); }
+.itone-teal { background: var(--teal-soft); color: var(--teal-strong); } .itone-orange { background: #FFEDD5; color: #C2410C; }
+:root[data-mode="dark"] .itone-green { color: #4ADE80; } :root[data-mode="dark"] .itone-violet { color: #C4B5FD; } :root[data-mode="dark"] .itone-orange { background: rgba(249, 115, 22, 0.16); color: #FDBA74; }
+
+.pf2-idcard {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; border-radius: 20px;
+  background: var(--night); color: #fff; box-shadow: var(--glow); border: 1px solid rgba(127, 176, 255, 0.3); position: relative; overflow: hidden;
+}
+.pf2-idcard::before { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.12) 50%, transparent 65%); background-size: 250% 100%; animation: vj-sheen 5s linear infinite; pointer-events: none; }
+a.pf2-idcard:hover { box-shadow: var(--glow-strong); }
+.idm-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.idm-label { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9EC2FF; }
+.idm-left strong { font-size: 17px; margin-top: 6px; }
+.idm-left > span:last-child { font-size: 12.5px; color: #C9D6F2; }
+.idm-qr { flex-shrink: 0; width: 76px; height: 76px; padding: 6px; border-radius: 12px; background: #fff; }
+.idm-qr svg { width: 100%; height: 100%; display: block; }
+
+.pf2-tabs { position: sticky; top: var(--topbar-h, 0px); z-index: 4; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 6px; border-radius: 16px; background: var(--glass); border: 1px solid var(--border-soft); backdrop-filter: blur(12px); }
+.pf2-tabs button { flex: 1 0 auto; height: 36px; padding: 0 14px; border: 0; border-radius: 11px; background: none; color: var(--text-dim); font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.pf2-tabs button.on { background: var(--grad-btn); color: #fff; box-shadow: 0 6px 14px -8px rgba(99, 102, 241, 0.9); }
+.pf-facts-head { display: flex; align-items: center; justify-content: space-between; }
+.pf-facts.editing { display: flex; flex-direction: column; gap: 10px; }
+.pf2-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.pf2-badge-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 10px; text-align: center; }
+.pf-saved { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; }
+.pf-saved a { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; color: var(--text); }
+.pf-saved a:hover { background: var(--surface-2); }
+.pf-saved span { display: flex; flex-direction: column; } .pf-saved em { font-style: normal; font-size: 12.5px; color: var(--text-dim); }
+
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); }
+.seg button { flex: 1; height: 34px; border: 0; border-radius: 10px; background: none; color: var(--text-dim); font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.seg button.on { background: var(--surface); color: var(--brand-strong); box-shadow: var(--shadow); }
+:root[data-mode="dark"] .seg button.on { background: var(--grad-btn); color: #fff; }
+.people-note { margin: 0; font-size: 13px; }
+.people-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.people-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 4px; }
+.people-row { display: flex; align-items: center; gap: 10px; color: var(--text); min-width: 0; }
+.people-row span { display: flex; flex-direction: column; min-width: 0; }
+.people-row b { display: inline-flex; align-items: center; gap: 4px; font-size: 14.5px; }
+.people-row em { font-style: normal; font-size: 12.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edit-sheet .field { display: flex; flex-direction: column; gap: 6px; }
+.edit-sheet .field > span { font-size: 13px; font-weight: 700; }
+.edit-sheet .field em { font-style: normal; font-weight: 500; color: var(--text-dim); }
+.edit-sheet input, .edit-sheet textarea { font-family: inherit; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.edit-photos { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
+.edit-photos .cover-picker-frame { aspect-ratio: 16 / 9; }
+.edit-photos .cover-picker:first-child .cover-picker-frame { aspect-ratio: 1; border-radius: 50%; }
+.pf2-photo .avatar, .story-ring .avatar { background-color: var(--surface) !important; }
+:root[data-mode="dark"] .btn.ghost, :root[data-mode="dark"] .btn.brand-outline { background: rgba(15, 28, 62, 0.8); border-color: var(--border); color: var(--text); }
+:root[data-mode="dark"] .btn.ghost:hover, :root[data-mode="dark"] .btn.brand-outline:hover { background: rgba(30, 50, 100, 0.8); border-color: var(--border-strong); color: #fff; }
+:root[data-mode="dark"] .icon-btn { color: var(--text); }
