@@ -12,7 +12,7 @@ import { Avatar, EventCard, PostCard, FavoriteButton } from '../components/bits.
 import { LiveTab, LiveBadge } from '../components/Live.jsx'
 import { RatingWidget, RatingSummary } from '../components/Rating.jsx'
 import { MediaButtons, MediaTray, compressPhoto } from '../components/Media.jsx'
-import { CoverPicker } from '../components/CoverPicker.jsx'
+import { EventForm } from '../components/EventForm.jsx'
 
 export default function Community() {
   const { id } = useParams()
@@ -260,14 +260,7 @@ function CoverEdit({ community }) {
 
 // Any member can put an event on the community's calendar.
 function NewEvent({ community, onCreated }) {
-  const blank = { title: '', date: '', time: '', venue: '', description: '', cover: '' }
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState(blank)
-  const [busy, setBusy] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-  const today = new Date().toISOString().slice(0, 10)
-
   if (!open) {
     return (
       <button className="card create-row" onClick={() => setOpen(true)}>
@@ -276,35 +269,7 @@ function NewEvent({ community, onCreated }) {
       </button>
     )
   }
-
-  const submit = async (e) => {
-    e.preventDefault()
-    if (!form.title.trim() || !form.date || busy) return
-    setBusy(true)
-    try {
-      onCreated(await api.createEvent(community.id, form))
-      setForm(blank); setOpen(false)
-    } catch (err) { alert(err.message) }
-    setBusy(false)
-  }
-
-  return (
-    <form className="card composer-full" onSubmit={submit}>
-      <div className="side-card-head"><Icon name="calendar" size={15} /> New event in {community.name}</div>
-      <input className="composer-title" value={form.title} onChange={set('title')} placeholder="What’s happening?" maxLength={100} autoFocus aria-label="Event title" />
-      <div className="job-form-row two">
-        <input className="job-input" type="date" min={today} value={form.date} onChange={set('date')} aria-label="Date" required />
-        <input className="job-input" value={form.time} onChange={set('time')} placeholder="Time (e.g. 6:00 PM)" maxLength={20} aria-label="Time" />
-      </div>
-      <input className="job-input" value={form.venue} onChange={set('venue')} placeholder="Where? (venue, area, or Online)" maxLength={100} aria-label="Venue" />
-      <textarea className="composer-body" value={form.description} onChange={set('description')} placeholder="Tell people what to expect (optional)" rows={3} maxLength={600} />
-      <CoverPicker kind="event" label="Event photo (optional)" value={form.cover} onChange={(cover) => setForm((f) => ({ ...f, cover }))} onBusy={setUploading} />
-      <div className="composer-foot">
-        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Cancel</button>
-        <button className="btn primary small" disabled={!form.title.trim() || !form.date || busy || uploading}>{busy ? 'Creating…' : 'Create event'}</button>
-      </div>
-    </form>
-  )
+  return <EventForm community={community} heading={`New event in ${community.name}`} onCancel={() => setOpen(false)} onCreated={(ev) => { onCreated(ev); setOpen(false) }} />
 }
 
 // The community's standing rules stay put; moderators add their own

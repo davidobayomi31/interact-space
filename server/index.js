@@ -532,11 +532,19 @@ app.get('/api/events', async (req, res) => {
   res.json({ events: rows.map(serializeEvent) })
 })
 
-app.post('/api/communities/:id/events', requireAuth, async (req, res) => {
-  const community = await q.get('SELECT id FROM communities WHERE id = ?', req.params.id)
-  if (!community) return err(res, 404, 'Community not found.')
-  const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, community.id)
-  if (!member) return err(res, 403, 'Join the community to create an event in it.')
+// Events can be for everyone ('public'), the creator's city ('city'), or
+// one community they belong to ('community'), the same as posts.
+async function createEvent(req, res, audience, communityId) {
+  let city = ''
+  if (audience === 'community') {
+    const community = await q.get('SELECT id, city FROM communities WHERE id = ?', communityId)
+    if (!community) return err(res, 404, 'Community not found.')
+    const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, community.id)
+    if (!member) return err(res, 403, 'Join the community to create an event in it.')
+    city = community.city || ''
+  } else {
+    city = (await getUserById(req.userId))?.city || 'Lagos'
+  }
   const b = req.body || {}
   const title = String(b.title || '').trim().slice(0, 100)
   if (title.length < 3) return err(res, 400, 'Give the event a title.')
@@ -546,10 +554,18 @@ app.post('/api/communities/:id/events', requireAuth, async (req, res) => {
   try { cover = cleanCover(b.cover) } catch (e) { return err(res, 400, e.message) }
   if (cover === null) return err(res, 400, 'That cover photo can’t be used. Upload it again.')
   const id = uid('ev')
-  await q.run(`INSERT INTO events (id, community_id, creator_id, title, date, time, venue, description, attending, created_at, cover)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`, id, community.id, req.userId, title, date,
-    String(b.time || '').trim().slice(0, 20), String(b.venue || '').trim().slice(0, 100), String(b.description || '').trim().slice(0, 600), now(), cover)
+  await q.run(`INSERT INTO events (id, community_id, creator_id, title, date, time, venue, description, attending, created_at, cover, audience, city)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`, id, audience === 'community' ? communityId : null, req.userId, title, date,
+    String(b.time || '').trim().slice(0, 20), String(b.venue || '').trim().slice(0, 100), String(b.description || '').trim().slice(0, 600), now(), cover,
+    audience, city)
   res.json({ event: serializeEvent(await q.get('SELECT * FROM events WHERE id = ?', id)) })
+}
+
+app.post('/api/communities/:id/events', requireAuth, (req, res) => createEvent(req, res, 'community', req.params.id))
+
+app.post('/api/events', requireAuth, (req, res) => {
+  const audience = ['public', 'city', 'community'].includes(req.body?.audience) ? req.body.audience : 'public'
+  return createEvent(req, res, audience, req.body?.communityId)
 })
 
 app.post('/api/communities/:id/join', requireAuth, async (req, res) => {
@@ -645,7 +661,7 @@ app.get('/api/users/:id', async (req, res) => {
   const activity = [
     ...posts.slice(0, 6).map((p) => ({ kind: 'post', text: `Posted “${(p.title || p.body || 'a photo').slice(0, 60)}”${p.community ? ` in ${p.community}` : p.audience === 'city' ? ' to the city' : ''}`, at: p.created_at, to: `/post/${p.id}` })),
     ...comms.slice(0, 6).map((m) => ({ kind: 'community', text: `Joined ${m.name || 'a community'}`, at: m.created_at, to: `/community/${m.community_id}` })),
-    ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: `/community/${e.community_id}?tab=events` })),
+    ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: e.community_id ? `/community/${e.community_id}?tab=events` : `/events?event=${e.id}` })),
     ...jobs.slice(0, 4).map((j) => ({ kind: 'job', text: `Posted a quick job: ${j.title}`, at: j.created_at, to: `/jobs?job=${j.id}` })),
   ].filter((a) => a.at).sort((a, b) => b.at - a.at).slice(0, 10)
   res.json({ user: {

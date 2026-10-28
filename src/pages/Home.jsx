@@ -148,14 +148,14 @@ function Row({ title, to, children }) {
 
 export function EventTile({ event }) {
   const c = findCommunity(event.communityId)
-  const to = c ? `/community/${c.id}?tab=events` : '/explore?type=events'
+  const to = c ? `/community/${c.id}?tab=events` : `/events?event=${event.id}`
   return (
     <div className="tile event-tile card-link" style={{ '--accent': c?.accent ?? 'var(--gold)' }}>
       <div className="tile-top">
         <Cover src={event.cover ?? c?.cover} />
         <span className="tile-date"><b>{day(event.date)}</b>{month(event.date)}</span>
         <Icon name={c?.icon ?? 'calendar'} size={30} />
-        <span className="tile-kind">{c ? c.name.split(' ')[0] : 'Event'}</span>
+        <span className="tile-kind">{c ? c.name.split(' ')[0] : event.audience === 'city' ? event.city || 'City' : event.audience === 'public' ? 'Public' : 'Event'}</span>
       </div>
       <div className="tile-body">
         <Link to={to} className="tile-title stretched">{event.title}</Link>

@@ -16,14 +16,14 @@ const TABS = [
 ]
 const dayOf = (d) => new Date(d + 'T00:00:00')
 
-function EventBig({ event, going, count, onJoin }) {
+function EventBig({ event, going, count, onJoin, focused }) {
   const c = findCommunity(event.communityId)
   const d = dayOf(event.date)
   const soon = (d - new Date()) / 86400000
   const cover = event.cover ?? c?.cover
   return (
-    <article className="ev-card card-link" style={{ '--accent': c?.accent ?? '#3B82F6' }}>
-      <Link to={c ? `/community/${c.id}?tab=events` : '/events'} className="ev-photo" aria-label={event.title}>
+    <article id={`event-${event.id}`} className={`ev-card card-link${focused ? ' ev-focused' : ''}`} style={{ '--accent': c?.accent ?? '#3B82F6' }}>
+      <Link to={c ? `/community/${c.id}?tab=events` : `/events?event=${event.id}`} className="ev-photo" aria-label={event.title}>
         {cover ? <img src={cover} alt="" loading="lazy" /> : <span className="ev-photo-fallback"><Icon name="calendar" size={36} /></span>}
         <span className="ev-date"><b>{d.toLocaleDateString('en-GB', { day: 'numeric' })}</b>{d.toLocaleDateString('en-GB', { month: 'short' })}</span>
         {soon >= -0.5 && soon < 1 && <span className="ev-live">TODAY</span>}
@@ -33,7 +33,7 @@ function EventBig({ event, going, count, onJoin }) {
           <b>{event.title}</b>
           <span><Icon name="clock" size={12} /> {d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time}</span>
           {event.venue && <span><Icon name="map-pin" size={12} /> {event.venue}</span>}
-          <em>{count} going{c ? ` · ${c.name}` : ''}</em>
+          <em>{count} going · {c ? c.name : event.audience === 'city' ? event.city || 'City' : 'Public'}</em>
         </div>
         {event.host && <Link to={`/chats?dm=${event.host}&event=${event.id}`} className="btn ghost small icon-only" aria-label="Message the host"><Icon name="message-circle" size={15} /></Link>}
         <button className={`btn small ${going ? 'ghost ev-going' : 'primary'}`} onClick={onJoin}>
@@ -50,6 +50,8 @@ export default function Events() {
   const [params, setParams] = useSearchParams()
   const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'upcoming'
   const setTab = (t) => setParams(t === 'upcoming' ? {} : { tab: t }, { replace: true })
+  // ?event=<id> (a new event, or a link from Explore) scrolls to that card.
+  const focus = params.get('event')
   const [made, setMade] = useState([])
   const [rsvps, setRsvps] = useState({ counts: {}, mine: [] })
 
@@ -67,6 +69,10 @@ export default function Events() {
   }[tab]
   // The demo city calendar is dated in July; if it has all passed, show it anyway.
   const shown = list.length || tab === 'mine' ? list : [...all].sort((a, b) => a.date.localeCompare(b.date))
+  const found = !!focus && shown.some((e) => e.id === focus)
+  useEffect(() => {
+    if (found) document.getElementById(`event-${focus}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [found, focus])
 
   const join = async (e) => {
     if (!user) return navigate('/auth')
@@ -94,13 +100,13 @@ export default function Events() {
         </div>
       ) : (
         <div className="ev-list stagger">
-          {shown.map((e) => <EventBig key={e.id} event={e} going={rsvps.mine.includes(e.id)} count={count(e)} onJoin={() => join(e)} />)}
+          {shown.map((e) => <EventBig key={e.id} event={e} going={rsvps.mine.includes(e.id)} count={count(e)} onJoin={() => join(e)} focused={e.id === focus} />)}
         </div>
       )}
 
       <Link to={user ? '/add?pick=event' : '/auth'} className="card cm-create card-link">
         <IconTile name="plus" tone="pink" size={44} />
-        <span><b>Create an event</b><em>Plan a meetup, class or gathering for a community</em></span>
+        <span><b>Create an event</b><em>Plan a meetup, class or gathering — for everyone, your city or a community</em></span>
         <Icon name="chevron-right" size={20} />
       </Link>
     </div>

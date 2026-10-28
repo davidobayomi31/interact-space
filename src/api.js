@@ -58,6 +58,7 @@ export const rsvp = (id) => req(`/events/${id}/rsvp`, { method: 'POST' })
 export const uploadImage = (image, kind) => req('/uploads', { method: 'POST', body: { image, kind } }).then((d) => d.url)
 export const setCommunityCover = (id, cover) => req(`/communities/${id}/cover`, { method: 'PUT', body: { cover } }).then((d) => d.community)
 export const createEvent = (communityId, body) => req(`/communities/${communityId}/events`, { method: 'POST', body }).then((d) => d.event)
+export const createOpenEvent = (body) => req('/events', { method: 'POST', body }).then((d) => d.event)
 
 // Posts, comments, votes
 export const listPosts = (params = {}) => {

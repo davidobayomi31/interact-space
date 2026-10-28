@@ -7,6 +7,6 @@ export default defineConfig({
     port: 5173,
     host: true,
     // Frontend calls /api/* — proxy them to the Express API in server/.
-    proxy: { '/api': 'http://localhost:8787' },
+    proxy: { '/api': `http://localhost:${process.env.API_PORT || 8787}` },
   },
 })

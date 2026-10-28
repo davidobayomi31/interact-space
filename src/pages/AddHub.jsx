@@ -3,17 +3,19 @@
 // Post opens the composer right here, on top of the page (it used to jump
 // to a community picker at the bottom — Nuel: "it just takes me to a
 // weird spot down the bottom"), and can go to Public, your City or a
-// community. Event asks which community in the same sheet.
-import { useEffect, useState } from 'react'
+// community. Event opens its form the same way, and can be Public, City
+// or a community too (Nuel, Oct 28: "post an event without going through
+// community route").
+import { useEffect } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
-import { useCommunities } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { FeedComposer } from '../components/Feed.jsx'
+import { EventForm } from '../components/EventForm.jsx'
 
 const ROWS = [
   { id: 'post', icon: 'edit', tone: 'violet', title: 'Post', sub: 'Share photos, updates and ideas — public, your city or a community', sheet: true },
-  { id: 'event', icon: 'calendar', tone: 'pink', title: 'Event', sub: 'Create or promote a meetup, class or gathering', sheet: true },
+  { id: 'event', icon: 'calendar', tone: 'pink', title: 'Event', sub: 'A meetup, class or gathering — public, your city or a community', sheet: true },
   { id: 'job', icon: 'wrench', tone: 'orange', title: 'Job', sub: 'Get local help — plumbing, moving, tutoring and more', to: '/jobs?post=1' },
   { id: 'community', icon: 'community', tone: 'teal', title: 'Community', sub: 'Bring people together around a place or a passion', to: '/communities/new' },
   { id: 'voice', icon: 'megaphone', tone: 'blue', title: 'Voice', sub: 'A focused page for one side of who you are', to: '/voices/new' },
@@ -46,8 +48,7 @@ function Sheet({ title, icon, tone, onClose, children }) {
 }
 
 export default function AddHub() {
-  const { user, profile, loading } = useApp()
-  const { all } = useCommunities()
+  const { user, loading } = useApp()
   const navigate = useNavigate()
   // ?pick=post or ?pick=event (from Home's icons) opens that sheet.
   const [params, setParams] = useSearchParams()
@@ -57,8 +58,6 @@ export default function AddHub() {
 
   if (loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
   if (!user) return <Navigate to="/auth" replace />
-
-  const mine = all.filter((c) => profile.communities.includes(c.id))
 
   return (
     <div className="page addhub2">
@@ -107,20 +106,8 @@ export default function AddHub() {
         </Sheet>
       )}
       {picking === 'event' && (
-        <Sheet title="Which community is this event for?" icon="calendar" tone="pink" onClose={close}>
-          {mine.length ? (
-            <div className="addhub-pick-list">
-              {mine.map((c) => (
-                <Link key={c.id} to={`/community/${c.id}?tab=events`} className="addhub-pick-item" style={{ '--accent': c.accent }}>
-                  <span className="mod-scope-dot" aria-hidden="true" /> {c.name} <Icon name="arrow" size={14} />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="meta-dim">
-              Events belong to a community. <Link to="/communities">Join one</Link> or <Link to="/communities/new">start your own</Link>.
-            </p>
-          )}
+        <Sheet title="New event" icon="calendar" tone="pink" onClose={close}>
+          <EventForm onCancel={close} onCreated={(ev) => navigate(ev.communityId ? `/community/${ev.communityId}?tab=events` : `/events?event=${ev.id}`)} />
         </Sheet>
       )}
     </div>

@@ -427,6 +427,13 @@ ALTER TABLE posts ALTER COLUMN community_id DROP NOT NULL;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS audience TEXT DEFAULT 'community';
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS city TEXT DEFAULT '';
 
+-- Events too (Nuel, Oct 28: "post an event without going through
+-- community route"). Same three audiences as posts; city is where the
+-- creator lives, so My City can place public and city events.
+ALTER TABLE events ALTER COLUMN community_id DROP NOT NULL;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS audience TEXT DEFAULT 'community';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS city TEXT DEFAULT '';
+
 -- Followers are anyone who follows you, one way. Connections (the
 -- existing table) are the people you've picked out — Nuel: "selected
 -- people from the mass".
@@ -840,6 +847,7 @@ export function serializeEvent(row) {
     id: row.id, communityId: row.community_id, creatorId: row.creator_id,
     title: row.title, date: row.date, time: row.time, venue: row.venue,
     description: row.description, attending: row.attending, cover: row.cover || '',
+    audience: row.audience || 'community', city: row.city || '',
   }
 }
 

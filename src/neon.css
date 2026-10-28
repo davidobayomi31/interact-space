@@ -964,3 +964,6 @@ a.ad-card, a.phone-ad { color: var(--text); text-decoration: none; }
 .xp-place-art { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: radial-gradient(circle at 30% 20%, rgba(0, 200, 150, 0.35), transparent 60%), radial-gradient(circle at 80% 90%, rgba(124, 58, 237, 0.35), transparent 60%), var(--surface-2); }
 .xp-place-art .xp-place-name { font-size: 15px; font-weight: 800; color: var(--text); }
 .city-place-photo { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(127, 176, 255, 0.4); }
+.ev-card.ev-focused { border-color: transparent; box-shadow: 0 0 0 2px #EC4899, 0 0 34px -8px rgba(236, 72, 153, 0.8); }
+.event-form .fc-audience { margin-bottom: 2px; }
+.sheet .event-form { box-shadow: none; border: 0; padding: 0; background: none !important; }

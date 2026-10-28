@@ -26,6 +26,16 @@
         "dev:web"
       ],
       "port": 5173
+    },
+    {
+      "name": "dev-alt",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "API_PORT=8788 npx concurrently -n api,web \"node server/index.js\" \"vite --port 5174 --strictPort\""
+      ],
+      "port": 5174,
+      "autoPort": false
     }
   ]
 }
