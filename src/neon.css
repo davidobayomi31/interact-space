@@ -230,3 +230,127 @@ body { background: var(--bg); color: var(--text); }
 
 /* ── Footer brand ── */
 .footer-brand em { color: var(--brand); font-style: normal; }
+
+/* ══ App shell ═══════════════════════════════════════════════════════ */
+
+/* Side nav: coloured icon tiles; the active row glows. */
+.sidenav { width: 228px; padding: 18px 14px 16px; gap: 8px; border-right: 1px solid var(--border-soft); background: var(--bg-raised); }
+@media (min-width: 1001px) { body.has-sidenav .app-shell { padding-left: 228px; } }
+.sidenav-brand { padding: 4px 6px 18px; border-bottom: 1px solid var(--border-soft); }
+.sidenav-links { gap: 4px; }
+.sidenav-links > a, .sidenav-foot > a:not(.btn) {
+  gap: 12px; padding: 7px 10px 7px 7px; border-radius: 14px; color: var(--text);
+  font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: 0;
+}
+.sidenav-links > a .itile { transition: transform 0.2s var(--ease-out), box-shadow 0.2s, filter 0.2s; filter: saturate(0.9); }
+.sidenav-links > a:hover { background: var(--surface-2); color: var(--text); }
+.sidenav-links > a:hover .itile { transform: scale(1.06); }
+.sidenav-links > a.active { background: var(--brand-soft); color: var(--brand-strong); box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.25); }
+.sidenav-links > a.active .itile { filter: none; transform: scale(1.04); }
+:root[data-mode="dark"] .sidenav-links > a.active { background: linear-gradient(90deg, rgba(59, 130, 246, 0.22), rgba(139, 92, 246, 0.12)); color: #fff; box-shadow: inset 0 0 0 1px rgba(127, 176, 255, 0.35), 0 0 22px -10px rgba(76, 141, 255, 0.9); }
+.sidenav-foot > a:not(.btn) { color: var(--text-dim); padding: 9px 12px; }
+.sidenav-foot > a:not(.btn) .icon { margin: 0 7px 0 7px; }
+.sidenav-foot > a:not(.btn).active { background: var(--brand-soft); color: var(--brand-strong); }
+.sidenav-icon { position: relative; display: inline-grid; }
+.sidenav-icon .bar-badge { position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; font-size: 10.5px; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg-raised); }
+.sidenav-add {
+  display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; height: 46px; border-radius: 14px;
+  background: var(--grad-btn); color: #fff !important; font-weight: 700; font-size: 14.5px;
+  box-shadow: 0 10px 22px -12px rgba(99, 102, 241, 0.95);
+}
+.sidenav-add:hover { filter: brightness(1.08); }
+:root[data-mode="dark"] .sidenav-add { box-shadow: 0 0 0 1px rgba(127, 176, 255, 0.4), 0 0 26px -6px rgba(99, 102, 241, 0.95); }
+.sidenav-add-plus { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; background: rgba(255, 255, 255, 0.2); }
+.sidenav-companion {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; margin-bottom: 4px; border-radius: 14px;
+  border: 1px solid var(--border-soft); background: var(--surface); color: var(--text); font-weight: 700; font-size: 13.5px; cursor: pointer;
+}
+.sidenav-companion:hover { border-color: var(--border-strong); box-shadow: var(--glow); }
+@media (min-width: 681px) and (max-width: 1000px) {
+  .sidenav { width: 76px; padding: 14px 10px; }
+  body.has-sidenav .app-shell { padding-left: 76px; }
+  .sidenav-brand .voidaj-logo { display: none; }
+  .sidenav-links > a { justify-content: center; padding: 6px; }
+  .sidenav-add { width: 52px; align-self: center; }
+  .sidenav-add > span:last-child, .sidenav-companion span { display: none; }
+  .sidenav-companion { justify-content: center; padding: 6px; }
+}
+
+/* Top bar on phones: logo left; search, bell and you on the right. */
+@media (max-width: 680px) {
+  .topbar { padding: 10px 14px; gap: 8px; }
+  .topbar-right { gap: 4px; }
+  .topbar .bar-icon { width: 38px; height: 38px; border-radius: 12px; }
+  .topbar-brand .voidaj-logo { font-size: 15px !important; }
+}
+
+/* Bottom bar: Home · Chat · (+) · Community · Profile. */
+@media (max-width: 680px) {
+  .mobile-nav { padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); align-items: flex-end; }
+  .mobile-nav a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; font-size: 10.5px; font-weight: 600; color: var(--text-dim); }
+  .mobile-nav a.active { color: var(--brand); }
+  :root[data-mode="dark"] .mobile-nav a.active { color: #7FB0FF; text-shadow: 0 0 12px rgba(76, 141, 255, 0.8); }
+  :root[data-mode="dark"] .mobile-nav a.active .icon { filter: drop-shadow(0 0 6px rgba(76, 141, 255, 0.9)); }
+  .mobile-nav-icon { position: relative; display: inline-grid; }
+  .mobile-nav-icon .bar-badge { position: absolute; top: -5px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; font-size: 9.5px; display: grid; place-items: center; }
+  .mobile-nav a.mobile-nav-add { margin-top: -22px; color: var(--text); }
+  .mobile-nav-plus {
+    display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%;
+    background: var(--grad-btn); color: #fff; border: 4px solid var(--bg);
+    box-shadow: 0 10px 22px -8px rgba(99, 102, 241, 0.95);
+    transition: transform 0.2s var(--ease-out);
+  }
+  .mobile-nav a.mobile-nav-add:active .mobile-nav-plus { transform: scale(0.92); }
+  :root[data-mode="dark"] .mobile-nav-plus { border-color: #030817; box-shadow: 0 0 0 1px rgba(127, 176, 255, 0.5), 0 0 26px -2px rgba(76, 141, 255, 0.95); }
+  .mobile-nav a.mobile-nav-add.active .mobile-nav-plus { transform: rotate(45deg); }
+  .app-shell { padding-bottom: 78px; }
+}
+
+/* ── Ads rail: one clean seam from top to bottom ──
+   Nuel (#1679/#1684): "can that line seam properly". The page used to
+   bleed sideways rails (event cards) under the bar, breaking the line;
+   the page is now clipped at the seam and kept a gutter away from it. */
+.ads-rail {
+  width: 196px; padding: 18px 14px 16px; gap: 10px; overflow: visible;
+  background: var(--bg-raised); border-left: 0;
+  box-shadow: inset 1px 0 0 var(--border);
+}
+.ads-rail::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 1px;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0), rgba(59, 130, 246, 0.55) 18%, rgba(139, 92, 246, 0.55) 82%, rgba(139, 92, 246, 0));
+}
+:root[data-mode="dark"] .ads-rail { background: rgba(5, 12, 31, 0.9); }
+:root[data-mode="dark"] .ads-rail::before { box-shadow: 0 0 12px 1px rgba(76, 141, 255, 0.55); }
+@media (min-width: 1081px) {
+  body.has-ads-rail .app-shell { padding-right: 196px; }
+  body.has-ads-rail .main { padding-right: 24px; }
+}
+.main { overflow-x: clip; }
+.ads-rail-head { display: flex; align-items: center; justify-content: space-between; }
+.ads-rail-where { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--brand); margin-top: -4px; }
+.ads-stack { animation: vj-fade 0.35s ease both; }
+.ads-scope { position: relative; }
+.ads-scope-btn {
+  display: grid; place-items: center; width: 30px; height: 26px; border-radius: 9px; border: 1px solid var(--border-soft);
+  background: var(--surface); color: var(--text-dim); cursor: pointer;
+}
+.ads-scope-btn:hover, .ads-scope-btn[aria-expanded="true"] { color: var(--brand); border-color: var(--brand); box-shadow: var(--glow); }
+.ads-scope-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; width: 210px; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lift);
+  animation: vj-rise 0.18s var(--ease-out) both;
+}
+.ads-scope-title { padding: 6px 8px 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+.ads-scope-menu button {
+  display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; border: 0; background: none;
+  color: var(--text); text-align: left; cursor: pointer;
+}
+.ads-scope-menu button:hover { background: var(--surface-2); }
+.ads-scope-menu button.on { background: var(--brand-soft); color: var(--brand-strong); }
+.ads-scope-menu button > span { flex: 1; display: flex; flex-direction: column; }
+.ads-scope-menu b { font-size: 13.5px; }
+.ads-scope-menu em { font-style: normal; font-size: 11.5px; color: var(--text-dim); }
+.ads-rail .ad-card { border-top: 0; border-left: 3px solid var(--accent, var(--brand)); border-radius: 14px; }
+.ads-rail .ad-card .ad-mark { border-radius: 10px; }
+.ads-rail .ad-card .ad-cta { background: var(--grad-btn); border: 0; color: #fff; border-radius: 10px; }

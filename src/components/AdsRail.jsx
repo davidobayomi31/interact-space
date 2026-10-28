@@ -5,7 +5,7 @@
 // One ad is enlarged at a time for 5s, then minimizes as the next
 // takes its turn, looping continuously. Businesses pay to be listed;
 // payment is simulated (no real processor wired up in this prototype).
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -32,7 +32,8 @@ export const FALLBACK_ADS = [
 ]
 
 function AdvertiseForm({ onClose, onCreated }) {
-  const [form, setForm] = useState({ businessName: '', tagline: '', ctaLabel: 'Learn more', accent: ACCENTS[0] })
+  const { place } = useApp()
+  const [form, setForm] = useState({ businessName: '', tagline: '', ctaLabel: 'Learn more', accent: ACCENTS[0], city: place, reach: 'local' })
   const [step, setStep] = useState('form') // form | pay
   const [ad, setAd] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -68,6 +69,13 @@ function AdvertiseForm({ onClose, onCreated }) {
                 {ACCENTS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            <div className="job-form-row">
+              <input className="job-input" value={form.city} onChange={set('city')} placeholder="City (e.g. Lagos)" />
+              <select className="job-select" value={form.reach} onChange={set('reach')} aria-label="Who sees it">
+                <option value="local">Local: people in this city</option>
+                <option value="universal">Universal: everywhere</option>
+              </select>
+            </div>
             <div className="composer-foot">
               <button type="button" className="btn ghost small" onClick={onClose}>Cancel</button>
               <button className="btn primary small" disabled={!form.businessName.trim() || busy}>{busy ? 'Saving…' : 'Continue to payment'}</button>
@@ -96,18 +104,52 @@ function AdvertiseForm({ onClose, onCreated }) {
   )
 }
 
+// The "⋯" in the rail's corner: pick Local (this city's businesses) or
+// Universal (ads that run everywhere).
+function ScopeMenu() {
+  const { adScope, setAdScope, place } = useApp()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', away)
+    return () => document.removeEventListener('mousedown', away)
+  }, [open])
+  const pick = (s) => { setAdScope(s); setOpen(false) }
+  return (
+    <div className="ads-scope" ref={ref}>
+      <button className="ads-scope-btn" aria-label="Choose which ads to show" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <Icon name="more" size={18} />
+      </button>
+      {open && (
+        <div className="ads-scope-menu" role="menu">
+          <span className="ads-scope-title">Show ads from</span>
+          <button role="menuitemradio" aria-checked={adScope === 'local'} className={adScope === 'local' ? 'on' : ''} onClick={() => pick('local')}>
+            <Icon name="map-pin" size={15} /><span><b>Local</b><em>Businesses in {place}</em></span>{adScope === 'local' && <Icon name="check" size={14} />}
+          </button>
+          <button role="menuitemradio" aria-checked={adScope === 'universal'} className={adScope === 'universal' ? 'on' : ''} onClick={() => pick('universal')}>
+            <Icon name="globe" size={15} /><span><b>Universal</b><em>Ads that run everywhere</em></span>{adScope === 'universal' && <Icon name="check" size={14} />}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AdsRail() {
-  const { user } = useApp()
+  const { user, place, adScope, setAdScope } = useApp()
   const { pathname } = useLocation()
   const [ads, setAds] = useState([])
   const [active, setActive] = useState(0)
   const [showForm, setShowForm] = useState(false)
 
+  // Follows the city being looked at (My City map) and the Local/Universal switch.
   useEffect(() => {
-    api.listAds()
-      .then((a) => setAds(a.length ? a : FALLBACK_ADS))
+    api.listAds(adScope === 'universal' ? { scope: 'universal' } : { city: place, scope: 'local' })
+      .then((a) => { setAds(a); setActive(0) })
       .catch(() => setAds(FALLBACK_ADS))
-  }, [])
+  }, [place, adScope])
   useEffect(() => {
     if (ads.length < 2) return
     const t = setInterval(() => setActive((i) => (i + 1) % ads.length), 5000)
@@ -129,12 +171,19 @@ export function AdsRail() {
 
   return (
     <aside className="ads-rail" aria-label="Ads">
-      <div className="ads-rail-label"><Icon name="tag" size={12} /> Ads</div>
-      <div className="ads-stack">
+      <div className="ads-rail-head">
+        <div className="ads-rail-label"><Icon name="tag" size={12} /> Ads</div>
+        <ScopeMenu />
+      </div>
+      <div className="ads-rail-where">
+        <Icon name={adScope === 'universal' ? 'globe' : 'map-pin'} size={12} /> {adScope === 'universal' ? 'Universal' : place}
+      </div>
+      <div className="ads-stack" key={`${adScope}-${place}`}>
         {ads.length === 0 && (
           <div className="card ad-card empty">
             <Icon name="tag" size={18} />
-            <span className="meta-dim">Your business could be advertised here.</span>
+            <span className="meta-dim">No local ads in {place} yet.</span>
+            <button className="link-btn" onClick={() => setAdScope('universal')}>See universal ads</button>
           </div>
         )}
         {ads.map((ad, i) => (
@@ -163,14 +212,15 @@ export function AdsRail() {
 // "Find your people" used to be. Phones have no room for the rail, so this
 // is how they see ads too. The highlighted one rotates like the rail.
 export function HomeAds({ max = 4 }) {
-  const { user } = useApp()
+  const { user, place, adScope } = useApp()
   const navigate = useNavigate()
   const [ads, setAds] = useState(FALLBACK_ADS)
   const [i, setI] = useState(0)
   const [showForm, setShowForm] = useState(false)
   useEffect(() => {
-    api.listAds().then((a) => { if (a.length) setAds(a) }).catch(() => {})
-  }, [])
+    api.listAds(adScope === 'universal' ? { scope: 'universal' } : { city: place, scope: 'local' })
+      .then(setAds).catch(() => {})
+  }, [place, adScope])
   const shown = ads.slice(0, max)
   useEffect(() => {
     if (shown.length < 2) return
@@ -179,7 +229,7 @@ export function HomeAds({ max = 4 }) {
   }, [shown.length])
   return (
     <div className="partners-panel" aria-label="Ads">
-      <div className="hx-label"><Icon name="tag" size={12} /> Ads <em>Local businesses</em></div>
+      <div className="hx-label"><Icon name="tag" size={12} /> Ads <em>{adScope === 'universal' ? 'Universal' : `Local · ${place}`}</em><ScopeMenu /></div>
       <div className="partners-list">
         {shown.map((ad, n) => (
           <div key={ad.id} className={`phone-ad ${n === i % shown.length ? 'on' : ''}`} style={{ '--accent': ad.accent }}>

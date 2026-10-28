@@ -1170,8 +1170,14 @@ app.post('/api/chats/:id/messages', requireAuth, async (req, res) => {
 
 // ── Ads — businesses pay to post a rotating promo in the ads rail.
 // Payment is simulated (no real processor wired up in this demo). ──────
-app.get('/api/ads', async (_req, res) => {
-  const rows = await q.all('SELECT * FROM ads WHERE active = 1 ORDER BY created_at DESC')
+// ?city=Abuja&scope=local → that city's own ads; scope=universal → the
+// ads that run everywhere. With no city, every active ad.
+app.get('/api/ads', async (req, res) => {
+  const { city, scope } = req.query
+  let rows
+  if (scope === 'universal') rows = await q.all(`SELECT * FROM ads WHERE active = 1 AND reach = 'universal' ORDER BY created_at DESC`)
+  else if (city) rows = await q.all(`SELECT * FROM ads WHERE active = 1 AND reach = 'local' AND LOWER(city) = LOWER(?) ORDER BY created_at DESC`, String(city))
+  else rows = await q.all('SELECT * FROM ads WHERE active = 1 ORDER BY created_at DESC')
   res.json({ ads: rows.map(serializeAd) })
 })
 
@@ -1181,11 +1187,12 @@ app.get('/api/ads/mine', requireAuth, async (req, res) => {
 })
 
 app.post('/api/ads', requireAuth, async (req, res) => {
-  const { businessName, tagline, ctaLabel, accent, emoji } = req.body || {}
+  const { businessName, tagline, ctaLabel, accent, emoji, city, reach } = req.body || {}
   if (!businessName?.trim()) return err(res, 400, 'Enter your business name.')
   const id = uid('ad')
-  await q.run(`INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, businessName.trim(), (tagline || '').trim(), (ctaLabel || 'Learn more').trim(), accent || '#D8A63A', emoji || '✨', now())
+  await q.run(`INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, city, reach, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, businessName.trim(), (tagline || '').trim(), (ctaLabel || 'Learn more').trim(), accent || '#D8A63A', emoji || '✨',
+    (city || 'Lagos').trim(), reach === 'universal' ? 'universal' : 'local', now())
   res.json({ ad: serializeAd(await q.get('SELECT * FROM ads WHERE id = ?', id)) })
 })
 

@@ -414,6 +414,11 @@ CREATE TABLE IF NOT EXISTS company_accounts (
 -- default headline.
 UPDATE users SET title = 'New citizen of VOIDAJ' WHERE title = 'New citizen of Interact Space';
 
+-- Ads belong to a city. 'local' ads show to people looking at that city;
+-- 'universal' ones show everywhere (the rail's Local / Universal switch).
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Lagos';
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS reach TEXT DEFAULT 'local';
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
@@ -711,6 +716,7 @@ export function serializeAd(row) {
   return {
     id: row.id, businessName: row.business_name, tagline: row.tagline,
     ctaLabel: row.cta_label, accent: row.accent, emoji: row.emoji,
+    city: row.city || 'Lagos', reach: row.reach || 'local',
     active: !!row.active, ownerId: row.owner_id, createdAt: row.created_at,
   }
 }

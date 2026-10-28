@@ -190,6 +190,26 @@ export async function seedExtras() {
     }
   }
 
+  // Ads outside Lagos and ones that run everywhere, so tapping another
+  // city on the map, or switching the rail to Universal, shows something.
+  if (!(await q.get(`SELECT 1 FROM ads WHERE reach = 'universal' LIMIT 1`))) {
+    const AD2_SQL = `INSERT INTO ads (id, owner_id, business_name, tagline, cta_label, accent, emoji, city, reach, active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING`
+    const MORE_ADS = [
+      ['u-tunde', 'AfroRoam Travel', 'Group trips across West Africa', 'Plan a trip', '#3B82F6', '✈️', 'Lagos', 'universal'],
+      ['u-obi', 'CodeBridge Africa', 'Remote dev jobs, paid in dollars', 'Apply now', '#7C3AED', '💻', 'Lagos', 'universal'],
+      ['u-ngozi', 'Pure Water Co.', 'Clean water delivered, any city', 'Order', '#00C896', '💧', 'Lagos', 'universal'],
+      ['u-amina', 'Arewa Threads', 'Northern fabrics, tailored in Abuja', 'Shop', '#EC4899', '🧵', 'Abuja', 'local'],
+      ['u-david', 'Capital Fitness', 'Gyms in Wuse and Garki', 'Join', '#F97316', '💪', 'Abuja', 'local'],
+      ['u-emeka', 'Garden City Grills', 'Port Harcourt’s best suya', 'Order now', '#EF4444', '🍢', 'Port Harcourt', 'local'],
+      ['u-halima', 'Kano Spice House', 'Spices from Kurmi market', 'See spices', '#FBBF24', '🌶️', 'Kano', 'local'],
+      ['u-seun', 'Ibadan Print Hub', 'Flyers and banners in 24h', 'Get a quote', '#2563EB', '🖨️', 'Ibadan', 'local'],
+    ]
+    for (const [owner, name, tagline, cta, accent, emoji, city, reach] of MORE_ADS) {
+      await q.run(AD2_SQL, uid2('ad'), owner, name, tagline, cta, accent, emoji, city, reach, now - DAY)
+    }
+  }
+
   if ((await q.get('SELECT COUNT(*) AS n FROM ratings')).n === 0) {
     const RATING_SQL = 'INSERT INTO ratings (user_id, community_id, stars, review, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING'
     const RATINGS = [

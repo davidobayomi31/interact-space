@@ -23,6 +23,12 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [theme, setThemeState] = useState(readTheme)
+  // The city being looked at: the member's own, until they tap another
+  // one on the My City map. The ads rail and My City's lists follow it.
+  const [placeOverride, setPlace] = useState(null)
+  // Ads rail: 'local' (this city's businesses) or 'universal' (everywhere).
+  const [adScope, setAdScopeState] = useState(() => { try { return localStorage.getItem('voidaj-ad-scope') === 'universal' ? 'universal' : 'local' } catch { return 'local' } })
+  const setAdScope = (s) => { setAdScopeState(s); try { localStorage.setItem('voidaj-ad-scope', s) } catch {} }
 
   useEffect(() => {
     api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false))
@@ -76,6 +82,7 @@ export function AppProvider({ children }) {
     loading,
     assistantOpen, setAssistantOpen,
     theme, setTheme,
+    place: placeOverride ?? user?.city ?? 'Lagos', setPlace, adScope, setAdScope,
     register, login, logout, refreshMe, saveProfile,
     joinCommunity, leaveCommunity, connect,
   }
