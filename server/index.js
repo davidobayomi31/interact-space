@@ -1040,13 +1040,32 @@ app.get('/api/jobs', async (req, res) => {
 })
 
 app.post('/api/jobs', requireAuth, async (req, res) => {
-  const { title, category, description, area, budget, verifiedOnly } = req.body || {}
+  const { title, category, description, area, budget, verifiedOnly, timing, remote, openToOffers } = req.body || {}
   if (!title?.trim()) return err(res, 400, 'Give the job a title.')
   if (!category?.trim()) return err(res, 400, 'Pick a category.')
   const id = uid('j')
-  await q.run(`INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'Lagos', ?, ?, ?)`, id, req.userId, title.trim(), category, (description || '').trim(), (area || '').trim(), (budget || '').trim(), verifiedOnly ? 1 : 0, now())
+  const when = JOB_TIMINGS.includes(timing) ? timing : 'Flexible'
+  await q.run(`INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, timing, remote, open_to_offers, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, req.userId, title.trim(), category, (description || '').trim(), (area || '').trim(),
+    req.userRow.city || 'Lagos', (budget || '').trim(), verifiedOnly ? 1 : 0, when, remote ? 1 : 0, openToOffers === false ? 0 : 1, now())
   res.json({ job: await serializeJob(await q.get('SELECT * FROM jobs WHERE id = ?', id), req.userId) })
+})
+
+const JOB_TIMINGS = ['Today', 'This week', 'This weekend', 'Flexible']
+
+// Make an offer: your own price and a note. Sending it again changes it.
+app.post('/api/jobs/:id/offer', requireAuth, async (req, res) => {
+  const job = await q.get('SELECT * FROM jobs WHERE id = ?', req.params.id)
+  if (!job) return err(res, 404, 'Job not found.')
+  if (job.poster_id === req.userId) return err(res, 400, 'This is your own job.')
+  if (job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
+  if (job.open_to_offers === 0) return err(res, 400, 'This job has a fixed price.')
+  const offer = String(req.body?.offer || '').trim().slice(0, 40)
+  if (!offer) return err(res, 400, 'Enter your price.')
+  const note = String(req.body?.note || '').trim().slice(0, 300)
+  await q.run(`INSERT INTO job_interests (job_id, user_id, created_at, offer, offer_note) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT (job_id, user_id) DO UPDATE SET offer = EXCLUDED.offer, offer_note = EXCLUDED.offer_note`, job.id, req.userId, now(), offer, note)
+  res.json({ job: await serializeJob(job, req.userId) })
 })
 
 app.post('/api/jobs/:id/interest', requireAuth, async (req, res) => {

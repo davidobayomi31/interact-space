@@ -93,6 +93,7 @@ export const listJobs = (params = {}) => {
   return req('/jobs' + (q ? `?${q}` : '')).then((d) => d.jobs)
 }
 export const createJob = (body) => req('/jobs', { method: 'POST', body }).then((d) => d.job)
+export const makeOffer = (id, offer, note) => req(`/jobs/${id}/offer`, { method: 'POST', body: { offer, note } }).then((d) => d.job)
 export const toggleJobInterest = (id) => req(`/jobs/${id}/interest`, { method: 'POST' }).then((d) => d.job)
 
 // Job history — the applicant's own tracker

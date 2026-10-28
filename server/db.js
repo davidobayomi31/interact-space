@@ -468,6 +468,18 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   PRIMARY KEY (event_id, user_id)
 );
 
+-- Quick Jobs: when it's needed, whether it can be done remotely, and
+-- whether the poster takes offers. Anyone offering can name their own
+-- price (Nuel: "in case of price there should be a 'make an offer'").
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS timing TEXT DEFAULT 'Flexible';
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS remote INTEGER DEFAULT 0;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS open_to_offers INTEGER DEFAULT 1;
+ALTER TABLE job_interests ADD COLUMN IF NOT EXISTS offer TEXT DEFAULT '';
+ALTER TABLE job_interests ADD COLUMN IF NOT EXISTS offer_note TEXT DEFAULT '';
+UPDATE jobs SET timing = 'Today' WHERE timing = 'Flexible' AND category IN ('plumbing', 'appliance-repair', 'electrical') AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1);
+UPDATE jobs SET timing = 'This weekend' WHERE timing = 'Flexible' AND category IN ('moving', 'painting', 'cleaning') AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1);
+UPDATE jobs SET remote = 1 WHERE category IN ('tech-support', 'tutoring') AND remote = 0 AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1);
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
@@ -704,11 +716,18 @@ export async function serializeCommunity(row, viewerId) {
 
 // ── Jobs ─────────────────────────────────────────────────────────────
 export async function serializeJob(row, viewerId) {
-  const [posterRow, countRow, mineRow] = await Promise.all([
+  const isPoster = viewerId && viewerId === row.poster_id
+  const [posterRow, countRow, offerRow, mineRow, offers] = await Promise.all([
     getUserById(row.poster_id),
     q.get('SELECT COUNT(*) AS n FROM job_interests WHERE job_id = ?', row.id),
+    q.get("SELECT COUNT(*) AS n FROM job_interests WHERE job_id = ? AND offer <> ''", row.id),
     viewerId
-      ? q.get('SELECT 1 FROM job_interests WHERE job_id = ? AND user_id = ?', row.id, viewerId)
+      ? q.get('SELECT offer, offer_note FROM job_interests WHERE job_id = ? AND user_id = ?', row.id, viewerId)
+      : Promise.resolve(null),
+    // The poster sees who offered and for how much.
+    isPoster
+      ? q.all(`SELECT u.*, ji.offer, ji.offer_note, ji.created_at AS offered_at FROM job_interests ji JOIN users u ON u.id = ji.user_id
+          WHERE ji.job_id = ? ORDER BY ji.created_at DESC`, row.id)
       : Promise.resolve(null),
   ])
   const poster = publicUser(posterRow) || { id: row.poster_id, name: 'Unknown', color: '#888' }
@@ -716,7 +735,10 @@ export async function serializeJob(row, viewerId) {
     id: row.id, title: row.title, category: row.category, description: row.description,
     area: row.area, city: row.city, budget: row.budget, verifiedOnly: !!row.verified_only,
     verified: !!row.verified || !!posterRow?.id_verified,
-    status: row.status, poster, interested: countRow.n, iInterested: !!mineRow,
+    timing: row.timing || 'Flexible', remote: !!row.remote, openToOffers: row.open_to_offers !== 0,
+    status: row.status, poster, interested: countRow.n, offerCount: offerRow.n,
+    iInterested: !!mineRow, myOffer: mineRow?.offer || '', myOfferNote: mineRow?.offer_note || '',
+    offers: offers ? offers.map((o) => ({ user: publicUser(o), offer: o.offer || '', note: o.offer_note || '', ago: timeAgo(o.offered_at) })) : undefined,
     createdAt: row.created_at, ago: timeAgo(row.created_at),
   }
 }
