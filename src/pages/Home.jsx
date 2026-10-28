@@ -28,8 +28,8 @@ function HomeSearch({ communities, posts, jobs, events }) {
   const results = useMemo(() => (term.length < 2 ? [] : [
     ...USERS.filter((u) => has(u.name, u.title, u.handle)).map((u) => ({ id: u.id, icon: 'user', kind: 'Person', title: u.name, to: `/profile/${u.id}` })),
     ...communities.filter((c) => has(c.name, c.tagline, c.tags)).map((c) => ({ id: c.id, icon: 'community', kind: 'Community', title: c.name, to: `/community/${c.id}` })),
-    ...events.filter((e) => has(e.title, e.venue, e.tags)).map((e) => ({ id: e.id, icon: 'calendar', kind: 'Event', title: e.title, to: e.communityId ? `/community/${e.communityId}?tab=events` : '/explore?type=events' })),
-    ...jobs.filter((j) => has(j.title, j.area, j.category)).map((j) => ({ id: j.id, icon: 'wrench', kind: 'Job', title: j.title, to: `/jobs?job=${j.id}` })),
+    ...events.filter((e) => has(e.title, e.venue, e.tags)).map((e) => ({ id: e.id, icon: 'calendar', kind: 'Event', title: e.title, to: e.communityId ? `/community/${e.communityId}?tab=events` : `/events?event=${e.id}` })),
+    ...jobs.filter((j) => has(j.title, j.area, j.category)).map((j) => ({ id: j.id, icon: 'briefcase', kind: 'Job', title: j.title, to: `/jobs?job=${j.id}` })),
     ...posts.filter((p) => has(p.title, p.body)).map((p) => ({ id: p.id, icon: 'chat', kind: 'Post', title: p.title, to: `/post/${p.id}` })),
   ].slice(0, 6)), [term, communities, events, jobs, posts]) // eslint-disable-line
   const searchAd = pickSearchAd(useAds(), term)
@@ -112,7 +112,7 @@ function CityHero({ city }) {
 }
 
 const SHORTCUTS = [
-  { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', tone: 'orange' },
+  { to: '/jobs', icon: 'briefcase', label: 'Quick Jobs', tone: 'orange' },
   { to: '/events', icon: 'calendar', label: 'Events', tone: 'pink' },
   { to: '/city', icon: 'map-pin', label: 'My City', tone: 'teal' },
 ]
@@ -121,8 +121,8 @@ const SHORTCUTS = [
 const QUICK = [
   { to: '/add?pick=post', icon: 'edit', label: 'Post', tone: 'blue' },
   { to: '/add?pick=event', icon: 'calendar', label: 'Event', tone: 'pink' },
-  { to: '/jobs?post=1', icon: 'wrench', label: 'Job', tone: 'orange' },
-  { to: '/communities', icon: 'community', label: 'Community', tone: 'teal' },
+  { to: '/jobs?post=1', icon: 'briefcase', label: 'Job', tone: 'orange' },
+  { to: '/communities', icon: 'users', label: 'Community', tone: 'teal' },
   { to: '/city', icon: 'map-pin', label: 'Map', tone: 'green' },
   { to: '/explore', icon: 'grid', label: 'More', tone: 'violet' },
 ]

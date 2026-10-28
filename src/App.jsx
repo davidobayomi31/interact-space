@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from './state.jsx'
-import { Icon, IconTile } from './components/Icons.jsx'
+import { Icon } from './components/Icons.jsx'
 import { VoidajLockup } from './components/VoidajMark.jsx'
 import { Eagle } from './components/Eagle.jsx'
 import { Avatar } from './components/bits.jsx'
@@ -35,16 +35,17 @@ import * as api from './api.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
-// The main places, down the left side on larger screens, each with its
-// own coloured icon tile (Nuel's "redesigned icons"). Add Hub is the big
+// The main places, down the left side on larger screens. Every icon sits
+// in the same glass tile; the page you're on gets the glossy brand fill
+// (David, Oct 28: one colour, not a different one each). Add Hub is the
 // gradient button beneath them.
 const PRIMARY = [
   { to: '/home', icon: 'home', tone: 'blue', label: 'Home' },
-  { to: '/explore', icon: 'search', tone: 'violet', label: 'Explore' },
+  { to: '/explore', icon: 'compass', tone: 'violet', label: 'Explore' },
   { to: '/city', icon: 'map-pin', tone: 'teal', label: 'My City' },
   { to: '/events', icon: 'calendar', tone: 'pink', label: 'Events' },
-  { to: '/jobs', icon: 'wrench', tone: 'orange', label: 'Quick Jobs' },
-  { to: '/communities', icon: 'community', tone: 'indigo', label: 'Communities' },
+  { to: '/jobs', icon: 'briefcase', tone: 'orange', label: 'Quick Jobs' },
+  { to: '/communities', icon: 'users', tone: 'indigo', label: 'Communities' },
   { to: '/chats', icon: 'message-circle', tone: 'green', label: 'Chat', unread: true },
 ]
 
@@ -193,7 +194,7 @@ function SideNav() {
         {PRIMARY.map((n) => (
           <NavLink key={n.to} to={n.to} title={n.label} className={`nav-${n.tone}`}>
             <span className="sidenav-icon">
-              <IconTile name={n.icon} tone={n.tone} size={32} iconSize={16} />
+              <span className="snav-ico"><Icon name={n.icon} size={17} /></span>
               {n.unread && unread > 0 && <b className="bar-badge">{unread > 9 ? '9+' : unread}</b>}
             </span>
             <span>{n.label}</span>
