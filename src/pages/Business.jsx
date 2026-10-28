@@ -44,7 +44,7 @@ export default function Business() {
       </section>
 
       <div className="biz-content">
-      <div className="seg">
+      <div className="seg float-bar">
         {TABS.map((t) => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
       </div>
 

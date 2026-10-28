@@ -88,7 +88,7 @@ export default function Communities() {
         <Icon name="chevron-right" size={20} />
       </Link>
 
-      <div className="seg cm-tabs" role="tablist">
+      <div className="seg cm-tabs float-bar" role="tablist">
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
       </div>
 

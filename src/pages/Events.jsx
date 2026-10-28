@@ -92,7 +92,7 @@ export default function Events() {
         <h1>Events</h1>
         <p className="meta-dim">Discover, create and manage events.</p>
       </header>
-      <div className="seg" role="tablist">
+      <div className="seg float-bar" role="tablist">
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}{t.id === 'mine' && rsvps.mine.length > 0 ? ` (${rsvps.mine.length})` : ''}</button>)}
       </div>
 

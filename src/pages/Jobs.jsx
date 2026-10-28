@@ -434,7 +434,7 @@ export default function Jobs() {
         <span><b>Good work travels by word of mouth.</b> Here, the word of mouth is written down.</span>
       </div>
 
-      <div className="jobs-views-row">
+      <div className="jobs-views-row float-bar">
       <div className="seg jobs-views" role="tablist" aria-label="Quick Jobs">
         <button role="tab" aria-selected={view === 'work'} className={view === 'work' ? 'on' : ''} onClick={() => setView('work')}>
           <Icon name="briefcase" size={15} /> Find work

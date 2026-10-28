@@ -270,3 +270,30 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, te
 .jobs-page .space-side .chip-grid { gap: 6px; justify-content: flex-start; padding-left: 0; }
 .jobs-page .space-side .goal-chip.small { padding: 5px 10px; font-size: 12px; gap: 5px; }
 @media (max-width: 680px) { .jobs-post-btn { width: 100%; justify-content: center; } }
+
+/* ══ Floating tab bars (David, Oct 29) ═══════════════════════════════
+   Each page's tab bar sticks as you scroll, floating a little below the
+   top edge (below the header on phones) as a glass pill. */
+:root { --float-top: 14px; }
+@media (max-width: 680px) { :root { --float-top: 67px; } }
+@media (min-width: 681px) { .page { padding-top: 22px; } }
+.float-bar, .feed-tabs, .pf2-tabs { position: sticky; top: var(--float-top); z-index: 30; }
+.float-bar.seg, .float-bar.chip-row, .jobs-views-row.float-bar, .feed-tabs, .pf2-tabs {
+  padding: 5px; border-radius: 16px; border: 1px solid var(--glass-line);
+  background: var(--glass-sheen), var(--glass-fill-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow), 0 14px 30px -18px rgba(15, 23, 42, 0.55);
+}
+:root[data-mode="dark"] .float-bar.seg, :root[data-mode="dark"] .float-bar.chip-row,
+:root[data-mode="dark"] .jobs-views-row.float-bar, :root[data-mode="dark"] .feed-tabs, :root[data-mode="dark"] .pf2-tabs {
+  box-shadow: var(--glass-shadow), 0 16px 34px -16px rgba(0, 0, 0, 0.9);
+}
+.float-bar.chip-row { padding: 5px; }
+.jobs-views-row.float-bar { align-self: flex-start; }
+.jobs-views-row.float-bar .seg { background: none; box-shadow: none; padding: 0; }
+.jobs-views-row.float-bar .jobs-post-btn { height: 38px; }
+@media (max-width: 680px) { .jobs-views-row.float-bar { align-self: stretch; } }
+@media (min-width: 681px) {
+  .jobs-views-row.float-bar { flex-wrap: nowrap; }
+  .jobs-views-row.float-bar .jobs-views { flex: 0 0 320px; }
+}

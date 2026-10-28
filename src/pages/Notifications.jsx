@@ -110,7 +110,7 @@ export default function Notifications() {
         <p className="meta-dim">Messages, jobs, people and community activity — each one says where it’s from.</p>
       </header>
 
-      <div className="chip-row" role="tablist" aria-label="Sections">
+      <div className="chip-row float-bar" role="tablist" aria-label="Sections">
         {SECTIONS.map((s) => (
           <button key={s.id} role="tab" aria-selected={section === s.id} className={section === s.id ? 'on' : ''}
             onClick={() => setParams(s.id === 'all' ? {} : { s: s.id }, { replace: true })}>

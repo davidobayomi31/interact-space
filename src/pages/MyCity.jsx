@@ -70,7 +70,7 @@ export default function MyCity() {
         {!same(home) && <button className="btn ghost small" onClick={() => setPlace(null)}><Icon name="navigation" size={13} /> Back to {home}</button>}
       </section>
 
-      <div className="chip-row" role="tablist" aria-label="What to show">
+      <div className="chip-row float-bar" role="tablist" aria-label="What to show">
         {FILTERS.map((f) => (
           <button key={f.id} role="tab" aria-selected={filter === f.id} className={filter === f.id ? 'on' : ''} onClick={() => setFilter(f.id)}>
             {f.icon && <Icon name={f.icon} size={13} />} {f.label}{f.soon && <span className="soon-badge">Soon</span>}
