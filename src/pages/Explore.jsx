@@ -27,10 +27,13 @@ const KINDS = [
 const firstPhoto = (p) => p.media?.find((m) => m.kind === 'image')?.src
 
 // A photo card with a title and a line under it — the mockup's tiles.
-function PhotoCard({ to, img, title, sub, onClick, tone = 'grad', icon = 'sparkle' }) {
+function PhotoCard({ to, img, title, sub, onClick, tone = 'grad', icon = 'sparkle', place }) {
   const body = (
     <>
-      <span className="xp-photo">{img ? <img src={img} alt="" loading="lazy" /> : <IconTile name={icon} tone={tone} size={44} />}</span>
+      <span className={`xp-photo ${!img && place ? 'xp-place-art' : ''}`}>
+        {img ? <img src={img} alt="" loading="lazy" /> : <IconTile name={icon} tone={tone} size={44} />}
+        {!img && place && <b className="xp-place-name">{place}</b>}
+      </span>
       <b>{title}</b>
       {sub && <span>{sub}</span>}
     </>
@@ -43,10 +46,14 @@ function Discover({ posts, events, jobs, communities }) {
   const navigate = useNavigate()
   const photoPosts = posts.filter(firstPhoto).sort((a, b) => b.score - a.score)
   const interests = profile.interests ?? []
+  // A full row: upcoming events, the most-liked photo posts, then
+  // communities with the most members.
   const trending = [
     ...events.slice(0, 2).map((e) => ({ key: e.id, to: `/events?event=${e.id}`, img: e.cover, title: e.title, sub: e.venue })),
-    ...photoPosts.slice(0, 3).map((p) => ({ key: p.id, to: `/post/${p.id}`, img: firstPhoto(p), title: (p.title || p.body).slice(0, 40), sub: p.author.name })),
-  ]
+    ...photoPosts.slice(0, 4).map((p) => ({ key: p.id, to: `/post/${p.id}`, img: firstPhoto(p), title: (p.title || p.body).slice(0, 40), sub: p.author.name })),
+    ...[...communities].filter((c) => c.cover).sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0)).slice(0, 4)
+      .map((c) => ({ key: c.id, to: `/community/${c.id}`, img: c.cover, title: c.name, sub: `${c.memberCount >= 1000 ? `${(c.memberCount / 1000).toFixed(1)}k` : c.memberCount} members` })),
+  ].slice(0, 8)
   const suggested = [
     { key: 'photo', to: '/explore?type=people&q=photo', img: '/images/communities/lagos-lens-collective.jpg', title: 'Photographers', sub: 'Near you' },
     { key: 'remote', to: '/jobs', img: '/images/events/ev-js-study.jpg', title: 'Jobs', sub: `${jobs.length} open` },
@@ -69,14 +76,14 @@ function Discover({ posts, events, jobs, communities }) {
         <div className="rail xp-rail">
           {CITIES.map((c) => (
             <PhotoCard key={c.id} onClick={() => { setPlace(c.name); navigate('/city') }} img={c.id === 'lagos' ? '/images/city/lagos.jpg' : null}
-              icon="map-pin" tone={c.live ? 'blue' : 'teal'} title={c.name} sub={c.live ? 'Live now' : 'Look around'} />
+              icon="map-pin" tone={c.live ? 'blue' : 'teal'} title={c.name} sub={c.live ? 'Live now' : 'Look around'} place={c.name} />
           ))}
         </div>
       </section>
       <section className="section">
         <div className="row-head"><h2>Popular Posts</h2><Link to="/explore?type=posts">See all <Icon name="arrow" size={13} /></Link></div>
         <div className="xp-grid">
-          {photoPosts.slice(0, 9).map((p) => (
+          {photoPosts.slice(0, photoPosts.length >= 12 ? 12 : Math.min(6, photoPosts.length)).map((p) => (
             <Link key={p.id} to={`/post/${p.id}`} className="xp-grid-item" aria-label={(p.title || p.body).slice(0, 60)}>
               <img src={firstPhoto(p)} alt="" loading="lazy" />
               <span><Icon name="heart" size={12} /> {p.score}</span>

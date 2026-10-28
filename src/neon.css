@@ -944,3 +944,21 @@ a.ad-card, a.phone-ad { color: var(--text); text-decoration: none; }
   .biz-grid { display: grid; grid-template-columns: clamp(320px, 34%, 420px) minmax(0, 1fr); gap: 24px; align-items: start; }
   .biz-hero { position: sticky; top: 20px; }
 }
+
+/* Explore and the other card rows on computers: an older rule turns
+   rails into a grid, so the cards must fill their cells rather than keep
+   their phone width (Oct 28: "empty and all spaced out"). */
+@media (min-width: 900px) {
+  .rail.xp-rail { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 16px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 6px; }
+  .rail.xp-rail > :nth-child(n + 9) { display: flex; }
+  .rail.xp-rail > .xp-card { width: auto; }
+  .xp-rail .xp-photo { height: 160px; }
+  .rail.cm-pop-rail { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .rail.cm-pop-rail > .cm-pop { width: auto; }
+  .rail.job-cat-rail { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .rail.job-cat-rail > .job-cat { width: auto; height: 120px; }
+  .rail.job-cat-rail > :nth-child(n + 9) { display: flex; }
+  .xp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.xp-place-art { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: radial-gradient(circle at 30% 20%, rgba(0, 200, 150, 0.35), transparent 60%), radial-gradient(circle at 80% 90%, rgba(124, 58, 237, 0.35), transparent 60%), var(--surface-2); }
+.xp-place-art .xp-place-name { font-size: 15px; font-weight: 800; color: var(--text); }
