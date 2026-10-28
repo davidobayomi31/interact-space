@@ -93,9 +93,9 @@ Also #1689 (an earlier full set): Home has a hero ("The world is more connected 
 - Payments (#1693): **later**, not this round (moved to DO-LATER).
 - Motion graphics: **in-site animation** (logo reveal, glow, transitions).
 - Sign-up headline: **"Step into VOIDAJ"**.
-- "Unique profile stuff" (#1672): David will ask Nuel. Skipped for now.
+- "Unique profile stuff" (#1672): Nuel said to disregard it.
 - "Search bar" (#1659): a **job search bar on Quick Jobs**.
-- Theme: **follow the system setting**. Both light and dark get the new palette.
+- Theme: **dark by default**, like Nuel's mockups (changed Oct 28). Light and System are still in Settings → Appearance.
 
 ## Build plan
 

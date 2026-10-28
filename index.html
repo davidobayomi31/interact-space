@@ -13,8 +13,10 @@
     <meta name="color-scheme" content="light dark" />
     <script>
       // Apply the saved theme before the first paint, so dark mode never flashes white.
-      var t = null
-      try { t = localStorage.getItem('voidaj-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch (e) {}
+      // Dark unless the visitor picked otherwise (the look of Nuel's mockups).
+      var t = 'dark'
+      try { var saved = localStorage.getItem('voidaj-theme'); if (saved === 'light' || saved === 'dark' || saved === 'system') t = saved } catch (e) {}
+      if (t !== 'system') document.documentElement.dataset.theme = t
       document.documentElement.dataset.mode = t === 'light' || t === 'dark' ? t : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     </script>
     <title>VOIDAJ — People, Communities &amp; Opportunities</title>

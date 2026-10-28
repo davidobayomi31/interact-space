@@ -17,9 +17,14 @@ import { useFavorites } from '../favorites.js'
 
 const catInfo = (id) => JOB_CATEGORIES.find((c) => c.id === id) || { label: id, icon: 'briefcase' }
 
-// A picture for each kind of work. Categories without a photo of their
-// own yet get a coloured tile with their icon.
+// A picture for each kind of work (public/images, free Unsplash photos).
+// A category without one gets a coloured tile with its icon.
 const CAT_PHOTO = {
+  plumbing: '/images/jobs/plumbing.jpg',
+  cleaning: '/images/jobs/cleaning.jpg',
+  carpentry: '/images/jobs/carpentry.jpg',
+  'appliance-repair': '/images/jobs/appliance-repair.jpg',
+  'auto-repair': '/images/jobs/auto-repair.jpg',
   'photography-gig': '/images/communities/lagos-lens-collective.jpg',
   'event-help': '/images/events/ev-pitch-night.jpg',
   'tech-support': '/images/events/ev-js-study.jpg',

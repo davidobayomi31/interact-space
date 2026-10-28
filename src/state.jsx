@@ -15,7 +15,7 @@ const GUEST = {
 
 const THEMES = ['system', 'light', 'dark']
 function readTheme() {
-  try { const t = localStorage.getItem('voidaj-theme'); return THEMES.includes(t) ? t : 'system' } catch { return 'system' }
+  try { const t = localStorage.getItem('voidaj-theme'); return THEMES.includes(t) ? t : 'dark' } catch { return 'dark' }
 }
 
 export function AppProvider({ children }) {
@@ -42,7 +42,8 @@ export function AppProvider({ children }) {
     root.classList.toggle('pref-large-text', !!prefs?.largeText)
   }, [prefs?.reduceMotion, prefs?.largeText])
 
-  // Theme: 'system' follows the device; 'light' and 'dark' pin it. Kept on
+  // Theme: dark by default, like Nuel's mockups. 'system' follows the
+  // device; 'light' and 'dark' pin it. Kept on
   // this device (so it applies before sign-in and before the first paint,
   // see index.html) and in the member's settings (so it follows them).
   const savedTheme = user?.settings?.theme

@@ -71,10 +71,3 @@ Nuel sent 14 payment screens (see NUEL-FEEDBACK-OCT24-27.md, section J). Setting
 - In-app badge purchases
 - Transaction history: all, payments, payouts
 
-## Photos for job categories (Oct 27)
-
-Quick Jobs categories show a photo where one fits from public/images. Plumbing, cleaning, carpentry, appliance repair and auto repair still use a coloured icon tile until they get real photos.
-
-## "That unique profile stuff" (Nuel, Oct 25)
-
-David is checking with Nuel what he meant. It may be the Identity Builder preview at /vision.

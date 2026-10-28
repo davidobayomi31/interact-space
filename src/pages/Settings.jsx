@@ -427,7 +427,7 @@ function Notifications() {
 const THEME_OPTIONS = [
   { id: 'system', icon: 'monitor', label: 'System', sub: 'Match this device' },
   { id: 'light', icon: 'sun', label: 'Light', sub: 'Always light' },
-  { id: 'dark', icon: 'moon', label: 'Dark', sub: 'Always dark' },
+  { id: 'dark', icon: 'moon', label: 'Dark', sub: 'Always dark (default)' },
 ]
 
 function ThemeBlock() {

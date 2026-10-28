@@ -592,7 +592,7 @@ export const DEFAULT_SETTINGS = {
   reduceMotion: false,
   largeText: false,
   language: 'en',
-  theme: 'system', // 'system' | 'light' | 'dark'
+  theme: 'dark', // 'system' | 'light' | 'dark' — dark by default, like the mockups
 }
 export function readSettings(row) {
   const s = json(row?.settings, {})
