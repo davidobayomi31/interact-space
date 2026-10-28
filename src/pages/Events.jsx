@@ -3,7 +3,7 @@
 // RSVP; My Events is everything you've joined.
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { EVENTS } from '../data/seed.js'
+import { EVENTS, SHOW_DEMO_EVENTS } from '../data/seed.js'
 import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
@@ -61,14 +61,19 @@ export default function Events() {
   const today = new Date().toISOString().slice(0, 10)
   const all = useMemo(() => [...made, ...EVENTS.filter((e) => !made.some((m) => m.id === e.id))], [made])
   const count = (e) => (e.attending ?? 0) + (rsvps.counts[e.id] ?? 0)
-  const upcoming = all.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date))
+  const byDate = (a, b) => a.date.localeCompare(b.date)
+  // Real upcoming events first; the demo calendar stays after them, even
+  // though its dates have passed, until SHOW_DEMO_EVENTS is switched off.
+  const demoIds = new Set(EVENTS.map((e) => e.id))
+  const real = all.filter((e) => !demoIds.has(e.id) && e.date >= today).sort(byDate)
+  const demo = SHOW_DEMO_EVENTS ? all.filter((e) => demoIds.has(e.id)).sort(byDate) : []
+  const upcoming = [...real, ...demo]
   const list = {
     upcoming,
     trending: [...upcoming].sort((a, b) => count(b) - count(a)),
     mine: all.filter((e) => rsvps.mine.includes(e.id)).sort((a, b) => a.date.localeCompare(b.date)),
   }[tab]
-  // The demo city calendar is dated in July; if it has all passed, show it anyway.
-  const shown = list.length || tab === 'mine' ? list : [...all].sort((a, b) => a.date.localeCompare(b.date))
+  const shown = list
   const found = !!focus && shown.some((e) => e.id === focus)
   useEffect(() => {
     if (found) document.getElementById(`event-${focus}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })

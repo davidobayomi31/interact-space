@@ -279,7 +279,11 @@ export const COMMUNITIES = [
 ]
 
 // ── Events (dates relative to demo today: 2026-07-17) ────────────────
-export const EVENTS = [
+// The demo city calendar. It stays on every page (Events, Home, My City,
+// Explore, communities), even after its dates pass, until David says to
+// remove it: then set SHOW_DEMO_EVENTS to false.
+export const SHOW_DEMO_EVENTS = true
+const DEMO_EVENTS = [
   {
     id: 'ev-pitch-night', cover: '/images/events/ev-pitch-night.jpg', communityId: 'lagos-entrepreneurs',
     title: 'First-Cheque Pitch Night', date: '2026-07-21', time: '6:00 PM',
@@ -337,6 +341,7 @@ export const EVENTS = [
     tags: ['farming', 'agriculture', 'sustainability', 'startups'], attending: 63, host: 'u-chidi',
   },
 ]
+export const EVENTS = SHOW_DEMO_EVENTS ? DEMO_EVENTS : []
 
 // ── Discussion posts per community ───────────────────────────────────
 export const POSTS = [
