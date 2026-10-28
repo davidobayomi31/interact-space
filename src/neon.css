@@ -951,6 +951,7 @@ a.ad-card, a.phone-ad { color: var(--text); text-decoration: none; }
 @media (min-width: 900px) {
   .rail.xp-rail { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 16px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 6px; }
   .rail.xp-rail > :nth-child(n + 9) { display: flex; }
+  .rail.xp-rail { scroll-snap-type: none; scroll-padding-inline: 0; }
   .rail.xp-rail > .xp-card { width: auto; }
   .xp-rail .xp-photo { height: 160px; }
   .rail.cm-pop-rail { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }

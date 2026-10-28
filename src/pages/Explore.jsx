@@ -46,21 +46,29 @@ function Discover({ posts, events, jobs, communities }) {
   const navigate = useNavigate()
   const photoPosts = posts.filter(firstPhoto).sort((a, b) => b.score - a.score)
   const interests = profile.interests ?? []
-  // A full row: upcoming events, the most-liked photo posts, then
-  // communities with the most members.
-  const trending = [
-    ...events.slice(0, 2).map((e) => ({ key: e.id, to: `/events?event=${e.id}`, img: e.cover, title: e.title, sub: e.venue })),
-    ...photoPosts.slice(0, 4).map((p) => ({ key: p.id, to: `/post/${p.id}`, img: firstPhoto(p), title: (p.title || p.body).slice(0, 40), sub: p.author.name })),
-    ...[...communities].filter((c) => c.cover).sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0)).slice(0, 4)
+  // Popular Posts shows the most-liked photo posts; Trending gets the
+  // rest, so the same picture never shows twice on the page. Anything
+  // without a photo is left out of these photo rows.
+  const popular = photoPosts.slice(0, photoPosts.length >= 12 ? 12 : Math.min(6, photoPosts.length))
+  const used = new Set(popular.map(firstPhoto))
+  const unique = (items) => items.filter((t) => t.img && !used.has(t.img) && used.add(t.img))
+  const trending = unique([
+    ...events.filter((e) => e.cover).slice(0, 3).map((e) => ({ key: e.id, to: `/events?event=${e.id}`, img: e.cover, title: e.title, sub: e.venue })),
+    ...photoPosts.filter((p) => !popular.includes(p)).map((p) => ({ key: p.id, to: `/post/${p.id}`, img: firstPhoto(p), title: (p.title || p.body).slice(0, 40), sub: p.author.name })),
+    ...[...communities].filter((c) => c.cover).sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0)).slice(0, 3)
       .map((c) => ({ key: c.id, to: `/community/${c.id}`, img: c.cover, title: c.name, sub: `${c.memberCount >= 1000 ? `${(c.memberCount / 1000).toFixed(1)}k` : c.memberCount} members` })),
-  ].slice(0, 8)
-  const suggested = [
+  ]).slice(0, 8)
+  const suggested = unique([
     { key: 'photo', to: '/explore?type=people&q=photo', img: '/images/communities/lagos-lens-collective.jpg', title: 'Photographers', sub: 'Near you' },
-    { key: 'remote', to: '/jobs', img: '/images/events/ev-js-study.jpg', title: 'Jobs', sub: `${jobs.length} open` },
-    { key: 'founders', to: '/communities?tab=discover', img: '/images/communities/lagos-entrepreneurs.jpg', title: 'Founders', sub: 'Communities' },
-    ...communities.filter((c) => c.cover && (c.tags || []).some((t) => interests.includes(t))).slice(0, 2)
+    { key: 'jobs', to: '/jobs', img: '/images/jobs/plumbing.jpg', title: 'Jobs', sub: `${jobs.length} open` },
+    { key: 'founders', to: '/communities?tab=discover', img: '/images/events/ev-asn-demo-day.jpg', title: 'Founders', sub: 'Communities' },
+    { key: 'farm', to: '/communities?tab=discover', img: '/images/events/ev-farm-tour.jpg', title: 'Farming & food', sub: 'Communities' },
+    { key: 'fix', to: '/jobs', img: '/images/jobs/carpentry.jpg', title: 'Makers & trades', sub: 'Quick Jobs' },
+    { key: 'cars', to: '/jobs', img: '/images/jobs/auto-repair.jpg', title: 'Mechanics', sub: 'Near you' },
+    ...communities.filter((c) => c.cover && (c.tags || []).some((t) => interests.includes(t)))
       .map((c) => ({ key: c.id, to: `/community/${c.id}`, img: c.cover, title: c.name, sub: 'Matches your interests' })),
-  ]
+    ...communities.filter((c) => c.cover).map((c) => ({ key: `c-${c.id}`, to: `/community/${c.id}`, img: c.cover, title: c.name, sub: 'Community' })),
+  ]).slice(0, 6)
   return (
     <>
       <section className="section">
@@ -83,7 +91,7 @@ function Discover({ posts, events, jobs, communities }) {
       <section className="section">
         <div className="row-head"><h2>Popular Posts</h2><Link to="/explore?type=posts">See all <Icon name="arrow" size={13} /></Link></div>
         <div className="xp-grid">
-          {photoPosts.slice(0, photoPosts.length >= 12 ? 12 : Math.min(6, photoPosts.length)).map((p) => (
+          {popular.map((p) => (
             <Link key={p.id} to={`/post/${p.id}`} className="xp-grid-item" aria-label={(p.title || p.body).slice(0, 60)}>
               <img src={firstPhoto(p)} alt="" loading="lazy" />
               <span><Icon name="heart" size={12} /> {p.score}</span>
