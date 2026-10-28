@@ -727,6 +727,23 @@ app.get('/api/feed', async (req, res) => {
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
+// ── Going to events ──────────────────────────────────────────────────
+// Which events you're going to, and how many members are going to each.
+app.get('/api/rsvps', async (req, res) => {
+  const [counts, mine] = await Promise.all([
+    q.all('SELECT event_id, COUNT(*)::int AS n FROM event_rsvps GROUP BY event_id'),
+    req.userId ? q.all('SELECT event_id FROM event_rsvps WHERE user_id = ?', req.userId) : [],
+  ])
+  res.json({ counts: Object.fromEntries(counts.map((r) => [r.event_id, r.n])), mine: mine.map((r) => r.event_id) })
+})
+
+app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
+  const id = String(req.params.id).slice(0, 80)
+  const { changes } = await q.run('DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?', id, req.userId)
+  if (!changes) await q.run('INSERT INTO event_rsvps (event_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', id, req.userId, now())
+  res.json({ going: !changes })
+})
+
 // ── Status: photos and lines of text that last 24 hours ─────────────
 const STATUS_TTL = 24 * 60 * 60 * 1000
 app.get('/api/statuses', async (req, res) => {

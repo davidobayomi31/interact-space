@@ -210,6 +210,24 @@ export async function seedExtras() {
     }
   }
 
+  // A few jobs outside Lagos, so tapping another city on the My City map
+  // shows that city's work.
+  if (!(await q.get(`SELECT 1 FROM jobs WHERE city <> 'Lagos' LIMIT 1`))) {
+    const JOB2_SQL = `INSERT INTO jobs (id, poster_id, title, category, description, area, city, budget, verified_only, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?) ON CONFLICT DO NOTHING`
+    const MORE_JOBS = [
+      ['u-amina', 'Set up Wi-Fi for a small office', 'tech-support', 'Router, two access points, and a printer on the network.', 'Wuse 2', 'Abuja', '₦30,000'],
+      ['u-david', 'Driver for an airport pickup', 'delivery', 'Nnamdi Azikiwe airport to Garki, Friday evening.', 'Garki', 'Abuja', '₦15,000'],
+      ['u-emeka', 'Fix a generator that won’t start', 'appliance-repair', '5kVA petrol generator, stopped after the rain.', 'GRA', 'Port Harcourt', '₦18,000'],
+      ['u-seun', 'Paint a shop front', 'painting', 'Small shop, one coat over the old paint.', 'Bodija', 'Ibadan', '₦20,000'],
+      ['u-halima', 'Carry goods from Kurmi market', 'moving', 'About 20 bags, short distance, Saturday morning.', 'Kurmi', 'Kano', '₦9,000'],
+      ['u-chidi', 'Math lessons for JSS3', 'tutoring', 'Twice a week after school.', 'Independence Layout', 'Enugu', '₦8,000/session'],
+    ]
+    for (const [poster, title, category, description, area, city, budget] of MORE_JOBS) {
+      await q.run(JOB2_SQL, uid2('j'), poster, title, category, description, area, city, budget, now - 3 * HOUR)
+    }
+  }
+
   // Sample people follow each other, so Following and follower counts
   // have something in them.
   if (!(await q.get('SELECT 1 FROM follows LIMIT 1'))) {

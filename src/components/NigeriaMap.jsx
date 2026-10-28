@@ -35,8 +35,12 @@ const K = 30, W0 = 2.3, N0 = 14.2
 const px = ([lon, lat]) => [(lon - W0) * K, (N0 - lat) * K]
 const path = (pts, close) => pts.map((p, i) => `${i ? 'L' : 'M'}${px(p).map((n) => n.toFixed(1)).join(' ')}`).join(' ') + (close ? ' Z' : '')
 
-export function NigeriaMap({ liveCount = 0, startTo = '/auth' }) {
-  const [picked, setPicked] = useState('lagos')
+// Controlled when `value` (a city name) and `onPick` are given: My City
+// passes the city being looked at, so tapping a pin switches the page.
+export function NigeriaMap({ liveCount = 0, startTo = '/auth', value, onPick, counts = {}, caption = true }) {
+  const [own, setOwn] = useState('lagos')
+  const picked = value ? (CITIES.find((c) => c.name.toLowerCase() === value.toLowerCase())?.id ?? own) : own
+  const setPicked = (id) => { setOwn(id); onPick?.(CITIES.find((c) => c.id === id).name) }
   const city = CITIES.find((c) => c.id === picked)
   return (
     <div className="ng-map">
@@ -50,20 +54,21 @@ export function NigeriaMap({ liveCount = 0, startTo = '/auth' }) {
             <g key={c.id} className={`ng-city ${c.live ? 'live' : ''} ${picked === c.id ? 'on' : ''}`}
               transform={`translate(${x} ${y})`} tabIndex={0} role="button" aria-label={c.name}
               onClick={() => setPicked(c.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked(c.id) } }}>
-              {c.live && <circle className="ng-pulse" r="11" />}
-              <circle className="ng-dot" r={c.live ? 6 : 4} />
+              {(c.live || picked === c.id) && <circle className="ng-pulse" r="11" />}
+              <circle className="ng-dot" r={c.live || picked === c.id ? 6 : 4} />
+              {counts[c.name] > 0 && <text className="ng-count" x="0" y="-10" textAnchor="middle">{counts[c.name]}</text>}
               <text x={c.id === 'lagos' || c.id === 'ibadan' ? -9 : 9} y="4" textAnchor={c.id === 'lagos' || c.id === 'ibadan' ? 'end' : 'start'}>{c.name}</text>
             </g>
           )
         })}
       </svg>
-      <div className="ng-caption" aria-live="polite">
+      {caption && <div className="ng-caption" aria-live="polite">
         {city.live ? (
           <p className="meta-dim"><strong><Icon name="map-pin" size={12} /> {city.name} is live</strong> — {liveCount} local communities and counting. Tap another city to look around.</p>
         ) : (
           <p className="meta-dim"><strong>{city.name}</strong> has no communities yet. <Link to={startTo}>Start the first one</Link>.</p>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

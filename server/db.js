@@ -459,6 +459,15 @@ CREATE TABLE IF NOT EXISTS status_views (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo TEXT DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cover TEXT DEFAULT '';
 
+-- Going to an event. event_id is text so it covers both events members
+-- make (the events table) and the city calendar that ships with the app.
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  event_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  created_at BIGINT,
+  PRIMARY KEY (event_id, user_id)
+);
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
