@@ -6,6 +6,7 @@
 // function no persistent disk, so the data had to move somewhere that
 // outlives a single request. Every read below is therefore async.
 import pg from 'pg'
+import crypto from 'crypto'
 import { SUPABASE_ROOT_CA } from './supabase-ca.js'
 
 // pg hands back BIGINT and NUMERIC as strings, to protect values too large
@@ -516,10 +517,54 @@ export const isStaff = (role) => STAFF_ROLES.includes(role)
 
 // Run once per cold start, and only once even if several requests race to
 // be first — every caller awaits the same promise.
+//
+// On Vercel several copies of the server start at once, and each used to
+// run the whole SCHEMA at the same moment. Once SCHEMA had UPDATEs and
+// ALTERs in it the copies locked each other out ("deadlock detected") and
+// every request failed (Oct 28). So now:
+//   1. SCHEMA's fingerprint is stored in schema_meta. If the database is
+//      already on this version, a cold start skips SCHEMA entirely.
+//   2. Otherwise one copy at a time applies it, inside a transaction that
+//      holds an advisory lock; the others wait, see the new version, and skip.
+const SCHEMA_VERSION = crypto.createHash('sha256').update(SCHEMA).digest('hex').slice(0, 16)
+const SCHEMA_LOCK = 7104201
 let ready = null
 export function init() {
-  if (!ready) ready = pool.query(SCHEMA)
+  if (!ready) {
+    ready = applySchema().catch((e) => {
+      ready = null // let the next request retry
+      throw e
+    })
+  }
   return ready
+}
+
+async function applySchema() {
+  const client = await pool.connect()
+  const current = async () =>
+    (await client.query('SELECT version FROM schema_meta WHERE id = 1')).rows[0]?.version
+  try {
+    try {
+      await client.query('CREATE TABLE IF NOT EXISTS schema_meta (id INTEGER PRIMARY KEY, version TEXT, applied_at BIGINT)')
+    } catch (e) {
+      // Two copies creating it at the same instant: the other one won.
+      if (e.code !== '23505' && e.code !== '42P07') throw e
+    }
+    if ((await current()) === SCHEMA_VERSION) return
+    await client.query('BEGIN')
+    await client.query('SELECT pg_advisory_xact_lock($1)', [SCHEMA_LOCK])
+    if ((await current()) !== SCHEMA_VERSION) {
+      await client.query(SCHEMA)
+      await client.query(`INSERT INTO schema_meta (id, version, applied_at) VALUES (1, $1, $2)
+        ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, applied_at = EXCLUDED.applied_at`, [SCHEMA_VERSION, Date.now()])
+    }
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw e
+  } finally {
+    client.release()
+  }
 }
 
 // Run several writes as one unit on a single connection, so a failure
