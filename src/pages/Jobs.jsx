@@ -86,8 +86,8 @@ function VerifyModal({ onClose, onVerified }) {
   )
 }
 
-function PostJobForm({ onCreated, startOpen = false, startCategory }) {
-  const [open, setOpen] = useState(startOpen)
+// Opened by the "Post a quick job" button beside Find work / Find people.
+function PostJobForm({ onCreated, onClose, startCategory }) {
   const blank = { title: '', category: JOB_CATEGORIES[0].id, area: '', budget: '', description: '', verifiedOnly: false, timing: 'Flexible', remote: false, openToOffers: true }
   const [form, setForm] = useState({ ...blank, category: JOB_CATEGORIES.some((c) => c.id === startCategory) ? startCategory : JOB_CATEGORIES[0].id })
   const [busy, setBusy] = useState(false)
@@ -101,17 +101,9 @@ function PostJobForm({ onCreated, startOpen = false, startCategory }) {
       const job = await api.createJob(form)
       onCreated(job)
       setForm(blank)
-      setOpen(false)
+      onClose()
     } catch (err) { alert(err.message) }
     setBusy(false)
-  }
-
-  if (!open) {
-    return (
-      <button className="btn primary" onClick={() => setOpen(true)}>
-        <Icon name="plus" size={15} /> Post a quick job
-      </button>
-    )
   }
 
   return (
@@ -141,7 +133,7 @@ function PostJobForm({ onCreated, startOpen = false, startCategory }) {
         <span><Icon name="badge-check" size={13} /> Only show to ID-verified pros</span>
       </label>
       <div className="composer-foot">
-        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Cancel</button>
+        <button type="button" className="btn ghost small" onClick={onClose}>Cancel</button>
         <button className="btn primary small" disabled={!form.title.trim() || busy}>{busy ? 'Posting…' : 'Post job'}</button>
       </div>
     </form>
@@ -361,6 +353,7 @@ export default function Jobs() {
   const [params, setParams] = useSearchParams()
   const view = params.get('view') === 'people' ? 'people' : 'work'
   const setView = (v) => setParams((p) => { v === 'people' ? p.set('view', 'people') : p.delete('view'); return p }, { replace: true })
+  const [posting, setPosting] = useState(params.get('post') === '1')
   const openId = params.get('job')
   const openJob = [...matched, ...jobs].find((j) => j.id === openId) || (stray?.id === openId ? stray : null)
   const closeJob = () => setParams((p) => { p.delete('job'); return p }, { replace: true })
@@ -432,11 +425,8 @@ export default function Jobs() {
   return (
     <div className="page jobs-page">
       <header className="page-head jobs-head">
-        <IconTile name="wrench" tone="orange" size={48} iconSize={24} />
-        <div>
-          <h1>Quick Jobs</h1>
-          <p className="meta-dim">Real local work — plumbing, moving, tutoring, deliveries and more.</p>
-        </div>
+        <h1>Quick Jobs</h1>
+        <p className="meta-dim">Real local work — plumbing, moving, tutoring, deliveries and more.</p>
       </header>
 
       <div className="jobs-banner">
@@ -444,6 +434,7 @@ export default function Jobs() {
         <span><b>Good work travels by word of mouth.</b> Here, the word of mouth is written down.</span>
       </div>
 
+      <div className="jobs-views-row">
       <div className="seg jobs-views" role="tablist" aria-label="Quick Jobs">
         <button role="tab" aria-selected={view === 'work'} className={view === 'work' ? 'on' : ''} onClick={() => setView('work')}>
           <Icon name="briefcase" size={15} /> Find work
@@ -451,6 +442,12 @@ export default function Jobs() {
         <button role="tab" aria-selected={view === 'people'} className={view === 'people' ? 'on' : ''} onClick={() => setView('people')}>
           <Icon name="users" size={15} /> Find people
         </button>
+      </div>
+      {user && (
+        <button className="btn primary jobs-post-btn" onClick={() => { setView('work'); setPosting(true) }} aria-expanded={posting}>
+          <Icon name="plus" size={15} /> Post a quick job
+        </button>
+      )}
       </div>
 
       {toast && (
@@ -470,9 +467,9 @@ export default function Jobs() {
       {view === 'people' ? <JobPeople /> : (
       <div className="space-grid">
         <div className="space-main jobs-main">
-          <div className="job-toolbar">
-            {user ? <PostJobForm startOpen={params.get('post') === '1'} startCategory={params.get('category')} onCreated={(j) => setJobs((js) => [j, ...js])} /> : <span />}
-          </div>
+          {user && posting && (
+            <PostJobForm startCategory={params.get('category')} onClose={() => setPosting(false)} onCreated={(j) => setJobs((js) => [j, ...js])} />
+          )}
 
           <label className="search-pill jobs-search">
             <Icon name="search" size={17} />

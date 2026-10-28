@@ -82,6 +82,12 @@ export default function Communities() {
 
   return (
     <div className="page cm-page">
+      <Link to="/communities/new" className="card cm-create card-link">
+        <IconTile name="plus" tone="grad" size={44} />
+        <span><b>Start a community</b><em>Bring people together around a place or a passion</em></span>
+        <Icon name="chevron-right" size={20} />
+      </Link>
+
       <div className="seg cm-tabs" role="tablist">
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
       </div>
@@ -134,11 +140,6 @@ export default function Communities() {
         </section>
       )}
 
-      <Link to="/communities/new" className="card cm-create card-link">
-        <IconTile name="plus" tone="grad" size={44} />
-        <span><b>Start a community</b><em>Bring people together around a place or a passion</em></span>
-        <Icon name="chevron-right" size={20} />
-      </Link>
     </div>
   )
 }

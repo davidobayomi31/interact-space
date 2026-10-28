@@ -257,3 +257,16 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, te
   .assistant-fab { bottom: calc(96px + env(safe-area-inset-bottom)) !important; right: 12px !important; }
 }
 .sidenav .sidenav-links > a.active .snav-ico .icon { color: #fff; stroke: #fff; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2)); }
+
+/* ══ Quick Jobs ══════════════════════════════════════════════════════ */
+.jobs-head { display: block; }
+.jobs-views-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.jobs-views-row .jobs-views { flex: 0 1 360px; }
+.jobs-post-btn { height: 46px; padding: 0 18px; border-radius: 14px; }
+/* "Get notified for work": a narrower column with smaller chips. */
+@media (min-width: 981px) { .jobs-page .space-grid { grid-template-columns: minmax(0, 1fr) 260px; } }
+.jobs-page .space-side .side-card { padding: 14px; }
+.jobs-page .space-side .side-card .meta-dim { font-size: 12.5px; }
+.jobs-page .space-side .chip-grid { gap: 6px; justify-content: flex-start; padding-left: 0; }
+.jobs-page .space-side .goal-chip.small { padding: 5px 10px; font-size: 12px; gap: 5px; }
+@media (max-width: 680px) { .jobs-post-btn { width: 100%; justify-content: center; } }
