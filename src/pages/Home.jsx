@@ -222,6 +222,24 @@ function Welcome() {
   )
 }
 
+// A compact row for the side column: face, name, Follow.
+function SidePerson({ person }) {
+  const { user, profile, follow } = useApp()
+  const navigate = useNavigate()
+  const following = (profile.following ?? []).includes(person.id)
+  return (
+    <div className="side-person">
+      <Link to={`/profile/${person.id}`} className="people-row">
+        <Avatar user={person} size={40} />
+        <span><b>{person.name}</b><em>{person.title}</em></span>
+      </Link>
+      <button className={`btn small ${following ? 'ghost' : 'primary'}`} onClick={() => (user ? follow(person.id) : navigate('/auth'))}>
+        {following ? 'Following' : 'Follow'}
+      </button>
+    </div>
+  )
+}
+
 export default function Home() {
   const { user, profile, loading } = useApp()
   const [tab, setTab] = useState('foryou')
@@ -247,6 +265,7 @@ export default function Home() {
   // Events members have planned come first, then the city calendar.
   const events = [...madeEvents, ...[...EVENTS].sort((a, b) => a.date.localeCompare(b.date))].slice(0, 8)
   const people = USERS.filter((u) => u.id !== profile.id && !(profile.following ?? []).includes(u.id)).slice(0, 8)
+  const trending = communities.filter((c) => c.trending || c.scope === 'global' || c.cover).slice(0, 8)
   const first = profile.name?.split(' ')[0]
   const city = profile.city || 'Lagos'
   // Nearby: posts for your city and from local communities.
@@ -258,11 +277,11 @@ export default function Home() {
   const weave = (list) => list.flatMap((p, n) => {
     const out = [<FeedPost key={p.id} post={p} />]
     if (n === 1 && events.length) out.push(
-      <Row key="events" title={`Happening in ${city}`} to="/events">{events.map((e) => <EventTile key={e.id} event={e} />)}</Row>)
+      <div key="events" className="feed-inline"><Row title={`Happening in ${city}`} to="/events">{events.map((e) => <EventTile key={e.id} event={e} />)}</Row></div>)
     if (n === 3 && people.length) out.push(
-      <Row key="people" title="People to follow" to="/explore?type=people">{people.map((u) => <PersonTile key={u.id} person={u} />)}</Row>)
+      <div key="people" className="feed-inline"><Row title="People to follow" to="/explore?type=people">{people.map((u) => <PersonTile key={u.id} person={u} />)}</Row></div>)
     if (n === 5 && jobs.length) out.push(
-      <section key="jobs" className="home-row">
+      <section key="jobs" className="home-row feed-inline">
         <div className="row-head"><h2>Jobs near you</h2><Link to="/jobs">See all <Icon name="arrow" size={13} /></Link></div>
         <div className="card-grid two">{jobs.slice(0, 2).map((j) => <JobCard key={j.id} job={j} />)}</div>
       </section>)
@@ -289,38 +308,70 @@ export default function Home() {
         </nav>
       </div>
 
-      <StoriesRow />
+      <div className="home-body">
+        <div className="home-main">
+          <StoriesRow />
 
-      <nav className="quick-icons" aria-label="Create and find">
-        {QUICK.map((a) => (
-          <Link key={a.label} to={user || a.to === '/explore' || a.to === '/city' || a.to === '/communities' ? a.to : '/auth'} className="quick-icon">
-            <IconTile name={a.icon} tone={a.tone} size={48} iconSize={22} />
-            <span>{a.label}</span>
-          </Link>
-        ))}
-      </nav>
+          <nav className="quick-icons" aria-label="Create and find">
+            {QUICK.map((a) => (
+              <Link key={a.label} to={user || a.to === '/explore' || a.to === '/city' || a.to === '/communities' ? a.to : '/auth'} className="quick-icon">
+                <IconTile name={a.icon} tone={a.tone} size={48} iconSize={22} />
+                <span>{a.label}</span>
+              </Link>
+            ))}
+          </nav>
 
-      <div className="feed-tabs" role="tablist" aria-label="Feed">
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
-        ))}
-      </div>
-
-      <FeedComposer onPosted={(p) => setFeed((f) => [p, ...(f || [])])} />
-
-      <div className="feed-list stagger">
-        {shown === null && [0, 1].map((n) => <div key={n} className="card feed-post skeleton" aria-hidden="true" />)}
-        {shown && shown.length === 0 && (
-          <div className="card feed-empty">
-            <IconTile name={tab === 'following' ? 'user-plus' : 'sparkle'} tone="grad" size={52} />
-            <strong>{tab === 'following' ? 'Follow people to see their posts here' : 'Nothing here yet'}</strong>
-            <span className="meta-dim">{tab === 'following' ? 'Here are a few people in your city to start with.' : 'Be the first to post something for your city.'}</span>
+          <div className="feed-tabs" role="tablist" aria-label="Feed">
+            {TABS.map((t) => (
+              <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
+            ))}
           </div>
-        )}
-        {shown && shown.length === 0 && tab === 'following' && people.length > 0 && (
-          <Row title="People to follow" to="/explore?type=people">{people.map((u) => <PersonTile key={u.id} person={u} />)}</Row>
-        )}
-        {shown && weave(shown)}
+
+          <FeedComposer onPosted={(p) => setFeed((f) => [p, ...(f || [])])} />
+
+          <div className="feed-list stagger">
+            {shown === null && [0, 1].map((n) => <div key={n} className="card feed-post skeleton" aria-hidden="true" />)}
+            {shown && shown.length === 0 && (
+              <div className="card feed-empty">
+                <IconTile name={tab === 'following' ? 'user-plus' : 'sparkle'} tone="grad" size={52} />
+                <strong>{tab === 'following' ? 'Follow people to see their posts here' : 'Nothing here yet'}</strong>
+                <span className="meta-dim">{tab === 'following' ? 'Here are a few people in your city to start with.' : 'Be the first to post something for your city.'}</span>
+              </div>
+            )}
+            {shown && shown.length === 0 && tab === 'following' && people.length > 0 && (
+              <Row title="People to follow" to="/explore?type=people">{people.map((u) => <PersonTile key={u.id} person={u} />)}</Row>
+            )}
+            {shown && weave(shown)}
+          </div>
+        </div>
+
+        {/* Wide screens: what's around you sits beside the feed. */}
+        <aside className="home-aside">
+          {events.length > 0 && (
+            <section className="card home-side-card">
+              <div className="row-head"><h2>Happening in {city}</h2><Link to="/events">See all <Icon name="arrow" size={13} /></Link></div>
+              {events.slice(0, 4).map((e) => <EventTile key={e.id} event={e} />)}
+            </section>
+          )}
+          {people.length > 0 && (
+            <section className="card home-side-card">
+              <div className="row-head"><h2>People to follow</h2><Link to="/explore?type=people">See all <Icon name="arrow" size={13} /></Link></div>
+              {people.slice(0, 5).map((u) => <SidePerson key={u.id} person={u} />)}
+            </section>
+          )}
+          {jobs.length > 0 && (
+            <section className="card home-side-card">
+              <div className="row-head"><h2>Jobs near you</h2><Link to="/jobs">See all <Icon name="arrow" size={13} /></Link></div>
+              <div className="stack">{jobs.slice(0, 3).map((j) => <JobCard key={j.id} job={j} />)}</div>
+            </section>
+          )}
+          {trending.length > 0 && (
+            <section className="card home-side-card">
+              <div className="row-head"><h2>Trending communities</h2><Link to="/communities">See all <Icon name="arrow" size={13} /></Link></div>
+              <div className="home-side-comms">{trending.slice(0, 4).map((c) => <CommunityTile key={c.id} community={c} />)}</div>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   )

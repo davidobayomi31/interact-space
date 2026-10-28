@@ -897,3 +897,50 @@ a.ad-card, a.phone-ad { color: var(--text); text-decoration: none; }
   .settings-back { display: inline-flex; }
 }
 @media (max-width: 680px) { .settings2.is-index .settings-nav a.active { background: none; box-shadow: none; } }
+
+/* ══ Desktop: use the whole screen ═══════════════════════════════════
+   David (Oct 28): the narrow centred column left empty space either
+   side on a computer. Phones are unchanged — everything here is for
+   wide screens only. */
+.pf2-side, .pf2-content, .biz-grid, .biz-content, .home-body, .home-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.home-aside { display: none; }
+
+@media (min-width: 1001px) {
+  :root { --maxw: 1440px; }
+  .page.home3, .page.pf2, .page.cm-page, .page.ev-page, .page.notif2, .page.addhub2, .page.biz-page,
+  .page.explore2, .page.city2, .page.jobs-page, .page.settings2 { max-width: var(--maxw); width: 100%; }
+  .addhub-list:not(.soon) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .addhub-list.soon { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cm-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .cm-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ev-list { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .xp-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .notif-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings2 .settings-grid { grid-template-columns: 320px minmax(0, 1fr); }
+}
+
+/* Two columns once there's room: Home's feed with events, people, jobs
+   and communities beside it; a profile's card beside its tabs. */
+@media (min-width: 1240px) {
+  .home3 .home-top { grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); }
+  .home-body { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 28%, 380px); gap: 24px; align-items: start; }
+  .home-aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
+  .home-main .feed-inline { display: none; }
+  .home-main .stories { margin: 0; }
+  .home-side-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+  .home-side-card .row-head { margin: 0; }
+  .home-side-card .row-head h2 { font-size: 16px; }
+  .home-side-card .event-tile { width: 100%; }
+  .home-side-card .job-row { padding: 8px; box-shadow: none; }
+  .home-side-comms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .home-side-comms .community-tile { width: auto; }
+  .side-person { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .side-person .people-row { min-width: 0; flex: 1; }
+
+  .pf2 { display: grid; grid-template-columns: clamp(320px, 32%, 420px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .pf2-side { position: sticky; top: 20px; }
+  .pf2-content .pf2-tabs { top: 0; }
+
+  .biz-grid { display: grid; grid-template-columns: clamp(320px, 34%, 420px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .biz-hero { position: sticky; top: 20px; }
+}

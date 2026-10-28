@@ -416,6 +416,7 @@ export default function Profile() {
 
   return (
     <div className="page profile-page pf pf2">
+      <div className="pf2-side">
       <section className="card pf2-hero">
         <Cover user={user} />
         {isMe && <button className="pf2-cover-edit" onClick={() => setEditing(true)} aria-label="Change cover photo"><Icon name="camera" size={15} /></button>}
@@ -471,7 +472,9 @@ export default function Profile() {
       </section>
 
       <IdMini user={user} isMe={isMe} />
+      </div>
 
+      <div className="pf2-content">
       {isMe && <VoiceTabs voices={voices} max={max} active={picked ? picked.id : 'main'} onPick={setActiveVoice} />}
 
       {picked ? (
@@ -586,6 +589,7 @@ export default function Profile() {
 
         {tab === 'saved' && isMe && <div className="pf-panel"><SavedTab /></div>}
       </>}
+      </div>
 
       {list && <PeopleSheet user={user} list={list} onList={setList} onClose={() => setList(null)} />}
       {editing && <EditSheet onClose={() => setEditing(false)} />}

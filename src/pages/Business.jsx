@@ -25,6 +25,7 @@ export default function Business() {
   return (
     <div className="page biz-page" style={{ '--accent': ad.accent }}>
       <div className="biz-soon"><Icon name="sparkle" size={14} /> Business pages are coming soon — this is a preview built from {ad.businessName}’s ad.</div>
+      <div className="biz-grid">
       <section className="card biz-hero">
         <div className="biz-cover"><span>{ad.emoji}</span></div>
         <div className="biz-logo"><AdMark ad={ad} /></div>
@@ -42,6 +43,7 @@ export default function Business() {
         </div>
       </section>
 
+      <div className="biz-content">
       <div className="seg">
         {TABS.map((t) => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}
       </div>
@@ -68,6 +70,8 @@ export default function Business() {
           <span className="meta-dim">Businesses will be able to show their {tab.toLowerCase()} here.</span>
         </section>
       )}
+      </div>
+      </div>
     </div>
   )
 }
