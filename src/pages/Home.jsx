@@ -1,20 +1,20 @@
-// Home — the member's starting point, laid out like the VOIDAJ app
-// screens: search, an "Explore your city" card into My City, three
-// shortcuts, nearby events and trending communities as rows you swipe
-// through, quick actions, then the feed (latest posts, people, jobs) and
-// the member's own space. On wider screens the rows become grids.
+// Home — laid out like Nuel's app mockup (Oct 27): the "Explore your
+// city" card he liked, status rings, quick icons, then For You /
+// Following / Nearby and a feed of posts with events, people to follow
+// and jobs woven in between.
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { EVENTS, USERS, PURPOSE } from '../data/seed.js'
-import { Avatar, PostCard, FavoriteButton } from '../components/bits.jsx'
+import { Avatar, FavoriteButton } from '../components/bits.jsx'
 import { useCommunities, findCommunity } from '../communities.js'
-import { Icon } from '../components/Icons.jsx'
+import { Icon, IconTile } from '../components/Icons.jsx'
+import { StoriesRow } from '../components/Stories.jsx'
+import { FeedPost, FeedComposer } from '../components/Feed.jsx'
 import { VoidajMark } from '../components/VoidajMark.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { useAds, pickSearchAd, SearchAd } from '../components/AdsRail.jsx'
 import { JobCard } from './Jobs.jsx'
-import MySpace from './MySpace.jsx'
 
 const day = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric' })
 const month = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' })
@@ -90,7 +90,7 @@ function Skyline() {
 
 // A photo that quietly removes itself if it fails to load, leaving the
 // drawn fallback (icon or skyline) underneath.
-function Cover({ src, className = 'tile-photo' }) {
+export function Cover({ src, className = 'tile-photo' }) {
   const [ok, setOk] = useState(true)
   if (!src || !ok) return null
   return <img className={className} src={src} alt="" loading="lazy" decoding="async" onError={() => setOk(false)} />
@@ -112,16 +112,25 @@ function CityHero({ city }) {
 }
 
 const SHORTCUTS = [
-  { to: '/jobs', icon: 'briefcase', label: 'Quick Jobs', tone: 'blue' },
-  { to: '/add', icon: 'plus', label: 'Add Hub', tone: 'teal' },
-  { to: '/city', icon: 'map-pin', label: 'My City', tone: 'purple' },
+  { to: '/jobs', icon: 'wrench', label: 'Quick Jobs', tone: 'orange' },
+  { to: '/events', icon: 'calendar', label: 'Events', tone: 'pink' },
+  { to: '/city', icon: 'map-pin', label: 'My City', tone: 'teal' },
 ]
 
-const QUICK_ACTIONS = [
-  { to: '/add?pick=post', icon: 'send', label: 'Post', tone: 'blue' },
-  { to: '/add?pick=event', icon: 'calendar', label: 'Create Event', tone: 'blue' },
-  { to: '/jobs', icon: 'briefcase', label: 'Find Job', tone: 'blue' },
-  { to: '/add', icon: 'map-pin', label: 'Add Hub', tone: 'teal' },
+// The mockup's icon row under the status rings.
+const QUICK = [
+  { to: '/add?pick=post', icon: 'edit', label: 'Post', tone: 'blue' },
+  { to: '/add?pick=event', icon: 'calendar', label: 'Event', tone: 'pink' },
+  { to: '/jobs?post=1', icon: 'wrench', label: 'Job', tone: 'orange' },
+  { to: '/communities', icon: 'community', label: 'Community', tone: 'teal' },
+  { to: '/city', icon: 'map-pin', label: 'Map', tone: 'green' },
+  { to: '/explore', icon: 'grid', label: 'More', tone: 'violet' },
+]
+
+const TABS = [
+  { id: 'foryou', label: 'For You' },
+  { id: 'following', label: 'Following' },
+  { id: 'nearby', label: 'Nearby' },
 ]
 
 // A titled row of cards: swipe sideways on phones, a grid on wider screens.
@@ -137,7 +146,7 @@ function Row({ title, to, children }) {
   )
 }
 
-function EventTile({ event }) {
+export function EventTile({ event }) {
   const c = findCommunity(event.communityId)
   const to = c ? `/community/${c.id}?tab=events` : '/explore?type=events'
   return (
@@ -162,7 +171,7 @@ function EventTile({ event }) {
   )
 }
 
-function CommunityTile({ community: c }) {
+export function CommunityTile({ community: c }) {
   const { user, profile, joinCommunity } = useApp()
   const navigate = useNavigate()
   const joined = profile.communities.includes(c.id)
@@ -181,18 +190,18 @@ function CommunityTile({ community: c }) {
   )
 }
 
-function PersonTile({ person }) {
-  const { user, profile, connect } = useApp()
+export function PersonTile({ person }) {
+  const { user, profile, follow } = useApp()
   const navigate = useNavigate()
-  const connected = profile.connections.includes(person.id)
+  const following = (profile.following ?? []).includes(person.id)
   return (
     <div className="tile person-tile card-link">
       <Avatar user={person} size={56} />
       <Link to={`/profile/${person.id}`} className="tile-title stretched">{person.name}</Link>
       <span className="tile-meta">{person.title}</span>
-      <button className={`btn small ${connected ? 'ghost' : 'primary'}`} disabled={connected}
-        onClick={() => (user ? connect(person.id) : navigate('/auth'))}>
-        {connected ? <><Icon name="check" size={13} /> Connected</> : 'Connect'}
+      <button className={`btn small ${following ? 'ghost' : 'primary'}`}
+        onClick={() => (user ? follow(person.id) : navigate('/auth'))}>
+        {following ? <><Icon name="check" size={13} /> Following</> : <><Icon name="user-plus" size={13} /> Follow</>}
       </button>
     </div>
   )
@@ -215,11 +224,17 @@ function Welcome() {
 
 export default function Home() {
   const { user, profile, loading } = useApp()
+  const [tab, setTab] = useState('foryou')
+  const [feed, setFeed] = useState(null)
   const [posts, setPosts] = useState([])
   const [jobs, setJobs] = useState([])
   const [madeEvents, setMadeEvents] = useState([])
   const { all: communities } = useCommunities()
 
+  useEffect(() => {
+    setFeed(null)
+    api.feed(tab === 'following' ? 'following' : 'foryou').then(setFeed).catch(() => setFeed([]))
+  }, [tab, user?.id])
   useEffect(() => { api.listPosts().then(setPosts).catch(() => setPosts([])) }, [user])
   useEffect(() => { api.listJobs().then(setJobs).catch(() => setJobs([])) }, [user])
   useEffect(() => {
@@ -231,14 +246,31 @@ export default function Home() {
 
   // Events members have planned come first, then the city calendar.
   const events = [...madeEvents, ...[...EVENTS].sort((a, b) => a.date.localeCompare(b.date))].slice(0, 8)
-  const trending = communities.filter((c) => c.trending || c.scope === 'global' || c.cover).slice(0, 8)
-  const people = USERS.filter((u) => u.id !== profile.id && !profile.connections.includes(u.id)).slice(0, 8)
-  const latest = [...posts].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4)
+  const people = USERS.filter((u) => u.id !== profile.id && !(profile.following ?? []).includes(u.id)).slice(0, 8)
   const first = profile.name?.split(' ')[0]
   const city = profile.city || 'Lagos'
+  // Nearby: posts for your city and from local communities.
+  const shown = feed && (tab === 'nearby'
+    ? feed.filter((p) => p.audience === 'city' || (p.community && findCommunity(p.community.id)?.scope !== 'global'))
+    : feed)
+
+  // Events, people and jobs sit between posts rather than above them.
+  const weave = (list) => list.flatMap((p, n) => {
+    const out = [<FeedPost key={p.id} post={p} />]
+    if (n === 1 && events.length) out.push(
+      <Row key="events" title={`Happening in ${city}`} to="/events">{events.map((e) => <EventTile key={e.id} event={e} />)}</Row>)
+    if (n === 3 && people.length) out.push(
+      <Row key="people" title="People to follow" to="/explore?type=people">{people.map((u) => <PersonTile key={u.id} person={u} />)}</Row>)
+    if (n === 5 && jobs.length) out.push(
+      <section key="jobs" className="home-row">
+        <div className="row-head"><h2>Jobs near you</h2><Link to="/jobs">See all <Icon name="arrow" size={13} /></Link></div>
+        <div className="card-grid two">{jobs.slice(0, 2).map((j) => <JobCard key={j.id} job={j} />)}</div>
+      </section>)
+    return out
+  })
 
   return (
-    <div className="page home2">
+    <div className="page home2 home3">
       {user
         ? <div className="home-greeting"><h1>Hi {first} <span aria-hidden="true">👋</span></h1><p className="meta-dim">Here’s what’s happening around {city}.</p></div>
         : <Welcome />}
@@ -249,55 +281,47 @@ export default function Home() {
         <CityHero city={city} />
         <nav className="shortcut-tiles" aria-label="Shortcuts">
           {SHORTCUTS.map((s) => (
-            <Link key={s.to} to={s.to} className={`shortcut tone-${s.tone}`}>
-              <span className="shortcut-icon"><Icon name={s.icon} size={20} /></span>
+            <Link key={s.to} to={s.to} className="shortcut">
+              <IconTile name={s.icon} tone={s.tone} size={40} iconSize={20} />
               <span>{s.label}</span>
             </Link>
           ))}
         </nav>
       </div>
 
-      <Row title="Nearby Events" to="/explore?type=events">
-        {events.map((e) => <EventTile key={e.id} event={e} />)}
-      </Row>
+      <StoriesRow />
 
-      <Row title="Trending Communities" to="/explore?type=communities">
-        {trending.map((c) => <CommunityTile key={c.id} community={c} />)}
-      </Row>
+      <nav className="quick-icons" aria-label="Create and find">
+        {QUICK.map((a) => (
+          <Link key={a.label} to={user || a.to === '/explore' || a.to === '/city' || a.to === '/communities' ? a.to : '/auth'} className="quick-icon">
+            <IconTile name={a.icon} tone={a.tone} size={48} iconSize={22} />
+            <span>{a.label}</span>
+          </Link>
+        ))}
+      </nav>
 
-      <section className="home-row">
-        <div className="row-head"><h2>Quick Actions</h2></div>
-        <nav className="quick-actions" aria-label="Quick actions">
-          {QUICK_ACTIONS.map((a) => (
-            <Link key={a.label} to={user ? a.to : '/auth'} className={`quick-action tone-${a.tone}`}>
-              <span className="quick-action-icon"><Icon name={a.icon} size={20} /></span>
-              <span>{a.label}</span>
-            </Link>
-          ))}
-        </nav>
-      </section>
+      <div className="feed-tabs" role="tablist" aria-label="Feed">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
 
-      {latest.length > 0 && (
-        <section className="home-row">
-          <div className="row-head"><h2>Latest posts</h2><Link to="/explore?type=posts">See all <Icon name="arrow" size={13} /></Link></div>
-          <div className="feed-list">{latest.map((p) => <PostCard key={p.id} post={p} />)}</div>
-        </section>
-      )}
+      <FeedComposer onPosted={(p) => setFeed((f) => [p, ...(f || [])])} />
 
-      {people.length > 0 && (
-        <Row title="People you may know" to="/explore?type=people">
-          {people.map((p) => <PersonTile key={p.id} person={p} />)}
-        </Row>
-      )}
-
-      {jobs.length > 0 && (
-        <section className="home-row">
-          <div className="row-head"><h2>Jobs near you</h2><Link to="/jobs">See all <Icon name="arrow" size={13} /></Link></div>
-          <div className="card-grid two">{jobs.slice(0, 4).map((j) => <JobCard key={j.id} job={j} />)}</div>
-        </section>
-      )}
-
-      {user && <MySpace />}
+      <div className="feed-list stagger">
+        {shown === null && [0, 1].map((n) => <div key={n} className="card feed-post skeleton" aria-hidden="true" />)}
+        {shown && shown.length === 0 && (
+          <div className="card feed-empty">
+            <IconTile name={tab === 'following' ? 'user-plus' : 'sparkle'} tone="grad" size={52} />
+            <strong>{tab === 'following' ? 'Follow people to see their posts here' : 'Nothing here yet'}</strong>
+            <span className="meta-dim">{tab === 'following' ? 'Here are a few people in your city to start with.' : 'Be the first to post something for your city.'}</span>
+          </div>
+        )}
+        {shown && shown.length === 0 && tab === 'following' && people.length > 0 && (
+          <Row title="People to follow" to="/explore?type=people">{people.map((u) => <PersonTile key={u.id} person={u} />)}</Row>
+        )}
+        {shown && weave(shown)}
+      </div>
     </div>
   )
 }

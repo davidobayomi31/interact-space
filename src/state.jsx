@@ -10,7 +10,7 @@ const AppContext = createContext(null)
 const GUEST = {
   id: null, name: '', handle: '', title: '', city: 'Lagos', area: '', color: '#D8A63A',
   bio: '', interests: [], goals: [], skills: [], privacy: 'city-only',
-  onboarded: false, communities: [], moderatorOf: [], connections: [],
+  onboarded: false, communities: [], moderatorOf: [], connections: [], following: [],
 }
 
 const THEMES = ['system', 'light', 'dark']
@@ -75,6 +75,7 @@ export function AppProvider({ children }) {
   const joinCommunity = async (id) => { const { user: u } = await api.joinCommunity(id); setUser(u) }
   const leaveCommunity = async (id) => { const { user: u } = await api.leaveCommunity(id); setUser(u) }
   const connect = async (id) => { const u = await api.connect(id); setUser(u) }
+  const follow = async (id) => { const r = await api.follow(id); setUser(r.user); return r }
 
   const value = {
     user, setUser,
@@ -84,7 +85,7 @@ export function AppProvider({ children }) {
     theme, setTheme,
     place: placeOverride ?? user?.city ?? 'Lagos', setPlace, adScope, setAdScope,
     register, login, logout, refreshMe, saveProfile,
-    joinCommunity, leaveCommunity, connect,
+    joinCommunity, leaveCommunity, connect, follow,
   }
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

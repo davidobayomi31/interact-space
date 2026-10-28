@@ -114,6 +114,7 @@ export default function Thread() {
               <div className="meta-dim">
                 <strong className="post-author">{post.author.name}</strong> · {post.ago} ago
                 {community && <> · in <Link to={`/community/${community.id}`} style={{ color: community.accent }}>{community.name}</Link></>}
+                {!community && <> · {post.audience === 'city' ? <><Icon name="map-pin" size={12} /> {post.city}</> : <><Icon name="globe" size={12} /> Public</>}</>}
               </div>
             </div>
             <h1 className="thread-title">{post.title}</h1>

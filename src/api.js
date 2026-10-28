@@ -41,6 +41,8 @@ export const getCommunity = (id) => req(`/communities/${id}`).then((d) => d.comm
 export const joinCommunity = (id) => req(`/communities/${id}/join`, { method: 'POST' })
 export const leaveCommunity = (id) => req(`/communities/${id}/leave`, { method: 'POST' })
 export const connect = (id) => req(`/users/${id}/connect`, { method: 'POST' }).then((d) => d.user)
+export const follow = (id) => req(`/users/${id}/follow`, { method: 'POST' })
+export const people = (id, list) => req(`/users/${id}/people?list=${list}`).then((d) => d.people)
 export const getUser = (id) => req(`/users/${id}`).then((d) => d.user)
 export const createCommunity = (body) => req('/communities', { method: 'POST', body })
 export const setModRules = (id, rules) => req(`/communities/${id}/mod-rules`, { method: 'PUT', body: { rules } }).then((d) => d.community)
@@ -60,6 +62,11 @@ export const listPosts = (params = {}) => {
   return req('/posts' + (q ? `?${q}` : '')).then((d) => d.posts)
 }
 export const createPost = (body) => req('/posts', { method: 'POST', body }).then((d) => d.post)
+export const feed = (tab = 'foryou') => req(`/feed?tab=${tab}`).then((d) => d.posts)
+export const listStatuses = () => req('/statuses').then((d) => d.groups)
+export const postStatus = (body) => req('/statuses', { method: 'POST', body })
+export const viewStatus = (id) => req(`/statuses/${id}/view`, { method: 'POST' })
+export const deleteStatus = (id) => req(`/statuses/${id}`, { method: 'DELETE' })
 export const getPost = (id) => req(`/posts/${id}`)
 export const addComment = (postId, body) => req(`/posts/${postId}/comments`, { method: 'POST', body })
 export const vote = (targetType, targetId, value) =>

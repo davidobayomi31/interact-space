@@ -118,7 +118,7 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/id"><Icon name="badge-check" size={15} /> VOIDAJ ID</Link>
           <Link role="menuitem" to="/communities?tab=mine"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
-          <Link role="menuitem" to="/saved"><Icon name="heart" size={15} /> Saved</Link>
+          <Link role="menuitem" to="/saved"><Icon name="bookmark" size={15} /> Saved</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
           {user.isAdmin && <Link role="menuitem" to="/admin"><Icon name="lock" size={15} /> Admin</Link>}
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>

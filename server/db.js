@@ -419,6 +419,42 @@ UPDATE users SET title = 'New citizen of VOIDAJ' WHERE title = 'New citizen of I
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Lagos';
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS reach TEXT DEFAULT 'local';
 
+-- Posts don't have to live in a community any more (Nuel, Oct 26):
+-- 'public' posts are for everyone, 'city' posts for people in the
+-- author's city, 'community' posts stay inside their community.
+ALTER TABLE posts ALTER COLUMN community_id DROP NOT NULL;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS audience TEXT DEFAULT 'community';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS city TEXT DEFAULT '';
+
+-- Followers are anyone who follows you, one way. Connections (the
+-- existing table) are the people you've picked out — Nuel: "selected
+-- people from the mass".
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id TEXT NOT NULL,
+  followee_id TEXT NOT NULL,
+  created_at BIGINT,
+  PRIMARY KEY (follower_id, followee_id)
+);
+CREATE INDEX IF NOT EXISTS follows_followee ON follows (followee_id);
+
+-- Status: a photo or a line of text that disappears after 24 hours.
+CREATE TABLE IF NOT EXISTS statuses (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  image TEXT DEFAULT '',
+  text TEXT DEFAULT '',
+  bg TEXT DEFAULT '',
+  city TEXT DEFAULT '',
+  created_at BIGINT,
+  expires_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS statuses_live ON statuses (expires_at);
+CREATE TABLE IF NOT EXISTS status_views (
+  status_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  PRIMARY KEY (status_id, user_id)
+);
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
@@ -535,9 +571,10 @@ export function readSettings(row) {
 // The full "me" object the frontend keeps as the current user.
 export async function selfUser(row) {
   if (!row) return null
-  const [communities, connections] = await Promise.all([
+  const [communities, connections, following] = await Promise.all([
     q.all('SELECT community_id AS id, role FROM memberships WHERE user_id = ?', row.id),
     q.all('SELECT other_id FROM connections WHERE user_id = ?', row.id),
+    q.all('SELECT followee_id FROM follows WHERE follower_id = ?', row.id),
   ])
   return {
     ...publicUser(row),
@@ -549,6 +586,7 @@ export async function selfUser(row) {
     moderatorOf: communities.filter((c) => isStaff(c.role)).map((c) => c.id),
     roles: Object.fromEntries(communities.map((c) => [c.id, c.role])),
     connections: connections.map((r) => r.other_id),
+    following: following.map((r) => r.followee_id),
     jobSkills: json(row.job_skills),
     // Private to the member themselves — never in publicUser.
     email: row.email, phone: row.phone || '',
@@ -579,8 +617,11 @@ export async function serializePost(row, viewerId) {
     myVote(viewerId, 'post', row.id),
   ])
   const author = publicUser(authorRow) || { id: row.author_id, name: 'Unknown', color: '#888' }
+  const community = row.community_id ? await q.get('SELECT id, name, accent, cover FROM communities WHERE id = ?', row.community_id) : null
   return {
     id: row.id, communityId: row.community_id, title: row.title, body: row.body,
+    audience: row.audience || 'community', city: row.city || '',
+    community: community ? { id: community.id, name: community.name, accent: community.accent, cover: community.cover || '' } : null,
     media: json(row.media), pinned: !!row.pinned, hidden: !!row.hidden, author,
     score: row.base_score + score,
     myVote: mine,

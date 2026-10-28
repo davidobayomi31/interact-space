@@ -38,11 +38,11 @@ export function Avatar({ user, size = 40 }) {
   )
 }
 
-// Heart that saves anything to Favorites. `item` is { kind, id, title,
+// Bookmark that saves anything to Saved (the heart now means Like). `item` is { kind, id, title,
 // subtitle, href }. `label` shows the word beside the heart.
 export function FavoriteButton({ item, label = false, className = '' }) {
   const on = isFavorite(useFavorites(), item.kind, item.id)
-  const text = on ? 'Remove from favorites' : 'Add to favorites'
+  const text = on ? 'Remove from saved' : 'Save'
   return (
     <button
       type="button"
@@ -50,8 +50,8 @@ export function FavoriteButton({ item, label = false, className = '' }) {
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(item) }}
       aria-pressed={on} aria-label={text} title={text}
     >
-      <Icon name="heart" size={label ? 14 : 16} />
-      {label && <span>{on ? 'Favorited' : 'Favorite'}</span>}
+      <Icon name="bookmark" size={label ? 14 : 16} />
+      {label && <span>{on ? 'Saved' : 'Save'}</span>}
     </button>
   )
 }

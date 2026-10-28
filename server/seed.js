@@ -210,6 +210,58 @@ export async function seedExtras() {
     }
   }
 
+  // Sample people follow each other, so Following and follower counts
+  // have something in them.
+  if (!(await q.get('SELECT 1 FROM follows LIMIT 1'))) {
+    const seedIds = (await q.all('SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1 ORDER BY id')).map((r) => r.id)
+    for (const [i, a] of seedIds.entries()) {
+      for (const [j, b] of seedIds.entries()) {
+        if (a !== b && (i * 7 + j * 3) % 4 !== 0) {
+          await q.run('INSERT INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', a, b, now - (i + j) * HOUR)
+        }
+      }
+    }
+  }
+
+  // Posts to everyone and to the city — the Home feed (Nuel: "people can
+  // either post public or post city").
+  if (!(await q.get(`SELECT 1 FROM posts WHERE audience IN ('public', 'city') LIMIT 1`))) {
+    const img = (src) => JSON.stringify([{ kind: 'image', type: 'image/jpeg', src }])
+    const FEED = [
+      ['u-kunle', 'public', '', 'Golden hour over Makoko never gets old. Who’s coming on Saturday’s photo walk? 📸', img('/images/events/ev-photo-walk.jpg'), 2],
+      ['u-tunde', 'city', 'Lagos', 'Third Mainland traffic was light this morning for once. Anyone else notice? Lagos is changing 🙌', img('/images/city/lagos.jpg'), 4],
+      ['u-ngozi', 'city', 'Lagos', 'Our balcony tomatoes are finally ripe! Small space, big harvest. Happy to share seedlings with anyone in Yaba 🍅', img('/images/events/ev-balcony-farm.jpg'), 7],
+      ['u-obi', 'public', '', 'Shipped my first open-source library this week. If you’re learning JavaScript, come to the study group — we all started somewhere 💻', img('/images/events/ev-js-study.jpg'), 10],
+      ['u-halima', 'city', 'Lagos', 'Balogun is packed today. If you need fabric for December, come early 😅', img('/images/events/ev-market-popup.jpg'), 15],
+      ['u-emeka', 'public', '', 'Six months off the generator. Solar paid for itself faster than I thought. Ask me anything ☀️', img('/images/events/ev-solar-workshop.jpg'), 20],
+      ['u-amina', 'public', '', 'Pitch night was electric. So many founders building for Africa, by Africa. Proud of everyone who stood up there 🚀', img('/images/events/ev-pitch-night.jpg'), 26],
+      ['u-bisi', 'city', 'Lagos', 'Looking for a good tailor around Surulere who can do a rush job by Friday. Recommendations?', '[]', 30],
+    ]
+    for (const [author, audience, city, body, media, hoursAgo] of FEED) {
+      await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, base_score, created_at)
+        VALUES (?, NULL, ?, '', ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`, uid2('p'), author, body, media, audience, city, 20 + ((hoursAgo * 13) % 90), now - hoursAgo * HOUR)
+    }
+  }
+
+  // Statuses last a day, so keep a few sample ones live for the demo.
+  if (!(await q.get('SELECT 1 FROM statuses WHERE expires_at > ? AND user_id LIKE ? LIMIT 1', now, 'u-%'))) {
+    const DAY_MS = 24 * HOUR
+    const STATUSES = [
+      ['u-kunle', '/images/communities/lagos-lens-collective.jpg', 'Out shooting in Lagos Island today', ''],
+      ['u-ngozi', '/images/communities/green-lagos.jpg', '', ''],
+      ['u-tunde', '', 'Big announcement coming Monday 👀', 'linear-gradient(135deg, #3B82F6, #8B5CF6)'],
+      ['u-obi', '/images/communities/naija-devs.jpg', 'Hack night at the hub', ''],
+      ['u-funke', '/images/events/ev-market-popup.jpg', 'New adire drop this weekend', ''],
+      ['u-amina', '', 'Who’s going to Demo Day? 🎤', 'linear-gradient(135deg, #00C896, #3B82F6)'],
+      ['u-halima', '/images/communities/balogun-market-hub.jpg', '', ''],
+    ]
+    for (const [i, [user, image, text, bg]] of STATUSES.entries()) {
+      const at = now - (i + 1) * 45 * 60 * 1000
+      await q.run('INSERT INTO statuses (id, user_id, image, text, bg, city, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        uid2('st'), user, image, text, bg, 'Lagos', at, at + DAY_MS)
+    }
+  }
+
   if ((await q.get('SELECT COUNT(*) AS n FROM ratings')).n === 0) {
     const RATING_SQL = 'INSERT INTO ratings (user_id, community_id, stars, review, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING'
     const RATINGS = [

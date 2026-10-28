@@ -10,7 +10,7 @@ import q, {
   init, selfUser, publicUser, getUserByEmail, getUserById,
   serializeCommunity, serializePost, threadForPost,
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
-  serializeAd, serializeLive, serializeEvent, parseJson, mediaLabel,
+  serializeAd, serializeLive, serializeEvent, parseJson, mediaLabel, timeAgo,
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
 } from './db.js'
 import { seedIfEmpty, seedExtras } from './seed.js'
@@ -580,11 +580,38 @@ app.post('/api/communities/:id/rate', requireAuth, async (req, res) => {
 })
 
 // ── Connections ──────────────────────────────────────────────────────
+// Connections are the people you pick out; tapping again removes them.
 app.post('/api/users/:id/connect', requireAuth, async (req, res) => {
   const target = await getUserById(req.params.id)
   if (!target) return err(res, 404, 'Person not found.')
-  await q.run('INSERT INTO connections (user_id, other_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', req.userId, target.id, now())
+  if (target.id === req.userId) return err(res, 400, 'That’s you.')
+  const { changes } = await q.run('DELETE FROM connections WHERE user_id = ? AND other_id = ?', req.userId, target.id)
+  if (!changes) await q.run('INSERT INTO connections (user_id, other_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', req.userId, target.id, now())
   res.json({ user: await selfUser(await getUserById(req.userId)) })
+})
+
+// Follow or unfollow. Anyone can follow anyone.
+app.post('/api/users/:id/follow', requireAuth, async (req, res) => {
+  const target = await getUserById(req.params.id)
+  if (!target || target.deleted_at) return err(res, 404, 'Person not found.')
+  if (target.id === req.userId) return err(res, 400, 'That’s you.')
+  const { changes } = await q.run('DELETE FROM follows WHERE follower_id = ? AND followee_id = ?', req.userId, target.id)
+  if (!changes) await q.run('INSERT INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', req.userId, target.id, now())
+  const followers = (await q.get('SELECT COUNT(*)::int AS n FROM follows WHERE followee_id = ?', target.id)).n
+  res.json({ user: await selfUser(await getUserById(req.userId)), followers, following: !changes })
+})
+
+// A person's followers, who they follow, or their connections.
+app.get('/api/users/:id/people', async (req, res) => {
+  const list = req.query.list
+  const sql = {
+    followers: 'SELECT u.* FROM follows f JOIN users u ON u.id = f.follower_id WHERE f.followee_id = ? AND u.deleted_at IS NULL ORDER BY f.created_at DESC',
+    following: 'SELECT u.* FROM follows f JOIN users u ON u.id = f.followee_id WHERE f.follower_id = ? AND u.deleted_at IS NULL ORDER BY f.created_at DESC',
+    connections: 'SELECT u.* FROM connections c JOIN users u ON u.id = c.other_id WHERE c.user_id = ? AND u.deleted_at IS NULL ORDER BY c.created_at DESC',
+  }[list]
+  if (!sql) return err(res, 400, 'Unknown list.')
+  const rows = await q.all(sql, req.params.id)
+  res.json({ people: rows.map(publicUser) })
 })
 
 // A person's profile: what publicUser shows, plus their communities,
@@ -597,17 +624,19 @@ app.get('/api/users/:id', async (req, res) => {
     : await getUserById(key)
   if (!row || row.deleted_at) return err(res, 404, 'Person not found.')
   const id = row.id
-  const [comms, conns, posts, events, jobs, hired] = await Promise.all([
+  const [comms, conns, followers, following, posts, events, jobs, hired] = await Promise.all([
     q.all('SELECT m.community_id, m.created_at, c.name FROM memberships m LEFT JOIN communities c ON c.id = m.community_id WHERE m.user_id = ? ORDER BY m.created_at DESC', id),
     q.get('SELECT COUNT(*)::int AS n FROM connections WHERE user_id = ?', id),
-    q.all('SELECT p.id, p.title, p.created_at, c.name AS community FROM posts p LEFT JOIN communities c ON c.id = p.community_id WHERE p.author_id = ? ORDER BY p.created_at DESC', id),
+    q.get('SELECT COUNT(*)::int AS n FROM follows WHERE followee_id = ?', id),
+    q.get('SELECT COUNT(*)::int AS n FROM follows WHERE follower_id = ?', id),
+    q.all('SELECT p.id, p.title, p.body, p.audience, p.created_at, c.name AS community FROM posts p LEFT JOIN communities c ON c.id = p.community_id WHERE p.author_id = ? AND p.hidden = 0 ORDER BY p.created_at DESC', id),
     q.all('SELECT e.id, e.title, e.community_id, e.created_at FROM events e WHERE e.creator_id = ? ORDER BY e.created_at DESC', id),
     q.all("SELECT id, title, created_at FROM jobs WHERE poster_id = ? ORDER BY created_at DESC", id),
     q.get("SELECT COUNT(*)::int AS n FROM job_interests WHERE user_id = ? AND status = 'hired'", id),
   ])
   // Public things they did, newest first. Offers on jobs stay private.
   const activity = [
-    ...posts.slice(0, 6).map((p) => ({ kind: 'post', text: `Posted “${p.title}”${p.community ? ` in ${p.community}` : ''}`, at: p.created_at, to: `/post/${p.id}` })),
+    ...posts.slice(0, 6).map((p) => ({ kind: 'post', text: `Posted “${(p.title || p.body || 'a photo').slice(0, 60)}”${p.community ? ` in ${p.community}` : p.audience === 'city' ? ' to the city' : ''}`, at: p.created_at, to: `/post/${p.id}` })),
     ...comms.slice(0, 6).map((m) => ({ kind: 'community', text: `Joined ${m.name || 'a community'}`, at: m.created_at, to: `/community/${m.community_id}` })),
     ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: `/community/${e.community_id}?tab=events` })),
     ...jobs.slice(0, 4).map((j) => ({ kind: 'job', text: `Posted a quick job: ${j.title}`, at: j.created_at, to: `/jobs?job=${j.id}` })),
@@ -617,7 +646,7 @@ app.get('/api/users/:id', async (req, res) => {
     communities: comms.map((m) => m.community_id),
     jobSkills: parseJson(row.job_skills),
     joinedAt: row.created_at,
-    stats: { connections: conns.n, communities: comms.length, events: events.length, posts: posts.length, jobsPosted: jobs.length, jobsDone: hired.n },
+    stats: { connections: conns.n, followers: followers.n, following: following.n, communities: comms.length, events: events.length, posts: posts.length, jobsPosted: jobs.length, jobsDone: hired.n },
     activity,
   } })
 })
@@ -635,18 +664,117 @@ app.get('/api/posts', async (req, res) => {
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
+// A post goes to a community, to the author's city, or to everyone.
+// Community posts need a title (they're discussions); city and public
+// posts can be just words or a photo, like a status update.
+const AUDIENCES = ['community', 'city', 'public']
 app.post('/api/posts', requireAuth, async (req, res) => {
   const { communityId, title, body } = req.body || {}
-  if (!title?.trim()) return err(res, 400, 'Give your post a title.')
+  const audience = AUDIENCES.includes(req.body?.audience) ? req.body.audience : 'community'
   let media
   try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
-  const community = await q.get('SELECT id FROM communities WHERE id = ?', communityId)
-  if (!community) return err(res, 404, 'Community not found.')
-  const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, communityId)
-  if (!member) return err(res, 403, 'Join the community to post in it.')
   const id = uid('p')
-  await q.run('INSERT INTO posts (id, community_id, author_id, title, body, media, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)', id, communityId, req.userId, title.trim(), (body || '').trim(), JSON.stringify(media), now())
+  if (audience === 'community') {
+    if (!title?.trim()) return err(res, 400, 'Give your post a title.')
+    const community = await q.get('SELECT id FROM communities WHERE id = ?', communityId)
+    if (!community) return err(res, 404, 'Community not found.')
+    const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, communityId)
+    if (!member) return err(res, 403, 'Join the community to post in it.')
+    await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, created_at) VALUES (?, ?, ?, ?, ?, ?, 'community', ?)`,
+      id, communityId, req.userId, title.trim(), (body || '').trim(), JSON.stringify(media), now())
+  } else {
+    if (!title?.trim() && !body?.trim() && !media.length) return err(res, 400, 'Write something or add a photo first.')
+    const me = await getUserById(req.userId)
+    await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+      id, req.userId, (title || '').trim(), (body || '').trim(), JSON.stringify(media), audience, me?.city || 'Lagos', now())
+  }
   res.json({ post: await serializePost(await q.get('SELECT * FROM posts WHERE id = ?', id), req.userId) })
+})
+
+// Home's feed. For You: public posts, posts for your city and posts in
+// your communities. Following: posts by people you follow. Guests get
+// public posts and Lagos.
+app.get('/api/feed', async (req, res) => {
+  const tab = req.query.tab === 'following' ? 'following' : 'foryou'
+  const limit = Math.min(Number(req.query.limit) || 30, 60)
+  const me = req.userId ? await getUserById(req.userId) : null
+  let rows
+  if (tab === 'following') {
+    if (!me) return res.json({ posts: [] })
+    rows = await q.all(`SELECT p.* FROM posts p WHERE p.hidden = 0
+      AND p.author_id IN (SELECT followee_id FROM follows WHERE follower_id = ?)
+      ORDER BY p.created_at DESC LIMIT ?`, req.userId, limit)
+  } else {
+    const city = me?.city || 'Lagos'
+    // Members see their own communities' posts; guests see every community's.
+    const communities = me
+      ? 'p.community_id IN (SELECT community_id FROM memberships WHERE user_id = ?)'
+      : 'p.community_id IS NOT NULL'
+    rows = await q.all(`SELECT p.* FROM posts p WHERE p.hidden = 0 AND (
+        p.audience = 'public'
+        OR (p.audience = 'city' AND LOWER(p.city) = LOWER(?))
+        OR ${communities}
+      ) ORDER BY p.created_at DESC LIMIT ?`, city, ...(me ? [req.userId] : []), limit)
+  }
+  res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
+})
+
+// ── Status: photos and lines of text that last 24 hours ─────────────
+const STATUS_TTL = 24 * 60 * 60 * 1000
+app.get('/api/statuses', async (req, res) => {
+  const t = now()
+  const rows = await q.all('SELECT * FROM statuses WHERE expires_at > ? ORDER BY created_at ASC', t)
+  const following = req.userId ? new Set((await q.all('SELECT followee_id FROM follows WHERE follower_id = ?', req.userId)).map((r) => r.followee_id)) : new Set()
+  const viewed = req.userId ? new Set((await q.all('SELECT status_id FROM status_views WHERE user_id = ?', req.userId)).map((r) => r.status_id)) : new Set()
+  const byUser = new Map()
+  for (const r of rows) {
+    if (!byUser.has(r.user_id)) byUser.set(r.user_id, [])
+    byUser.get(r.user_id).push({
+      id: r.id, image: r.image, text: r.text, bg: r.bg, createdAt: r.created_at,
+      ago: timeAgo(r.created_at), viewed: viewed.has(r.id) || r.user_id === req.userId,
+    })
+  }
+  const groups = []
+  for (const [userId, items] of byUser) {
+    const u = publicUser(await getUserById(userId))
+    if (!u) continue
+    groups.push({ user: u, statuses: items, mine: userId === req.userId, following: following.has(userId), seen: items.every((i) => i.viewed), latest: items[items.length - 1].createdAt })
+  }
+  // Yours first, then unseen before seen, people you follow first, newest first.
+  groups.sort((a, b) => (b.mine - a.mine) || (a.seen - b.seen) || (b.following - a.following) || (b.latest - a.latest))
+  res.json({ groups })
+})
+
+app.post('/api/statuses', requireAuth, async (req, res) => {
+  const text = String(req.body?.text || '').trim().slice(0, 240)
+  const bg = String(req.body?.bg || '').slice(0, 40)
+  let image = ''
+  if (req.body?.image) {
+    try {
+      if (storageReady()) image = await uploadImage(req.body.image, 'statuses')
+      else if (process.env.VERCEL) return err(res, 503, 'Photo uploads aren’t switched on yet.')
+      else { readImage(req.body.image); image = req.body.image }
+    } catch (e) { return err(res, 400, e.message) }
+  }
+  if (!image && !text) return err(res, 400, 'Add a photo or write something.')
+  const me = await getUserById(req.userId)
+  const id = uid('st')
+  const t = now()
+  await q.run('INSERT INTO statuses (id, user_id, image, text, bg, city, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    id, req.userId, image, text, bg, me?.city || '', t, t + STATUS_TTL)
+  res.json({ ok: true, id })
+})
+
+app.post('/api/statuses/:id/view', requireAuth, async (req, res) => {
+  await q.run('INSERT INTO status_views (status_id, user_id) VALUES (?, ?) ON CONFLICT DO NOTHING', req.params.id, req.userId)
+  res.json({ ok: true })
+})
+
+app.delete('/api/statuses/:id', requireAuth, async (req, res) => {
+  const { changes } = await q.run('DELETE FROM statuses WHERE id = ? AND user_id = ?', req.params.id, req.userId)
+  if (!changes) return err(res, 404, 'Status not found.')
+  await q.run('DELETE FROM status_views WHERE status_id = ?', req.params.id)
+  res.json({ ok: true })
 })
 
 app.get('/api/posts/:id', async (req, res) => {
@@ -693,10 +821,13 @@ app.post('/api/vote', requireAuth, async (req, res) => {
 
 // ── Reporting + moderation ───────────────────────────────────────────
 async function communityOfTarget(type, id) {
-  if (type === 'post') return (await q.get('SELECT community_id FROM posts WHERE id = ?', id))?.community_id
+  // Public and city posts belong to no community; their reports go to
+  // the 'public' queue, which admins see.
+  if (type === 'post') { const p = await q.get('SELECT community_id FROM posts WHERE id = ?', id); return p ? (p.community_id || 'public') : null }
   if (type === 'comment') {
     const c = await q.get('SELECT post_id FROM comments WHERE id = ?', id)
-    return c ? (await q.get('SELECT community_id FROM posts WHERE id = ?', c.post_id))?.community_id : null
+    const p = c ? await q.get('SELECT community_id FROM posts WHERE id = ?', c.post_id) : null
+    return p ? (p.community_id || 'public') : null
   }
   return null
 }
