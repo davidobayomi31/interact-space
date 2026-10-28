@@ -262,7 +262,9 @@ export async function seedExtras() {
   }
 
   // Statuses last a day, so keep a few sample ones live for the demo.
-  if (!(await q.get('SELECT 1 FROM statuses WHERE expires_at > ? AND user_id LIKE ? LIMIT 1', now, 'u-%'))) {
+  // Checks the demo accounts only: real accounts' ids start with 'u-' too,
+  // so one real live status used to stop the demo ones coming back.
+  if (!(await q.get('SELECT 1 FROM statuses s JOIN users u ON u.id = s.user_id WHERE s.expires_at > ? AND COALESCE(u.is_seed, 0) = 1 LIMIT 1', now))) {
     const DAY_MS = 24 * HOUR
     const STATUSES = [
       ['u-kunle', '/images/communities/lagos-lens-collective.jpg', 'Out shooting in Lagos Island today', ''],

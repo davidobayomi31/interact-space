@@ -734,11 +734,19 @@ app.get('/api/feed', async (req, res) => {
     const communities = me
       ? 'p.community_id IN (SELECT community_id FROM memberships WHERE user_id = ?)'
       : 'p.community_id IS NOT NULL'
-    rows = await q.all(`SELECT p.* FROM posts p WHERE p.hidden = 0 AND (
+    // Demo posts always follow the real ones rather than being pushed off
+    // the end by them; they stay until David says to remove them.
+    const visible = `p.hidden = 0 AND (
         p.audience = 'public'
         OR (p.audience = 'city' AND LOWER(p.city) = LOWER(?))
         OR ${communities}
-      ) ORDER BY p.created_at DESC LIMIT ?`, city, ...(me ? [req.userId] : []), limit)
+      )`
+    const args = [city, ...(me ? [req.userId] : [])]
+    const real = await q.all(`SELECT p.* FROM posts p LEFT JOIN users u ON u.id = p.author_id
+      WHERE ${visible} AND COALESCE(u.is_seed, 0) = 0 ORDER BY p.created_at DESC LIMIT ?`, ...args, limit)
+    const demo = await q.all(`SELECT p.* FROM posts p LEFT JOIN users u ON u.id = p.author_id
+      WHERE ${visible} AND COALESCE(u.is_seed, 0) = 1 ORDER BY p.created_at DESC`, ...args)
+    rows = [...real, ...demo]
   }
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
