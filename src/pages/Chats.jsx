@@ -3,12 +3,18 @@
 // open thread on the right. Group chats stay separate from Communities:
 // Communities are public forums with posts and voting; groups here are
 // private, member-only message streams.
+// Every conversation shows where it came from (Nuel, Oct 25: "make it
+// known where someone is communicating to you from… from community, for a
+// job, about an event"): a label in the inbox, a "Re:" card at the top of
+// the chat, and a small card on the message that started it. Links from a
+// job, post, event, community or profile open the chat with ?job=, ?post=,
+// ?event=, ?community= or ?from=profile.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
-import { USERS } from '../data/seed.js'
+import { USERS, EVENTS } from '../data/seed.js'
 import * as api from '../api.js'
-import { Icon } from '../components/Icons.jsx'
+import { Icon, IconTile } from '../components/Icons.jsx'
 import { MediaButtons, MediaTray, MediaView } from '../components/Media.jsx'
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -30,6 +36,38 @@ function stamp(t) {
   if (Date.now() - t < 7 * DAY) return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`
   return `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${time}`
 }
+// How each kind of origin looks.
+const ORIGIN = {
+  job: { icon: 'wrench', tone: 'orange', label: 'Job', re: 'You’re chatting about this job' },
+  post: { icon: 'edit', tone: 'violet', label: 'Post', re: 'You’re chatting about this post' },
+  event: { icon: 'calendar', tone: 'pink', label: 'Event', re: 'You’re chatting about this event' },
+  community: { icon: 'community', tone: 'teal', label: 'Community', re: 'You met in this community' },
+  profile: { icon: 'user', tone: 'blue', label: 'Profile', re: 'Started from their profile' },
+  map: { icon: 'map-pin', tone: 'green', label: 'My City', re: 'Started from My City' },
+}
+
+// The "Re:" card: what this conversation is about, with a way back to it.
+function OriginCard({ context, compact = false }) {
+  const o = ORIGIN[context.kind] ?? ORIGIN.post
+  return (
+    <Link to={context.link || '#'} className={`dm-origin ${compact ? 'compact' : ''}`}>
+      {context.image ? <img src={context.image} alt="" /> : <IconTile name={o.icon} tone={o.tone} size={compact ? 32 : 40} />}
+      <span>
+        <b>Re: {context.title}</b>
+        <em>{compact ? [o.label, context.sub].filter(Boolean).join(' · ') : o.re}</em>
+      </span>
+      <Icon name="chevron-right" size={18} />
+    </Link>
+  )
+}
+
+// The chip under a name in the inbox.
+function OriginChip({ context }) {
+  if (!context) return null
+  const o = ORIGIN[context.kind] ?? ORIGIN.post
+  return <span className={`dm-origin-chip tone-${o.tone}`}><Icon name={o.icon} size={11} /> {o.label}{context.kind !== 'profile' ? ` · ${context.title}` : ''}</span>
+}
+
 const initials = (name = '?') => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
 function Face({ user, size = 44, group }) {
@@ -81,6 +119,7 @@ function Thread({ messages, meId, other, isGroup, intro }) {
             {!mine && <span className="dm-row-face">{last && <Face user={author} size={28} />}</span>}
             <div className="dm-bubble-col">
               {isGroup && !mine && first && <span className="dm-sender">{author?.name}</span>}
+              {m.context && <OriginCard context={m.context} compact />}
               {m.media?.length > 0 && <div className="dm-media" title={stamp(m.createdAt)}><MediaView media={m.media} /></div>}
               {m.body && <div className="dm-bubble" title={stamp(m.createdAt)}>{m.body}</div>}
             </div>
@@ -92,7 +131,7 @@ function Thread({ messages, meId, other, isGroup, intro }) {
   )
 }
 
-function Composer({ onSend, placeholder = 'Message…' }) {
+function Composer({ onSend, placeholder = 'Type a message…', pending, onDropPending }) {
   const [text, setText] = useState('')
   const [media, setMedia] = useState([])
   const [sending, setSending] = useState(false)
@@ -111,12 +150,20 @@ function Composer({ onSend, placeholder = 'Message…' }) {
   }
   return (
     <form className="dm-composer" onSubmit={submit}>
+      {pending && (
+        <div className="dm-pending">
+          <Icon name={ORIGIN[pending.kind]?.icon ?? 'link'} size={14} />
+          <span>Your message will say it’s about <b>{pending.title || ORIGIN[pending.kind]?.label}</b></span>
+          <button type="button" className="dm-icon-btn" onClick={onDropPending} aria-label="Don’t attach this"><Icon name="x" size={14} /></button>
+        </div>
+      )}
       <MediaTray media={media} setMedia={setMedia} />
       <div className="dm-composer-pill">
-        <Icon name="smile" size={22} />
-        <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label="Message" />
-        {(text.trim() || media.length > 0) && <button type="submit" className="dm-send" disabled={sending}>{sending ? 'Sending…' : 'Send'}</button>}
         <MediaButtons media={media} setMedia={setMedia} className="dm-composer-icons" />
+        <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label="Message" />
+        <button type="submit" className="dm-send-round" disabled={sending || (!text.trim() && !media.length)} aria-label="Send">
+          <Icon name="send" size={18} />
+        </button>
       </div>
     </form>
   )
@@ -162,6 +209,8 @@ function NewMessage({ profile, onPick, onClose }) {
   )
 }
 
+const pendingLink = (p) => ({ job: `/jobs?job=${p.id}`, post: `/post/${p.id}`, event: '/events', community: `/community/${p.id}`, profile: `/profile/${p.id}`, map: '/city' }[p.kind])
+
 // ── Inbox ──────────────────────────────────────────────────────────────
 export default function Chats() {
   const { user, profile, loading } = useApp()
@@ -177,6 +226,17 @@ export default function Chats() {
   const [composing, setComposing] = useState(false)
   const [newGroup, setNewGroup] = useState(false)
   const [groupName, setGroupName] = useState('')
+  const [filter, setFilter] = useState('all')
+  // Where this chat was opened from, attached to the next message sent.
+  const [pending, setPending] = useState(() => {
+    const ev = params.get('event') && EVENTS.find((e) => e.id === params.get('event'))
+    if (params.get('job')) return { kind: 'job', id: params.get('job'), title: '' }
+    if (params.get('post')) return { kind: 'post', id: params.get('post'), title: '' }
+    if (params.get('event')) return { kind: 'event', id: params.get('event'), title: ev?.title || '', sub: ev ? `${ev.date} · ${ev.time}` : '', image: ev?.cover || '' }
+    if (params.get('community')) return { kind: 'community', id: params.get('community'), title: '' }
+    if (params.get('from') === 'profile') return { kind: 'profile', id: params.get('dm'), title: '' }
+    return null
+  })
 
   const loadConversations = () => api.listConversations().then(setConversations).catch(() => {})
   const loadChats = () => api.listChats().then(setChats).catch(() => {})
@@ -190,6 +250,16 @@ export default function Chats() {
       setDmUser(other); setMessages(messages); loadConversations()
     }).catch(() => api.getUser(activeDm).then(setDmUser).catch(() => {}))
   }, [activeDm, tab]) // eslint-disable-line
+
+  // Name what the chat is about, for the banner above the composer.
+  useEffect(() => {
+    if (!pending || pending.title) return
+    const name = (t) => setPending((p) => (p ? { ...p, title: t } : p))
+    if (pending.kind === 'job') api.listJobs().then((js) => name(js.find((j) => j.id === pending.id)?.title || 'a job')).catch(() => {})
+    if (pending.kind === 'post') api.getPost(pending.id).then((d) => name((d.post.title || d.post.body || 'a post').slice(0, 60))).catch(() => {})
+    if (pending.kind === 'community') api.getCommunity(pending.id).then((c) => name(c.name)).catch(() => {})
+    if (pending.kind === 'profile') name('their profile')
+  }, [pending?.kind, pending?.id]) // eslint-disable-line
 
   // Open a group thread.
   useEffect(() => {
@@ -206,7 +276,7 @@ export default function Chats() {
     setTab(t); setMessages([]); setSearch('')
     setParams(t === 'groups' ? { tab: 'groups' } : {}, { replace: true })
   }
-  const openDm = (id) => { setTab('direct'); setActiveDm(id); setComposing(false); setParams({ dm: id }, { replace: true }) }
+  const openDm = (id) => { if (id !== activeDm) setPending(null); setTab('direct'); setActiveDm(id); setComposing(false); setParams({ dm: id }, { replace: true }) }
   const openGroup = async (chat) => {
     if (!chat.joined) {
       const updated = await api.joinChat(chat.id)
@@ -214,10 +284,11 @@ export default function Chats() {
     }
     setActiveGroup(chat.id)
   }
-  const closeThread = () => { setActiveDm(null); setActiveGroup(null); setDmUser(null); setParams(tab === 'groups' ? { tab: 'groups' } : {}, { replace: true }) }
+  const closeThread = () => { setPending(null); setActiveDm(null); setActiveGroup(null); setDmUser(null); setParams(tab === 'groups' ? { tab: 'groups' } : {}, { replace: true }) }
 
   const sendDm = async (body, media) => {
-    const msg = await api.sendMessage(activeDm, body, media)
+    const msg = await api.sendMessage(activeDm, body, media, pending)
+    setPending(null)
     setMessages((m) => [...m, msg]); loadConversations()
   }
   const sendGroup = async (body, media) => {
@@ -232,7 +303,12 @@ export default function Chats() {
   }
 
   const needle = search.trim().toLowerCase()
-  const dmRows = conversations.filter((c) => !needle || c.other.name.toLowerCase().includes(needle))
+  const dmRows = conversations
+    .filter((c) => !needle || `${c.other.name} ${c.context?.title || ''}`.toLowerCase().includes(needle))
+    .filter((c) => ({ all: true, direct: !c.context || c.context.kind === 'profile', jobs: c.context?.kind === 'job', events: c.context?.kind === 'event', communities: c.context?.kind === 'community', requests: c.request }[filter] ?? true))
+  const requests = conversations.filter((c) => c.request).length
+  // The conversation's subject: the newest message that carried one.
+  const threadContext = [...messages].reverse().find((m) => m.context)?.context ?? conversations.find((c) => c.other.id === activeDm)?.context ?? null
   const groupRows = [...chats]
     .sort((a, b) => (b.lastAt ?? 0) - (a.lastAt ?? 0))
     .filter((c) => !needle || c.name.toLowerCase().includes(needle))
@@ -258,26 +334,33 @@ export default function Chats() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" aria-label="Search conversations" />
           </label>
 
-          <div className="dm-tabs" role="tablist">
-            <button role="tab" aria-selected={tab === 'direct'} className={tab === 'direct' ? 'on' : ''} onClick={() => switchTab('direct')}>
-              Messages{unreadTotal > 0 && <span className="dm-count">{unreadTotal}</span>}
-            </button>
-            <button role="tab" aria-selected={tab === 'groups'} className={tab === 'groups' ? 'on' : ''} onClick={() => switchTab('groups')}>
-              Groups
-            </button>
+          <div className="dm-chips" role="tablist" aria-label="Show">
+            {[
+              ['all', 'All', unreadTotal], ['direct', 'Direct'], ['groups', 'Groups'], ['jobs', 'Jobs'],
+              ['events', 'Events'], ['communities', 'Communities'], ['requests', 'Requests', requests],
+            ].map(([id, label, n]) => {
+              const on = id === 'groups' ? tab === 'groups' : tab === 'direct' && filter === id
+              return (
+                <button key={id} role="tab" aria-selected={on} className={on ? 'on' : ''}
+                  onClick={() => { if (id === 'groups') switchTab('groups'); else { if (tab !== 'direct') switchTab('direct'); setFilter(id) } }}>
+                  {label}{n > 0 && <span className="dm-count">{n}</span>}
+                </button>
+              )
+            })}
           </div>
 
           <div className="dm-list">
             {tab === 'direct' && (
               <>
                 {dmRows.length === 0 && (
-                  <p className="dm-muted dm-list-empty">{needle ? 'No matches.' : 'No messages yet.'}</p>
+                  <p className="dm-muted dm-list-empty">{needle ? 'No matches.' : filter === 'requests' ? 'No message requests.' : filter !== 'all' ? 'Nothing here yet.' : 'No messages yet.'}</p>
                 )}
                 {dmRows.map((c) => (
                   <button key={c.other.id} className={`dm-item ${activeDm === c.other.id ? 'active' : ''} ${c.unread ? 'unread' : ''}`} onClick={() => openDm(c.other.id)}>
                     <Face user={c.other} size={56} />
                     <span className="dm-item-text">
-                      <span className="dm-item-name">{c.other.name}</span>
+                      <span className="dm-item-name">{c.other.name}{c.request && <span className="dm-request">Request</span>}</span>
+                      <OriginChip context={c.context} />
                       <span className="dm-item-preview">
                         <span className="dm-item-last">{c.lastMessage}</span>
                         <span className="dm-item-dot">·</span>
@@ -332,6 +415,7 @@ export default function Chats() {
                 </Link>
                 <Link to={`/profile/${dmUser.id}`} className="dm-icon-btn" aria-label="Profile details"><Icon name="info" size={24} /></Link>
               </header>
+              {(threadContext || pending) && <div className="dm-origin-bar"><OriginCard context={threadContext && !pending ? threadContext : { ...pending, link: pendingLink(pending) }} /></div>}
               <Thread
                 messages={messages} meId={user.id} other={dmUser}
                 intro={(
@@ -343,7 +427,7 @@ export default function Chats() {
                   </div>
                 )}
               />
-              <Composer onSend={sendDm} />
+              <Composer onSend={sendDm} pending={pending} onDropPending={() => setPending(null)} />
             </>
           )}
 

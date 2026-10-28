@@ -115,6 +115,7 @@ export default function Thread() {
                 <strong className="post-author">{post.author.name}</strong> · {post.ago} ago
                 {community && <> · in <Link to={`/community/${community.id}`} style={{ color: community.accent }}>{community.name}</Link></>}
                 {!community && <> · {post.audience === 'city' ? <><Icon name="map-pin" size={12} /> {post.city}</> : <><Icon name="globe" size={12} /> Public</>}</>}
+                {user && post.author.id !== user.id && <> · <Link to={`/chats?dm=${post.author.id}&post=${post.id}`}><Icon name="message-circle" size={12} /> Message</Link></>}
               </div>
             </div>
             <h1 className="thread-title">{post.title}</h1>

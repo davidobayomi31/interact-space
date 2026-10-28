@@ -727,6 +727,23 @@ app.get('/api/feed', async (req, res) => {
   res.json({ posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
 })
 
+// ── Notifications: new followers and replies to your posts ──────────
+// (Messages, jobs and reports come from their own endpoints.)
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  const since = now() - 30 * 24 * 60 * 60 * 1000
+  const [followers, comments] = await Promise.all([
+    q.all(`SELECT u.*, f.created_at AS at FROM follows f JOIN users u ON u.id = f.follower_id
+      WHERE f.followee_id = ? AND f.created_at > ? AND u.deleted_at IS NULL ORDER BY f.created_at DESC LIMIT 20`, req.userId, since),
+    q.all(`SELECT u.*, c.body AS comment, c.created_at AS at, p.id AS post_id, p.title AS post_title, p.body AS post_body, p.community_id
+      FROM comments c JOIN posts p ON p.id = c.post_id JOIN users u ON u.id = c.author_id
+      WHERE p.author_id = ? AND c.author_id <> ? AND c.hidden = 0 AND c.created_at > ? ORDER BY c.created_at DESC LIMIT 20`, req.userId, req.userId, since),
+  ])
+  res.json({
+    followers: followers.map((r) => ({ user: publicUser(r), at: r.at })),
+    comments: comments.map((r) => ({ user: publicUser(r), at: r.at, text: r.comment.slice(0, 120), postId: r.post_id, postTitle: (r.post_title || r.post_body || '').slice(0, 60), communityId: r.community_id })),
+  })
+})
+
 // ── Going to events ──────────────────────────────────────────────────
 // Which events you're going to, and how many members are going to each.
 app.get('/api/rsvps', async (req, res) => {
@@ -1248,6 +1265,40 @@ app.get('/api/v/:handle', async (req, res) => {
 })
 
 // ── Direct messages ──────────────────────────────────────────────────
+// What a message is about. The client says which job, post, event,
+// community or profile; the title, picture and link come from the
+// database where they can, so nobody can label a chat with a fake job.
+const CONTEXT_KINDS = ['job', 'post', 'event', 'community', 'profile', 'map']
+async function messageContext(raw, other) {
+  const kind = raw?.kind
+  if (!CONTEXT_KINDS.includes(kind)) return null
+  const id = String(raw.id || '').slice(0, 80)
+  const clip = (v, n = 90) => String(v || '').trim().slice(0, n)
+  if (kind === 'job') {
+    const j = await q.get('SELECT id, title, budget, area, city, category FROM jobs WHERE id = ?', id)
+    return j && { kind, id: j.id, title: j.title, sub: [j.budget, j.area || j.city].filter(Boolean).join(' · '), category: j.category, link: `/jobs?job=${j.id}` }
+  }
+  if (kind === 'post') {
+    const p = await q.get('SELECT id, title, body, media FROM posts WHERE id = ? AND hidden = 0', id)
+    const img = p && parseJson(p.media).find((m) => m.kind === 'image' && !String(m.src).startsWith('data:'))
+    return p && { kind, id: p.id, title: clip(p.title || p.body, 80), sub: 'Post', image: img?.src || '', link: `/post/${p.id}` }
+  }
+  if (kind === 'community') {
+    const c = await q.get('SELECT id, name, cover FROM communities WHERE id = ?', id)
+    return c && { kind, id: c.id, title: c.name, sub: 'Community', image: String(c.cover || '').startsWith('data:') ? '' : c.cover || '', link: `/community/${c.id}` }
+  }
+  if (kind === 'event') {
+    const e = await q.get('SELECT id, title, date, time, venue, cover FROM events WHERE id = ?', id)
+    if (e) return { kind, id: e.id, title: e.title, sub: [e.date, e.time, e.venue].filter(Boolean).join(' · '), image: String(e.cover || '').startsWith('data:') ? '' : e.cover || '', link: '/events' }
+    // The city calendar ships with the app, so take its title as given.
+    if (/^ev-[\w-]+$/.test(id)) return { kind, id, title: clip(raw.title), sub: clip(raw.sub), image: /^\/images\/[\w/-]+\.jpg$/.test(raw.image || '') ? raw.image : '', link: '/events' }
+    return null
+  }
+  if (kind === 'profile') return { kind, id: other.id, title: other.name, sub: 'From their profile', link: `/profile/${other.id}` }
+  if (kind === 'map') return { kind, id: clip(raw.id, 40), title: clip(raw.title || raw.id, 40), sub: 'From My City', link: '/city' }
+  return null
+}
+
 app.get('/api/messages', requireAuth, async (req, res) => {
   const rows = await q.all(`
     SELECT other_id, MAX(created_at) AS last_at FROM (
@@ -1262,7 +1313,17 @@ app.get('/api/messages', requireAuth, async (req, res) => {
       WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)
       ORDER BY created_at DESC LIMIT 1`, req.userId, r.other_id, r.other_id, req.userId)
     const unread = (await q.get('SELECT COUNT(*) AS n FROM dm_messages WHERE from_id = ? AND to_id = ? AND read = 0', r.other_id, req.userId)).n
-    return { other, lastMessage: last?.body || mediaLabel(last?.media), lastAt: last?.created_at ?? r.last_at, unread }
+    // The most recent thing the conversation was about, and whether you've
+    // ever written back (if not, it's a request).
+    const [origin, replied] = await Promise.all([
+      q.get(`SELECT context FROM dm_messages WHERE ((from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)) AND context <> ''
+        ORDER BY created_at DESC LIMIT 1`, req.userId, r.other_id, r.other_id, req.userId),
+      q.get('SELECT 1 FROM dm_messages WHERE from_id = ? AND to_id = ? LIMIT 1', req.userId, r.other_id),
+    ])
+    return {
+      other, lastMessage: last?.body || mediaLabel(last?.media), lastAt: last?.created_at ?? r.last_at, unread,
+      context: origin ? parseJson(origin.context, null) : null, request: !replied,
+    }
   }))).filter((c) => c.other)
   res.json({ conversations })
 })
@@ -1295,8 +1356,10 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
         : `${other.name} only takes messages from their connections.`)
     }
   }
+  const context = await messageContext(req.body?.context, other)
   const id = uid('dm')
-  await q.run('INSERT INTO dm_messages (id, from_id, to_id, body, media, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, req.userId, other.id, body, JSON.stringify(media), now())
+  await q.run('INSERT INTO dm_messages (id, from_id, to_id, body, media, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    id, req.userId, other.id, body, JSON.stringify(media), context ? JSON.stringify(context) : '', now())
   res.json({ message: serializeDm(await q.get('SELECT * FROM dm_messages WHERE id = ?', id)) })
 })
 

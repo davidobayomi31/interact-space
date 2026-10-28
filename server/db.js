@@ -480,6 +480,11 @@ UPDATE jobs SET timing = 'Today' WHERE timing = 'Flexible' AND category IN ('plu
 UPDATE jobs SET timing = 'This weekend' WHERE timing = 'Flexible' AND category IN ('moving', 'painting', 'cleaning') AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1);
 UPDATE jobs SET remote = 1 WHERE category IN ('tech-support', 'tutoring') AND remote = 0 AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1);
 
+-- Where a conversation started (Nuel: "make it known where someone is
+-- communicating to you from… from a community, for a job, about an
+-- event"). JSON: { kind, id, title, sub, image, link }.
+ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS context TEXT DEFAULT '';
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
@@ -766,7 +771,11 @@ export async function serializeChatMessage(row) {
 
 // Pure — no database access.
 export function serializeDm(row) {
-  return { id: row.id, fromId: row.from_id, toId: row.to_id, body: row.body, media: json(row.media), createdAt: row.created_at, ago: timeAgo(row.created_at), read: !!row.read }
+  return {
+    id: row.id, fromId: row.from_id, toId: row.to_id, body: row.body, media: json(row.media),
+    context: row.context ? json(row.context, null) : null,
+    createdAt: row.created_at, ago: timeAgo(row.created_at), read: !!row.read,
+  }
 }
 
 // What an inbox shows for a message that is only an attachment.

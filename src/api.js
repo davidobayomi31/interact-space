@@ -53,6 +53,7 @@ export const listEvents = (params = {}) => {
   return req('/events' + (q ? `?${q}` : '')).then((d) => d.events)
 }
 export const listRsvps = () => req('/rsvps')
+export const socialNotifications = () => req('/notifications')
 export const rsvp = (id) => req(`/events/${id}/rsvp`, { method: 'POST' })
 export const uploadImage = (image, kind) => req('/uploads', { method: 'POST', body: { image, kind } }).then((d) => d.url)
 export const setCommunityCover = (id, cover) => req(`/communities/${id}/cover`, { method: 'PUT', body: { cover } }).then((d) => d.community)
@@ -110,7 +111,7 @@ export const getVoice = (handle) => req(`/v/${encodeURIComponent(handle)}`)
 // Direct messages
 export const listConversations = () => req('/messages').then((d) => d.conversations)
 export const getThread = (userId) => req(`/messages/${userId}`)
-export const sendMessage = (userId, body, media = []) => req(`/messages/${userId}`, { method: 'POST', body: { body, media } }).then((d) => d.message)
+export const sendMessage = (userId, body, media = [], context = null) => req(`/messages/${userId}`, { method: 'POST', body: { body, media, context } }).then((d) => d.message)
 
 // Group chats
 export const listChats = () => req('/chats').then((d) => d.chats)

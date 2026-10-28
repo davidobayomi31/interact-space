@@ -35,6 +35,7 @@ function EventBig({ event, going, count, onJoin }) {
           {event.venue && <span><Icon name="map-pin" size={12} /> {event.venue}</span>}
           <em>{count} going{c ? ` · ${c.name}` : ''}</em>
         </div>
+        {event.host && <Link to={`/chats?dm=${event.host}&event=${event.id}`} className="btn ghost small icon-only" aria-label="Message the host"><Icon name="message-circle" size={15} /></Link>}
         <button className={`btn small ${going ? 'ghost ev-going' : 'primary'}`} onClick={onJoin}>
           {going ? <><Icon name="check" size={13} /> Going</> : 'Join'}
         </button>
