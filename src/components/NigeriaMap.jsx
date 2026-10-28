@@ -40,7 +40,7 @@ export function NigeriaMap({ liveCount = 0, startTo = '/auth' }) {
   const city = CITIES.find((c) => c.id === picked)
   return (
     <div className="ng-map">
-      <svg viewBox="0 0 384 310" role="img" aria-label="Map of Nigeria showing cities on Interact Space">
+      <svg viewBox="0 0 384 310" role="img" aria-label="Map of Nigeria showing cities on VOIDAJ">
         <path className="ng-land" d={path(BORDER, true)} />
         <path className="ng-river" d={path(NIGER)} />
         <path className="ng-river" d={path(BENUE)} />

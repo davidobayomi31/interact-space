@@ -207,7 +207,7 @@ export function askCompanion(text, profile) {
   }
 
   if (intent === 'create-community') {
-    out.text = `Love that, ${name} — new communities are how the city grows. Here’s how it works on Interact Space: pick a name and a focus, agree to the shared Charter (safety, respect, privacy), and set your first three rules. In this demo the create flow is simulated, but here are similar communities worth studying first — joining one for a while is the best founder research:`
+    out.text = `Love that, ${name} — new communities are how the city grows. Here’s how it works on VOIDAJ: pick a name and a focus, agree to the shared Charter (safety, respect, privacy), and set your first three rules. In this demo the create flow is simulated, but here are similar communities worth studying first — joining one for a while is the best founder research:`
     out.sections.push({ kind: 'communities', results: matchCommunities(tags.length ? tags : ['community'], profile) })
     return out
   }

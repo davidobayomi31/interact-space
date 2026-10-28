@@ -119,7 +119,7 @@ app.post('/api/auth/register', async (req, res) => {
   const color = NEW_USER_COLORS[Math.floor(Math.random() * NEW_USER_COLORS.length)]
   const handle = '@' + name.trim().toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, '')
   await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, email.toLowerCase(), hashPassword(password), name.trim(), handle, 'New citizen of Interact Space', color, now())
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, id, email.toLowerCase(), hashPassword(password), name.trim(), handle, 'New citizen of VOIDAJ', color, now())
   issueSession(res, id)
   await recordLogin(req, id)
   res.json({ user: await selfUser(await getUserById(id)) })
@@ -461,7 +461,7 @@ app.post('/api/communities', requireAuth, async (req, res) => {
   const icon = COMMUNITY_ICONS.includes(b.icon) ? b.icon : 'community'
   const tags = cleanList(b.tags, 6, 24).map((t) => t.toLowerCase())
   const rules = cleanList(b.rules, 8, 160)
-  if (!rules.some((r) => /charter/i.test(r))) rules.push('Follow the Interact Space Charter at all times.')
+  if (!rules.some((r) => /charter/i.test(r))) rules.push('Follow the VOIDAJ Charter at all times.')
   let cover
   try { cover = cleanCover(b.cover) } catch (e) { return err(res, 400, e.message) }
   if (cover === null) return err(res, 400, 'That cover photo can’t be used. Upload it again.')
@@ -1271,7 +1271,7 @@ app.use((error, _req, res, _next) => {
 if (!process.env.VERCEL) {
   const PORT = process.env.API_PORT || 8787
   app.listen(PORT, () => {
-    console.log(`Interact Space API on http://localhost:${PORT}  (companion: ${process.env.ANTHROPIC_API_KEY ? 'LLM' : 'rule-based fallback'})`)
+    console.log(`VOIDAJ API on http://localhost:${PORT}  (companion: ${process.env.ANTHROPIC_API_KEY ? 'LLM' : 'rule-based fallback'})`)
   })
 }
 

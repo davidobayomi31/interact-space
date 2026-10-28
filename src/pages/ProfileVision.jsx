@@ -118,7 +118,7 @@ const COMMUNITIES = [
 ]
 
 const ACTIVITY = [
-  { icon: 'briefcase', text: 'Completed 12 jobs through Interact Space', meta: 'All rated 4+' },
+  { icon: 'briefcase', text: 'Completed 12 jobs through VOIDAJ', meta: 'All rated 4+' },
   { icon: 'chat', text: 'Answers questions in Lagos Home Improvement', meta: '38 replies this month' },
   { icon: 'calendar', text: 'Hosted “Fix your own leak” workshop', meta: '24 attended' },
 ]

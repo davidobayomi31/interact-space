@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import { Icon } from '../components/Icons.jsx'
+import { VoidajMark, VJ_PATH } from '../components/VoidajMark.jsx'
 
 export default function Auth() {
   const { login, register } = useApp()
@@ -30,19 +31,35 @@ export default function Auth() {
     setBusy(false)
   }
 
+  const switchTo = (m) => { setMode(m); setError('') }
+
   return (
     <div className="auth-screen">
+      {/* The VJ mark, huge and faint, drifting behind the card. */}
+      <svg className="auth-bg-mark" viewBox="230 410 794 462" aria-hidden="true">
+        <defs>
+          <linearGradient id="vj-auth-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#3B82F6" /><stop offset="1" stopColor="#8B5CF6" />
+          </linearGradient>
+        </defs>
+        <path d={VJ_PATH} />
+      </svg>
+      <span className="auth-orb one" aria-hidden="true" />
+      <span className="auth-orb two" aria-hidden="true" />
+
       <div className="auth-card">
-        <Link to="/" className="brand auth-brand">
-          <span className="brand-mark"><Icon name="globe" size={18} /></span>
-          <span className="brand-name">Interact <em>Space</em></span>
+        <Link to="/" className="auth-logo" aria-label="VOIDAJ home">
+          <svg className="auth-logo-mark" viewBox="230 410 794 462" aria-hidden="true"><path d={VJ_PATH} /></svg>
+          <VoidajMark size={15} light />
         </Link>
-        <h1>{mode === 'register' ? 'Join the city' : 'Welcome back'}</h1>
-        <p className="meta-dim auth-sub">
-          {mode === 'register'
-            ? 'Create your account to join communities, post, and meet people.'
-            : 'Sign in to your Interact Space account.'}
-        </p>
+
+        <div className="auth-mode-switch" role="tablist">
+          <button role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'on' : ''} onClick={() => switchTo('register')}>Create account</button>
+          <button role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'on' : ''} onClick={() => switchTo('login')}>Sign in</button>
+        </div>
+
+        <h1>{mode === 'register' ? <>Step into <span className="grad-text">VOIDAJ</span></> : <>Welcome <span className="grad-text">back</span></>}</h1>
+        <div className="auth-tagline"><span>Connect.</span><span>Discover.</span><span>Participate.</span></div>
 
         <form onSubmit={submit} className="auth-form">
           {mode === 'register' && (
@@ -70,9 +87,9 @@ export default function Auth() {
 
         <div className="auth-switch">
           {mode === 'register' ? (
-            <>Already have an account? <button className="link-btn" onClick={() => { setMode('login'); setError('') }}>Sign in</button></>
+            <>Already have an account? <button className="link-btn" onClick={() => switchTo('login')}>Sign in</button></>
           ) : (
-            <>New here? <button className="link-btn" onClick={() => { setMode('register'); setError('') }}>Create an account</button></>
+            <>New here? <button className="link-btn" onClick={() => switchTo('register')}>Create an account</button></>
           )}
         </div>
         <Link to="/" className="auth-explore meta-dim">← Keep exploring without an account</Link>

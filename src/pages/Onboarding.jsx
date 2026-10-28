@@ -7,6 +7,7 @@ import { useApp } from '../state.jsx'
 import { GOAL_OPTIONS } from '../data/seed.js'
 import { extractTags, tagLabel, matchCommunities, matchPeople, matchEvents } from '../ai.js'
 import { Icon } from '../components/Icons.jsx'
+import { VoidajLockup } from '../components/VoidajMark.jsx'
 import { Eagle } from '../components/Eagle.jsx'
 import { CommunityCard, PersonCard, EventCard } from '../components/bits.jsx'
 
@@ -36,7 +37,7 @@ export default function Onboarding() {
   }
 
   useEffect(() => {
-    say({ role: 'ai', text: 'Welcome to Interact Space. 🌍 I’m your companion — my job is to connect you to people, not keep you scrolling.' }, 300)
+    say({ role: 'ai', text: 'Welcome to VOIDAJ. 🌍 I’m your companion — my job is to connect you to people, not keep you scrolling.' }, 300)
     say({ role: 'ai', text: 'First things first — what should the city call you?' }, 1300)
     const t = setTimeout(() => setStep('name'), 1400)
     timers.current.push(t)
@@ -111,7 +112,7 @@ export default function Onboarding() {
       // back to popular communities rather than inventing interests for them.
       interests: collected.tags, goals: GOAL_OPTIONS.filter((g) => goals.includes(g.id)).map((g) => g.label),
       onboarded: true,
-      bio: collected.rawInterest ? `“${collected.rawInterest}”` : 'New citizen of Interact Space.',
+      bio: collected.rawInterest ? `“${collected.rawInterest}”` : 'New citizen of VOIDAJ.',
     }
     saveProfile(newProfile)
     setCollected((c) => ({ ...c, privacy: p.id }))
@@ -144,8 +145,7 @@ export default function Onboarding() {
       <div className="onboarding-panel">
         <div className="onboarding-head">
           <Link to="/" className="brand small-brand">
-            <span className="brand-mark"><Icon name="globe" size={15} /></span>
-            <span className="brand-name">Interact <em>Space</em></span>
+            <VoidajLockup size={15} />
           </Link>
           <Link to="/" className="meta-dim skip-link">Explore the city first <Icon name="arrow" size={13} /></Link>
         </div>

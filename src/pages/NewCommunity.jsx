@@ -111,7 +111,7 @@ export default function NewCommunity() {
           {form.rules.length < 8 && (
             <button type="button" className="link-btn" onClick={() => setForm((f) => ({ ...f, rules: [...f.rules, ''] }))}><Icon name="plus" size={12} /> Another rule</button>
           )}
-          <div className="charter-note"><Icon name="shield" size={13} /><span>Always included: follow the Interact Space Charter. {CHARTER[0]}</span></div>
+          <div className="charter-note"><Icon name="shield" size={13} /><span>Always included: follow the VOIDAJ Charter. {CHARTER[0]}</span></div>
         </div>
 
         <div className="composer-foot">

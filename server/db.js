@@ -410,6 +410,10 @@ CREATE TABLE IF NOT EXISTS company_accounts (
   updated_at BIGINT
 );
 
+-- Interact Space is now VOIDAJ: retitle members who never changed the
+-- default headline.
+UPDATE users SET title = 'New citizen of VOIDAJ' WHERE title = 'New citizen of Interact Space';
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data

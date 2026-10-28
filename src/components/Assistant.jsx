@@ -72,7 +72,7 @@ export default function Assistant() {
         role: 'ai',
         text: user
           ? `Hi ${profile.name.split(' ')[0]} — I’m your companion for the whole network. ${joined ? `You’re in ${joined} ${joined === 1 ? 'community' : 'communities'} so far.` : ''} What would you like to do?`
-          : 'Hi — I’m the Interact Space companion. Tell me what you’re into and I’ll guide you to communities, people and discussions.',
+          : 'Hi — I’m the VOIDAJ companion. Tell me what you’re into and I’ll guide you to communities, people and discussions.',
         sections: [],
       }])
     }

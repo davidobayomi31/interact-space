@@ -145,7 +145,7 @@ function Header() {
             <ProfileMenu />
           </>
         ) : (
-          <Link to="/auth" className="btn primary small">Join the city</Link>
+          <Link to="/auth" className="btn primary small">Step into VOIDAJ</Link>
         )}
       </div>
     </header>
@@ -195,7 +195,7 @@ function SideNav() {
             <ProfileMenu inSide />
           </>
         ) : (
-          <Link to="/auth" className="btn primary small sidenav-join">Join the city</Link>
+          <Link to="/auth" className="btn primary small sidenav-join">Step into VOIDAJ</Link>
         )}
       </div>
     </nav>

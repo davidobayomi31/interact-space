@@ -176,7 +176,7 @@ export const USERS = [
 // ── Default current-user persona (completed during AI onboarding) ────
 export const DEFAULT_PROFILE = {
   id: 'u-me', name: 'Dami Adeyemi', handle: '@dami',
-  title: 'New citizen of Interact Space', city: 'Lagos', area: 'Yaba',
+  title: 'New citizen of VOIDAJ', city: 'Lagos', area: 'Yaba',
   interests: [], skills: [], goals: [],
   bio: 'Just arrived in the city.',
   communities: [], connections: [], color: '#D8A63A',
@@ -198,13 +198,13 @@ export const COMMUNITIES = [
       'Give feedback before you ask for it.',
       'No unsolicited DMs pitching services to members.',
       'Deals and partnerships must be disclosed in-thread.',
-      'Follow the Interact Space Charter at all times.',
+      'Follow the VOIDAJ Charter at all times.',
     ],
   },
   {
     id: 'african-startup-network', cover: '/images/communities/african-startup-network.jpg', name: 'African Startup Network', scope: 'global', city: 'Pan-African',
     tagline: 'One network, 54 countries, infinite hustle',
-    description: 'The global home for African founders, operators and investors on Interact Space. Cross-border intros, funding announcements, and city chapters from Lagos to Nairobi to Accra.',
+    description: 'The global home for African founders, operators and investors on VOIDAJ. Cross-border intros, funding announcements, and city chapters from Lagos to Nairobi to Accra.',
     tags: ['startups', 'tech', 'finance', 'networking', 'entrepreneurship'],
     memberCount: 18452, memberIds: ['u-tunde', 'u-bisi', 'u-yemi', 'u-amina', 'u-david'],
     moderators: ['u-david'], accent: '#1F5FA8', icon: 'globe',
@@ -213,7 +213,7 @@ export const COMMUNITIES = [
       'Intros must be double opt-in.',
       'Funding announcements welcome; hype threads are not.',
       'Respect chapter autonomy — local chapters set local norms.',
-      'Follow the Interact Space Charter at all times.',
+      'Follow the VOIDAJ Charter at all times.',
     ],
   },
   {
@@ -228,7 +228,7 @@ export const COMMUNITIES = [
       'Critique the work, never the person.',
       'Always get consent for street portraits before posting.',
       'Watermarks allowed, spam is not.',
-      'Follow the Interact Space Charter at all times.',
+      'Follow the VOIDAJ Charter at all times.',
     ],
   },
   {
@@ -243,7 +243,7 @@ export const COMMUNITIES = [
       'No question is too basic — mockery gets you removed.',
       'Share what you learn: one post per month minimum is encouraged.',
       'Job posts go in the #opportunities thread only.',
-      'Follow the Interact Space Charter at all times.',
+      'Follow the VOIDAJ Charter at all times.',
     ],
   },
   {
@@ -258,7 +258,7 @@ export const COMMUNITIES = [
       'Buy from members first when you can.',
       'One promo post per week per business.',
       'Disputes between traders go to moderators, not the timeline.',
-      'Follow the Interact Space Charter at all times.',
+      'Follow the VOIDAJ Charter at all times.',
     ],
   },
   {
@@ -273,7 +273,7 @@ export const COMMUNITIES = [
       'Practical over performative — share what you actually did.',
       'Workshops are free for members; never resell a spot.',
       'Keep politics to policy discussions, not parties.',
-      'Follow the Interact Space Charter at all times.',
+      'Follow the VOIDAJ Charter at all times.',
     ],
   },
 ]
@@ -513,7 +513,7 @@ export const CHARTER = [
 // ── Globe — public events happening around the world right now ───────
 // Demo data styled as if aggregated from public event platforms.
 export const WORLD_EVENTS = [
-  { id: 'we1', city: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, title: 'First-Cheque Pitch Night', platform: 'Interact Space', attending: 87 },
+  { id: 'we1', city: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, title: 'First-Cheque Pitch Night', platform: 'VOIDAJ', attending: 87 },
   { id: 'we2', city: 'Nairobi', country: 'Kenya', lat: -1.2921, lon: 36.8219, title: 'Silicon Savannah Founders Meetup', platform: 'Meetup', attending: 214 },
   { id: 'we3', city: 'Accra', country: 'Ghana', lat: 5.6037, lon: -0.1870, title: 'West Africa Fintech Summit', platform: 'Eventbrite', attending: 640 },
   { id: 'we4', city: 'London', country: 'UK', lat: 51.5072, lon: -0.1276, title: 'Diaspora Tech Founders Night', platform: 'Eventbrite', attending: 312 },
@@ -522,12 +522,12 @@ export const WORLD_EVENTS = [
   { id: 'we7', city: 'Dubai', country: 'UAE', lat: 25.2048, lon: 55.2708, title: 'Cross-Border Commerce Expo', platform: 'Eventbrite', attending: 980 },
   { id: 'we8', city: 'Mumbai', country: 'India', lat: 19.0760, lon: 72.8777, title: 'Urban Farming Collective Fair', platform: 'Meetup', attending: 173 },
   { id: 'we9', city: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, title: 'Renewable Energy Innovators Night', platform: 'Eventbrite', attending: 288 },
-  { id: 'we10', city: 'Cape Town', country: 'South Africa', lat: -33.9249, lon: 18.4241, title: 'Green Cities Symposium', platform: 'Interact Space', attending: 340 },
+  { id: 'we10', city: 'Cape Town', country: 'South Africa', lat: -33.9249, lon: 18.4241, title: 'Green Cities Symposium', platform: 'VOIDAJ', attending: 340 },
   { id: 'we11', city: 'Toronto', country: 'Canada', lat: 43.6532, lon: -79.3832, title: 'African Diaspora Business Expo', platform: 'Ticketmaster', attending: 502 },
   { id: 'we12', city: 'Paris', country: 'France', lat: 48.8566, lon: 2.3522, title: 'Creative Makers Salon', platform: 'Meetup', attending: 197 },
-  { id: 'we13', city: 'Nairobi', country: 'Kenya', lat: -1.2921, lon: 36.8219, title: 'Community Health Screening Day', platform: 'Interact Space', attending: 88 },
+  { id: 'we13', city: 'Nairobi', country: 'Kenya', lat: -1.2921, lon: 36.8219, title: 'Community Health Screening Day', platform: 'VOIDAJ', attending: 88 },
   { id: 'we14', city: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, title: 'Pan-Asia Startup Demo Day', platform: 'Eventbrite', attending: 720 },
-  { id: 'we15', city: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, title: 'Weekend Makers Pop-Up Market', platform: 'Interact Space', attending: 210 },
+  { id: 'we15', city: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, title: 'Weekend Makers Pop-Up Market', platform: 'VOIDAJ', attending: 210 },
   { id: 'we16', city: 'Mexico City', country: 'Mexico', lat: 19.4326, lon: -99.1332, title: 'Sustainable Cities Workshop', platform: 'Meetup', attending: 265 },
 ]
 

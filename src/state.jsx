@@ -46,6 +46,14 @@ export function AppProvider({ children }) {
     if (theme === 'system') delete root.dataset.theme
     else root.dataset.theme = theme
     try { localStorage.setItem('voidaj-theme', theme) } catch {}
+    // data-mode is always the resolved look (light or dark), so newer
+    // styles need one selector instead of a media query per rule.
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = () => { root.dataset.mode = theme === 'system' ? (mq.matches ? 'dark' : 'light') : theme }
+    apply()
+    if (theme !== 'system') return
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
   }, [theme])
   const setTheme = async (t) => {
     setThemeState(t)
