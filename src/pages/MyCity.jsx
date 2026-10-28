@@ -56,6 +56,7 @@ export default function MyCity() {
     return [c.name, allEvents.filter((e) => s(eventCity(e))).length + jobs.filter((j) => s(j.city || 'Lagos')).length]
   }))
   const soon = FILTERS.find((f) => f.id === filter)?.soon
+  const photo = CITIES.find((c) => same(c.name))?.photo
 
   return (
     <div className="page city-page city2">
@@ -90,7 +91,7 @@ export default function MyCity() {
           <section className="city-map-card">
             <NigeriaMap value={city} onPick={setPlace} counts={counts} caption={false} liveCount={local.length} startTo={startTo} />
             <div className="city-place" key={city}>
-              <IconTile name="map-pin" tone="grad" size={44} />
+              {photo ? <img className="city-place-photo" src={photo} alt="" /> : <IconTile name="map-pin" tone="grad" size={44} />}
               <div>
                 <strong>{city}</strong>
                 <span>{events.length} events · {cityJobs.length} jobs · {local.length} local communities</span>

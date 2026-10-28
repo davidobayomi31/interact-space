@@ -83,7 +83,7 @@ function Discover({ posts, events, jobs, communities }) {
         <div className="row-head"><h2>Places</h2></div>
         <div className="rail xp-rail">
           {CITIES.map((c) => (
-            <PhotoCard key={c.id} onClick={() => { setPlace(c.name); navigate('/city') }} img={c.id === 'lagos' ? '/images/city/lagos.jpg' : null}
+            <PhotoCard key={c.id} onClick={() => { setPlace(c.name); navigate('/city') }} img={c.photo ?? null}
               icon="map-pin" tone={c.live ? 'blue' : 'teal'} title={c.name} sub={c.live ? 'Live now' : 'Look around'} place={c.name} />
           ))}
         </div>

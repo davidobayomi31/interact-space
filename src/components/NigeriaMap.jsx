@@ -20,14 +20,17 @@ const BORDER = [
 const NIGER = [[3.61, 11.70], [4.40, 10.60], [5.10, 9.10], [6.00, 8.60], [6.74, 7.80], [6.75, 6.10], [6.40, 5.20], [6.10, 4.60]]
 const BENUE = [[13.30, 9.30], [12.40, 9.25], [10.60, 8.10], [8.53, 7.73], [6.74, 7.80]]
 
+// photo: public/images/city — free Unsplash photos taken in each city
+// (Kaduna's is the Eid durbar in Zaria, Kaduna State). Port Harcourt has
+// no suitable one yet.
 export const CITIES = [
-  { id: 'lagos', name: 'Lagos', lon: 3.38, lat: 6.52, live: true },
-  { id: 'ibadan', name: 'Ibadan', lon: 3.90, lat: 7.38 },
-  { id: 'abuja', name: 'Abuja', lon: 7.49, lat: 9.06 },
-  { id: 'kano', name: 'Kano', lon: 8.52, lat: 12.00 },
-  { id: 'kaduna', name: 'Kaduna', lon: 7.44, lat: 10.52 },
-  { id: 'enugu', name: 'Enugu', lon: 7.50, lat: 6.45 },
-  { id: 'benin', name: 'Benin City', lon: 5.62, lat: 6.34 },
+  { id: 'lagos', name: 'Lagos', lon: 3.38, lat: 6.52, live: true, photo: '/images/city/lagos.jpg' },
+  { id: 'ibadan', name: 'Ibadan', lon: 3.90, lat: 7.38, photo: '/images/city/ibadan.jpg' },
+  { id: 'abuja', name: 'Abuja', lon: 7.49, lat: 9.06, photo: '/images/city/abuja.jpg' },
+  { id: 'kano', name: 'Kano', lon: 8.52, lat: 12.00, photo: '/images/city/kano.jpg' },
+  { id: 'kaduna', name: 'Kaduna', lon: 7.44, lat: 10.52, photo: '/images/city/kaduna.jpg' },
+  { id: 'enugu', name: 'Enugu', lon: 7.50, lat: 6.45, photo: '/images/city/enugu.jpg' },
+  { id: 'benin', name: 'Benin City', lon: 5.62, lat: 6.34, photo: '/images/city/benin-city.jpg' },
   { id: 'ph', name: 'Port Harcourt', lon: 7.01, lat: 4.82 },
 ]
 

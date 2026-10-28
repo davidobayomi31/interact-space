@@ -100,7 +100,7 @@ export function Cover({ src, className = 'tile-photo' }) {
 function CityHero({ city }) {
   return (
     <Link to="/city" className="city-hero">
-      <Cover src={`/images/city/${city.toLowerCase()}.jpg`} className="city-hero-photo" />
+      <Cover src={`/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`} className="city-hero-photo" />
       <div className="city-hero-text">
         <strong>Explore your city</strong>
         <span>Events, jobs, hubs and more in {city}</span>
