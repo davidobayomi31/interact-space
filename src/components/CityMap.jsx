@@ -47,7 +47,23 @@ export function CityMap({ value, onPick, counts = {} }) {
     })
     map.current = m
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
-    m.scrollZoom.disable() // the page scrolls; zoom with the buttons, pinch or double-tap
+    // On a computer, a trackpad pinch zooms the map but a plain two-finger
+    // scroll still scrolls the page. Browsers send a pinch as a wheel event
+    // with ctrlKey set, so plain wheel events are stopped before they reach
+    // the map (the page scrolls as usual). Safari sends pinches as its own
+    // gesture events instead, handled below.
+    const wrap = box.current.parentElement
+    const wheel = (e) => { if (!e.ctrlKey) e.stopPropagation() }
+    wrap.addEventListener('wheel', wheel, { capture: true })
+    let startZoom = 0
+    const gStart = (e) => { e.preventDefault(); startZoom = m.getZoom() }
+    const gChange = (e) => {
+      e.preventDefault()
+      const r = box.current.getBoundingClientRect()
+      m.zoomTo(startZoom + Math.log2(e.scale), { duration: 0, around: m.unproject([e.clientX - r.left, e.clientY - r.top]) })
+    }
+    wrap.addEventListener('gesturestart', gStart)
+    wrap.addEventListener('gesturechange', gChange)
     // Far out, pins crowd together; on phones the CSS then drops their names.
     const far = () => box.current?.parentElement.classList.toggle('cm-far', m.getZoom() < 6.5)
     m.on('zoom', far); far()
@@ -66,7 +82,12 @@ export function CityMap({ value, onPick, counts = {} }) {
       if (target && !target.live) m.flyTo({ center: [target.lon, target.lat], zoom: CITY_ZOOM, duration: reduced() ? 0 : 1800, essential: true })
       else m.fitBounds(BOUNDS, { padding: PAD, duration: reduced() ? 0 : 1600, essential: true })
     })
-    return () => { m.remove(); map.current = null; pins.current = {} }
+    return () => {
+      wrap.removeEventListener('wheel', wheel, { capture: true })
+      wrap.removeEventListener('gesturestart', gStart)
+      wrap.removeEventListener('gesturechange', gChange)
+      m.remove(); map.current = null; pins.current = {}
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pins, rebuilt when the counts change.
