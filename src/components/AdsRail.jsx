@@ -6,7 +6,7 @@
 // takes its turn, looping continuously. Businesses pay to be listed;
 // payment is simulated (no real processor wired up in this prototype).
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
@@ -189,12 +189,12 @@ export function AdsRail() {
         {ads.map((ad, i) => (
           // Every ad shows in full so the rail is filled, not half
           // empty; the rotating one is lifted slightly to draw the eye.
-          <div key={ad.id} className={`card ad-card ${i === active ? 'enlarged' : ''}`} style={{ '--accent': ad.accent }}>
+          <Link key={ad.id} to={ad.id.startsWith('fallback') ? '/city' : `/business/${ad.id}`} className={`card ad-card card-link ${i === active ? 'enlarged' : ''}`} style={{ '--accent': ad.accent }}>
             <AdMark ad={ad} />
             <strong>{ad.businessName}</strong>
             <span className="meta-dim">{ad.tagline}</span>
             <span className="btn primary small ad-cta">{ad.ctaLabel}</span>
-          </div>
+          </Link>
         ))}
       </div>
       <div className="ads-rail-foot">
@@ -232,13 +232,13 @@ export function HomeAds({ max = 4 }) {
       <div className="hx-label"><Icon name="tag" size={12} /> Ads <em>{adScope === 'universal' ? 'Universal' : `Local · ${place}`}</em><ScopeMenu /></div>
       <div className="partners-list">
         {shown.map((ad, n) => (
-          <div key={ad.id} className={`phone-ad ${n === i % shown.length ? 'on' : ''}`} style={{ '--accent': ad.accent }}>
+          <Link key={ad.id} to={ad.id.startsWith('fallback') ? '/city' : `/business/${ad.id}`} className={`phone-ad ${n === i % shown.length ? 'on' : ''}`} style={{ '--accent': ad.accent }}>
             <AdMark ad={ad} />
             <div className="phone-ad-text">
               <strong>{ad.businessName}</strong>
               <span>{ad.tagline}</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
       <button type="button" className="btn brand-outline small" onClick={() => (user ? setShowForm(true) : navigate('/auth'))}>

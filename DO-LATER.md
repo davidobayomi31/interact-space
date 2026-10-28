@@ -53,3 +53,28 @@ David asked to pause backend work and do UI only for now.
 
 - **Favorites on the server.** Favorites are saved in the browser only (`src/favorites.js`), so they don't follow someone to another device and are lost if browser data is cleared. Move them to a `favorites` table with `GET/POST/DELETE /api/favorites`, include them in the data export, and delete them with the account.
 - **Making accounts real.** Sign-up, sign-in and the Postgres database already work in production. What's still simulated: ID verification (instant badge), ad payment (demo checkout), and there is no email verification or "forgot password" yet (both need an email service).
+
+## Payments (Nuel, Oct 27)
+
+Nuel sent 14 payment screens (see NUEL-FEEDBACK-OCT24-27.md, section J). Settings → Payments lists them as coming soon. **Not built.** It needs a payment provider (Paystack or Flutterwave for Nigeria), a merchant account and the legal side settled first.
+
+- Wallet: balance, add funds ($10 / $25 / $50 / $100 or a custom amount), withdraw, transactions, cards
+- Payment methods: card, bank transfer, mobile money (MTN, Airtel), Apple Pay, Google Pay, wallet balance
+- Confirm payment and a payment-success screen
+- Business promotion plans: Basic $5 (3 days), Standard $15 (7 days), Premium $30 (14 days). This replaces the demo ad checkout
+- Personal Premium: $4.99/month or yearly (save 20%)
+- VOIDAJ ID card designs: Standard (free), Premium $2.99, Custom $4.99
+- VOIDAJ Trips: book a seat, then pay
+- Quick Job payment: the money is held until the job is done (escrow), plus a platform fee
+- Event tickets: Regular, VIP, Group (4+)
+- Support a creator: one-time or monthly
+- In-app badge purchases
+- Transaction history: all, payments, payouts
+
+## Photos for job categories (Oct 27)
+
+Quick Jobs categories show a photo where one fits from public/images. Plumbing, cleaning, carpentry, appliance repair and auto repair still use a coloured icon tile until they get real photos.
+
+## "That unique profile stuff" (Nuel, Oct 25)
+
+David is checking with Nuel what he meant. It may be the Identity Builder preview at /vision.

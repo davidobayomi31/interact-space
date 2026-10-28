@@ -841,3 +841,59 @@ a.pf2-idcard:hover { box-shadow: var(--glow-strong); }
 :root[data-mode="dark"] .dm-intro-btn { background: rgba(30, 50, 100, 0.8); color: var(--text); }
 :root[data-mode="dark"] .dm-inbox, :root[data-mode="dark"] .dm-pane, :root[data-mode="dark"] .dm-pane-head, :root[data-mode="dark"] .dm-inbox-head { background: transparent; border-color: var(--border-soft); }
 .dm-composer-pill input { font-family: inherit; }
+
+/* ══ Settings ════════════════════════════════════════════════════════ */
+.settings2 { display: flex; flex-direction: column; gap: 14px; }
+.settings-me { display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 14px 16px; color: var(--text); }
+.settings-me > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.settings-me em { font-style: normal; color: var(--text-dim); font-size: 13px; }
+.settings2 .settings-nav a { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 14px; }
+.settings2 .settings-nav a > span:not(.itile) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.settings2 .settings-nav a.active { background: var(--brand-soft); box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3); }
+.settings-chev { color: var(--text-dim); flex-shrink: 0; }
+.settings-soon-card { display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 16px; margin-bottom: 10px; }
+.settings-soon-card > div { display: flex; flex-direction: column; }
+.settings-pay-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.settings-pay-list li { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; }
+.settings-pay-list li > .icon { color: var(--teal-strong); }
+.settings-pay-list li > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.settings-pay-list em { font-style: normal; font-size: 12.5px; color: var(--text-dim); }
+.settings-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--green); font-weight: 700; }
+.settings-inline { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.settings-charter { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+/* ══ Business page ═══════════════════════════════════════════════════ */
+.biz-page { max-width: 760px; display: flex; flex-direction: column; gap: 14px; }
+.biz-soon { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--purple-soft); color: var(--violet); font-size: 13px; font-weight: 600; }
+:root[data-mode="dark"] .biz-soon { color: #C4B5FD; }
+.biz-hero { padding: 0 0 18px; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.biz-cover { width: 100%; height: 150px; display: grid; place-items: center; font-size: 64px; background: radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent) 55%, #0B1F3B); }
+.biz-logo { margin-top: -44px; padding: 4px; border-radius: 22px; background: var(--surface); box-shadow: var(--glow); }
+.biz-logo .ad-mark { width: 80px !important; height: 80px !important; border-radius: 18px; font-size: 26px !important; }
+.biz-hero h1 { margin: 6px 0 0; font-size: 23px; display: inline-flex; align-items: center; gap: 6px; }
+.biz-hero p { margin: 0; padding: 0 18px; }
+.biz-where { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-dim); }
+.biz-actions { display: flex; gap: 8px; margin-top: 6px; }
+.biz-stats { grid-template-columns: repeat(3, 1fr); }
+.biz-stats > div { display: flex; flex-direction: column; align-items: center; padding: 12px 4px; }
+.biz-stats > div + div { border-left: 1px solid var(--border-soft); }
+.biz-stats b { font-size: 19px; } .biz-stats span { font-size: 12px; color: var(--text-dim); }
+.biz-about { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.biz-about p { margin: 0; }
+.biz-about ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.biz-about li { display: flex; align-items: center; gap: 8px; }
+.biz-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+a.ad-card, a.phone-ad { color: var(--text); text-decoration: none; }
+.settings-back { display: none; align-items: center; gap: 6px; font-weight: 700; color: var(--brand); margin-bottom: 6px; }
+.settings2 .settings-title { text-transform: none; letter-spacing: -0.01em; font-size: 22px; }
+@media (max-width: 680px) {
+  .settings2 .settings-grid { display: block; }
+  .settings2 .settings-nav { position: static; display: flex; flex-direction: column; overflow: visible; gap: 4px; padding: 6px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border-soft); }
+  :root[data-mode="dark"] .settings2 .settings-nav { background: rgba(10, 20, 48, 0.8); }
+  .settings2 .settings-nav a { flex: none; width: auto; }
+  .settings2 .settings-nav a .meta-dim { display: block; font-size: 12px; }
+  .settings2.is-index .settings-body { display: none; }
+  .settings2.is-section .settings-nav, .settings2.is-section .settings-me { display: none; }
+  .settings-back { display: inline-flex; }
+}
+@media (max-width: 680px) { .settings2.is-index .settings-nav a.active { background: none; box-shadow: none; } }

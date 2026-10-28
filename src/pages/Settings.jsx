@@ -1,53 +1,147 @@
 // Settings — everything about your account in one place, reached from the
-// profile menu (VOIDAJ-Blueprint.md §10): Account, Privacy, Security,
-// Notifications, Preferences, Help & Support and Data.
+// profile menu (VOIDAJ-Blueprint.md §10), laid out like Nuel's mockup: your
+// card at the top, then Account, Privacy, Notifications, Verification,
+// Payments (coming soon), Appearance, Security, Preferences, Help &
+// Support, Terms & Policies and Data.
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
-import { TAGS } from '../data/seed.js'
-import { Icon } from '../components/Icons.jsx'
+import { TAGS, CHARTER } from '../data/seed.js'
+import { Icon, IconTile } from '../components/Icons.jsx'
+import { Avatar } from '../components/bits.jsx'
 import { Eagle } from '../components/Eagle.jsx'
 
 const SECTIONS = [
-  { id: 'account', icon: 'user', label: 'Account', sub: 'Name, username, email, phone, password' },
-  { id: 'privacy', icon: 'eye', label: 'Privacy', sub: 'Who sees your location and can message you' },
-  { id: 'security', icon: 'lock', label: 'Security', sub: 'Sign-ins and devices' },
-  { id: 'notifications', icon: 'bell', label: 'Notifications', sub: 'What you hear about, and how' },
-  { id: 'preferences', icon: 'sparkle', label: 'Preferences', sub: 'Theme, language, location, accessibility, interests' },
-  { id: 'help', icon: 'info', label: 'Help & Support', sub: 'Get help or report a problem' },
-  { id: 'data', icon: 'layers', label: 'Data', sub: 'Download your data or delete your account' },
+  { id: 'account', icon: 'user', tone: 'blue', label: 'Account', sub: 'Name, username, email, phone, password' },
+  { id: 'privacy', icon: 'eye', tone: 'violet', label: 'Privacy', sub: 'Who sees your location and can message you' },
+  { id: 'notifications', icon: 'bell', tone: 'orange', label: 'Notifications', sub: 'What you hear about, and how' },
+  { id: 'verification', icon: 'badge-check', tone: 'green', label: 'Verification', sub: 'Identity and the Verified tick' },
+  { id: 'payments', icon: 'wallet', tone: 'teal', label: 'Payments', sub: 'Wallet, payment methods — coming soon' },
+  { id: 'appearance', icon: 'moon', tone: 'indigo', label: 'Appearance', sub: 'Light or dark mode' },
+  { id: 'security', icon: 'lock', tone: 'red', label: 'Security', sub: 'Sign-ins and devices' },
+  { id: 'preferences', icon: 'sparkle', tone: 'pink', label: 'Preferences', sub: 'Language, location, accessibility, interests' },
+  { id: 'help', icon: 'info', tone: 'blue', label: 'Help & Support', sub: 'Get help or report a problem' },
+  { id: 'terms', icon: 'book', tone: 'navy', label: 'Terms & Policies', sub: 'The VOIDAJ Charter and how we use your data' },
+  { id: 'data', icon: 'layers', tone: 'yellow', label: 'Data', sub: 'Download your data or delete your account' },
 ]
 
 export default function Settings() {
-  const { section = 'account' } = useParams()
+  // On phones /settings is the list itself; a section opens on its own.
+  const { section: picked } = useParams()
+  const section = picked ?? 'account'
   const { user, loading } = useApp()
   if (loading) return <div className="page"><p className="meta-dim" style={{ marginTop: 40 }}>Loading…</p></div>
   if (!user) return <Navigate to="/auth" replace />
   const current = SECTIONS.find((s) => s.id === section)
   if (!current) return <Navigate to="/settings" replace />
 
-  const Body = { account: Account, privacy: Privacy, security: Security, notifications: Notifications, preferences: Preferences, help: Help, data: Data }[section]
+  const Body = { account: Account, privacy: Privacy, security: Security, notifications: Notifications, verification: Verification, payments: Payments, appearance: Appearance, preferences: Preferences, help: Help, terms: Terms, data: Data }[section]
   return (
-    <div className="page settings-page">
-      <section className="discover-hero">
-        <h1><Icon name="edit" size={22} /> Settings</h1>
-      </section>
+    <div className={`page settings-page settings2 ${picked ? 'is-section' : 'is-index'}`}>
+      <header className="page-head"><h1>Settings</h1></header>
+      <Link to="/profile/me" className="card settings-me card-link">
+        <Avatar user={user} size={52} />
+        <span><b>{user.name}</b><em>{user.handle}</em></span>
+        <span className="btn primary small">Edit profile</span>
+      </Link>
       <div className="settings-grid">
         <nav className="settings-nav" aria-label="Settings sections">
           {SECTIONS.map((s) => (
-            <NavLink key={s.id} to={s.id === 'account' ? '/settings' : `/settings/${s.id}`} end className={s.id === section ? 'active' : ''}>
-              <Icon name={s.icon} size={16} />
+            <NavLink key={s.id} to={`/settings/${s.id}`} end className={s.id === section ? 'active' : ''}>
+              <IconTile name={s.icon} tone={s.tone} size={36} iconSize={17} />
               <span><strong>{s.label}</strong><span className="meta-dim">{s.sub}</span></span>
+              <Icon name="chevron-right" size={16} className="settings-chev" />
             </NavLink>
           ))}
         </nav>
         <div className="settings-body">
+          <Link to="/settings" className="settings-back"><Icon name="back" size={16} /> Settings</Link>
           <h2 className="settings-title">{current.label}</h2>
           <Body />
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Verification, Payments, Appearance, Terms ───────────────────────
+function Verification() {
+  const { user, refreshMe } = useApp()
+  const [idNumber, setIdNumber] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const verify = async (e) => {
+    e.preventDefault()
+    if (idNumber.trim().length < 6 || busy) return
+    setBusy(true); setError('')
+    try { await api.verifyId(idNumber.trim()); await refreshMe() } catch (err) { setError(err.message) }
+    setBusy(false)
+  }
+  return (
+    <>
+      <Block title="Identity" sub="The Verified tick on your profile and VOIDAJ ID, and access to verified-only jobs.">
+        {user.idVerified ? (
+          <p className="settings-ok"><Icon name="badge-check" size={16} /> You’re verified.</p>
+        ) : (
+          <form className="settings-inline" onSubmit={verify}>
+            <Field label="Government ID number" hint="NIN or passport number. Demo only — nothing is checked or stored yet.">
+              <input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="e.g. NIN" />
+            </Field>
+            {error && <p className="auth-error">{error}</p>}
+            <button className="btn primary small" disabled={idNumber.trim().length < 6 || busy}>{busy ? 'Verifying…' : 'Verify me'}</button>
+          </form>
+        )}
+      </Block>
+      <Block title="Email and phone">
+        <p className="meta-dim">Confirming your email and phone is coming soon.</p>
+      </Block>
+    </>
+  )
+}
+
+// From Nuel's payment designs (Oct 27). Not built yet — see DO-LATER.md.
+function Payments() {
+  const rows = [
+    ['wallet', 'Wallet', 'Add funds and pay for things on VOIDAJ'],
+    ['tag', 'Payment methods', 'Card, bank transfer, mobile money, Apple Pay, Google Pay'],
+    ['rocket', 'Promote a business or post', 'Plans from a few days to two weeks'],
+    ['award', 'Premium', 'Custom profile designs, advanced search, priority support'],
+    ['ticket', 'Event tickets', 'Regular, VIP and group tickets'],
+    ['hand-coins', 'Quick Job payments', 'Held safely until the job is done'],
+    ['heart', 'Support a creator', 'One-off or monthly tips'],
+    ['clock', 'Transaction history', 'Everything you’ve paid and received'],
+  ]
+  return (
+    <>
+      <div className="card settings-soon-card">
+        <IconTile name="wallet" tone="teal" size={52} />
+        <div><strong>Payments are coming soon</strong><span className="meta-dim">Here’s what’s on the way.</span></div>
+      </div>
+      <ul className="settings-pay-list">
+        {rows.map(([icon, title, sub]) => (
+          <li key={title} className="card"><Icon name={icon} size={18} /><span><b>{title}</b><em>{sub}</em></span><span className="soon-badge">Soon</span></li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function Appearance() {
+  return <ThemeBlock />
+}
+
+function Terms() {
+  return (
+    <>
+      <Block title="The VOIDAJ Charter" sub="Applies in every community, in every city.">
+        <ol className="settings-charter">{CHARTER.map((c) => <li key={c}>{c}</li>)}</ol>
+      </Block>
+      <Block title="Your data">
+        <p className="meta-dim">Your location is only shared at the level you choose in Privacy. You can download everything we hold about you, or delete your account, under Data.</p>
+        <Link to="/settings/data" className="btn ghost small">Go to Data</Link>
+      </Block>
+    </>
   )
 }
 
@@ -366,8 +460,6 @@ function Preferences() {
 
   return (
     <>
-      <ThemeBlock />
-
       <Block title="Language">
         <Field label="App language">
           <select className="job-select" value={settings.language} onChange={(e) => set({ language: e.target.value })}>

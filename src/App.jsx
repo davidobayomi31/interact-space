@@ -23,6 +23,7 @@ import NewCommunity from './pages/NewCommunity.jsx'
 import Explore from './pages/Explore.jsx'
 import Communities from './pages/Communities.jsx'
 import Events from './pages/Events.jsx'
+import Business from './pages/Business.jsx'
 import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
@@ -276,6 +277,7 @@ export default function App() {
               <Route path="/explore" element={<Explore />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/business/:id" element={<Business />} />
               <Route path="/add" element={<AddHub />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />

@@ -1419,6 +1419,15 @@ app.get('/api/ads', async (req, res) => {
   res.json({ ads: rows.map(serializeAd) })
 })
 
+// One business, from its ad — the page an ad opens.
+app.get('/api/ads/:id', async (req, res, next) => {
+  if (req.params.id === 'mine') return next()
+  const row = await q.get('SELECT * FROM ads WHERE id = ? AND active = 1', req.params.id)
+  if (!row) return err(res, 404, 'Business not found.')
+  const owner = publicUser(await getUserById(row.owner_id))
+  res.json({ ad: { ...serializeAd(row), owner } })
+})
+
 app.get('/api/ads/mine', requireAuth, async (req, res) => {
   const rows = await q.all('SELECT * FROM ads WHERE owner_id = ? ORDER BY created_at DESC', req.userId)
   res.json({ ads: rows.map(serializeAd) })

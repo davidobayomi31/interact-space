@@ -125,6 +125,7 @@ export const listAds = (params = {}) => {
   const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
   return req(`/ads${qs ? `?${qs}` : ''}`).then((d) => d.ads)
 }
+export const getAd = (id) => req(`/ads/${id}`).then((d) => d.ad)
 export const listMyAds = () => req('/ads/mine').then((d) => d.ads)
 export const createAd = (body) => req('/ads', { method: 'POST', body }).then((d) => d.ad)
 export const payForAd = (id) => req(`/ads/${id}/pay`, { method: 'POST' }).then((d) => d.ad)
