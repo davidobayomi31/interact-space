@@ -261,26 +261,7 @@ export async function seedExtras() {
     }
   }
 
-  // Statuses last a day, so keep a few sample ones live for the demo.
-  // Checks the demo accounts only: real accounts' ids start with 'u-' too,
-  // so one real live status used to stop the demo ones coming back.
-  if (!(await q.get('SELECT 1 FROM statuses s JOIN users u ON u.id = s.user_id WHERE s.expires_at > ? AND COALESCE(u.is_seed, 0) = 1 LIMIT 1', now))) {
-    const DAY_MS = 24 * HOUR
-    const STATUSES = [
-      ['u-kunle', '/images/communities/lagos-lens-collective.jpg', 'Out shooting in Lagos Island today', ''],
-      ['u-ngozi', '/images/communities/green-lagos.jpg', '', ''],
-      ['u-tunde', '', 'Big announcement coming Monday 👀', 'linear-gradient(135deg, #3B82F6, #8B5CF6)'],
-      ['u-obi', '/images/communities/naija-devs.jpg', 'Hack night at the hub', ''],
-      ['u-funke', '/images/events/ev-market-popup.jpg', 'New adire drop this weekend', ''],
-      ['u-amina', '', 'Who’s going to Demo Day? 🎤', 'linear-gradient(135deg, #00C896, #3B82F6)'],
-      ['u-halima', '/images/communities/balogun-market-hub.jpg', '', ''],
-    ]
-    for (const [i, [user, image, text, bg]] of STATUSES.entries()) {
-      const at = now - (i + 1) * 45 * 60 * 1000
-      await q.run('INSERT INTO statuses (id, user_id, image, text, bg, city, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        uid2('st'), user, image, text, bg, 'Lagos', at, at + DAY_MS)
-    }
-  }
+  await keepDemoStatuses()
 
   if ((await q.get('SELECT COUNT(*) AS n FROM ratings')).n === 0) {
     const RATING_SQL = 'INSERT INTO ratings (user_id, community_id, stars, review, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING'
@@ -323,5 +304,31 @@ export async function seedExtras() {
         await q.run(CHAT_MSG_SQL, uid2('gm'), c.id, by, body, now - (2 * HOUR - i * 4 * 60 * 1000))
       }
     }
+  }
+}
+
+// Demo statuses stay on until David says to turn them off (Oct 28): each
+// demo account always has a live status. Statuses last a day, so this
+// tops up any that have expired. Called on start-up and every time
+// statuses are listed, so a long-running server never runs out of them.
+export const SHOW_DEMO_STATUSES = true
+const DEMO_STATUSES = [
+  ['u-kunle', '/images/communities/lagos-lens-collective.jpg', 'Out shooting in Lagos Island today', ''],
+  ['u-ngozi', '/images/communities/green-lagos.jpg', '', ''],
+  ['u-tunde', '', 'Big announcement coming Monday 👀', 'linear-gradient(135deg, #3B82F6, #8B5CF6)'],
+  ['u-obi', '/images/communities/naija-devs.jpg', 'Hack night at the hub', ''],
+  ['u-funke', '/images/events/ev-market-popup.jpg', 'New adire drop this weekend', ''],
+  ['u-amina', '', 'Who’s going to Demo Day? 🎤', 'linear-gradient(135deg, #00C896, #3B82F6)'],
+  ['u-halima', '/images/communities/balogun-market-hub.jpg', '', ''],
+]
+export async function keepDemoStatuses() {
+  if (!SHOW_DEMO_STATUSES) return
+  const t = Date.now()
+  const live = new Set((await q.all('SELECT DISTINCT user_id FROM statuses WHERE expires_at > ?', t)).map((r) => r.user_id))
+  for (const [i, [user, image, text, bg]] of DEMO_STATUSES.entries()) {
+    if (live.has(user)) continue
+    const at = t - (i + 1) * 45 * 60 * 1000
+    await q.run('INSERT INTO statuses (id, user_id, image, text, bg, city, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      `st-${crypto.randomUUID().slice(0, 8)}`, user, image, text, bg, 'Lagos', at, at + 24 * HOUR)
   }
 }

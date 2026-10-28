@@ -13,7 +13,7 @@ import q, {
   serializeAd, serializeLive, serializeEvent, parseJson, mediaLabel, timeAgo,
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
 } from './db.js'
-import { seedIfEmpty, seedExtras } from './seed.js'
+import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
 import { storageReady, uploadImage, readImage, cleanCover } from './storage.js'
@@ -788,6 +788,7 @@ app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
 // ── Status: photos and lines of text that last 24 hours ─────────────
 const STATUS_TTL = 24 * 60 * 60 * 1000
 app.get('/api/statuses', async (req, res) => {
+  await keepDemoStatuses()
   const t = now()
   const rows = await q.all('SELECT * FROM statuses WHERE expires_at > ? ORDER BY created_at ASC', t)
   const following = req.userId ? new Set((await q.all('SELECT followee_id FROM follows WHERE follower_id = ?', req.userId)).map((r) => r.followee_id)) : new Set()
