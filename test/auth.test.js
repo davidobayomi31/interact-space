@@ -70,6 +70,38 @@ describe('auth', () => {
     expect((await agent.get('/api/auth/me')).body.user).not.toBeNull()
   })
 
+  // Idea #4
+  it('refuses a password change when the current password is wrong', async () => {
+    const { agent } = await signUp()
+    const res = await agent.post('/api/auth/password')
+      .send({ current: 'not-my-password', next: 'brand-new-password' })
+    expect(res.status).toBe(401)
+  })
+
+  // Idea #5
+  it('changing the password signs out other devices but keeps this one', async () => {
+    const { agent, email, password } = await signUp()
+    const otherDevice = request.agent(app)
+    await otherDevice.post('/api/auth/login').send({ email, password })
+    expect((await otherDevice.get('/api/auth/me')).body.user).not.toBeNull()
+
+    const res = await agent.post('/api/auth/password').send({ current: password, next: 'brand-new-password' })
+    expect(res.status).toBe(200)
+    expect((await otherDevice.get('/api/auth/me')).body.user).toBeNull()
+    expect((await agent.get('/api/auth/me')).body.user).not.toBeNull()
+  })
+
+  // Idea #6
+  it('after a password change, only the new password logs in', async () => {
+    const { agent, email, password } = await signUp()
+    await agent.post('/api/auth/password').send({ current: password, next: 'brand-new-password' })
+
+    const oldLogin = await request(app).post('/api/auth/login').send({ email, password })
+    const newLogin = await request(app).post('/api/auth/login').send({ email, password: 'brand-new-password' })
+    expect(oldLogin.status).toBe(401)
+    expect(newLogin.status).toBe(200)
+  })
+
   it('logout clears the session', async () => {
     const { agent } = await signUp()
     await agent.post('/api/auth/logout')

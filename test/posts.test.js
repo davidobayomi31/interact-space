@@ -56,6 +56,16 @@ describe('posts, voting and threaded comments', () => {
     expect(res.status).toBe(400)
   })
 
+  // Idea #11
+  it('rejects an unknown reaction type but accepts a real one', async () => {
+    const post = await createPost(alice, community.id)
+    const bad = await bob.post(`/api/posts/${post.id}/spark`).send({ kind: 'banana' })
+    expect(bad.status).toBe(400)
+
+    const good = await bob.post(`/api/posts/${post.id}/spark`).send({ kind: 'fire' })
+    expect(good.status).toBe(200)
+  })
+
   it('requires a title for community posts', async () => {
     const res = await alice.post('/api/posts').send({ communityId: community.id, title: '   ' })
     expect(res.status).toBe(400)
