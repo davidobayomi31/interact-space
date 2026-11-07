@@ -51,6 +51,62 @@ describe('communities and membership', () => {
     expect(post).toMatchObject({ title: 'Now I can post', communityId: community.id, score: 0 })
   })
 
+  // Idea #1
+  it('rejects a rating outside 1-5 stars', async () => {
+    const { agent } = await signUp()
+    const community = await createCommunity(agent)
+    const res = await agent.post(`/api/communities/${community.id}/rate`).send({ stars: 9 })
+    expect(res.status).toBe(400)
+  })
+
+  // Idea #2
+  it('records a valid rating and replaces it when rated again', async () => {
+    const { agent } = await signUp()
+    const community = await createCommunity(agent)
+
+    let res = await agent.post(`/api/communities/${community.id}/rate`).send({ stars: 4 })
+    expect(res.body.community.rating).toMatchObject({ mine: 4, avg: 4, count: 1 })
+
+    res = await agent.post(`/api/communities/${community.id}/rate`).send({ stars: 2 })
+    expect(res.body.community.rating).toMatchObject({ mine: 2, avg: 2, count: 1 })
+  })
+
+  // Idea #7
+  it('does not let a regular member promote someone', async () => {
+    const { agent: owner } = await signUp('Owner')
+    const { agent: memberA } = await signUp('Member A')
+    const { agent: memberB, user: b } = await signUp('Member B')
+    const community = await createCommunity(owner)
+    await memberA.post(`/api/communities/${community.id}/join`)
+    await memberB.post(`/api/communities/${community.id}/join`)
+
+    const res = await memberA.post(`/api/communities/${community.id}/roles`).send({ userId: b.id, role: 'moderator' })
+    expect(res.status).toBe(403)
+  })
+
+  // Idea #8
+  it('lets the owner make a member a moderator, who can then resolve reports', async () => {
+    const { agent: owner } = await signUp('Owner')
+    const { agent: mod, user: modUser } = await signUp('Future Mod')
+    const { agent: poster } = await signUp('Poster')
+    const community = await createCommunity(owner)
+    await mod.post(`/api/communities/${community.id}/join`)
+    await poster.post(`/api/communities/${community.id}/join`)
+
+    const promote = await owner.post(`/api/communities/${community.id}/roles`).send({ userId: modUser.id, role: 'moderator' })
+    expect(promote.body).toMatchObject({ ok: true, role: 'moderator' })
+
+    const post = await createPost(poster, community.id, 'Spammy post')
+    await poster.post('/api/reports').send({ targetType: 'post', targetId: post.id, reason: 'Spam' })
+    const queue = (await mod.get('/api/mod/reports')).body.reports
+    const report = queue.find((r) => r.targetId === post.id)
+    expect(report).toBeDefined()
+
+    const resolve = await mod.post(`/api/reports/${report.id}/resolve`).send({ action: 'remove' })
+    expect(resolve.status).toBe(200)
+    expect((await poster.get(`/api/posts/${post.id}`)).status).toBe(404)
+  })
+
   it('returns 404 for a community that does not exist', async () => {
     const { agent } = await signUp()
     const res = await agent.post('/api/communities/does-not-exist/join')
