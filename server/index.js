@@ -1686,7 +1686,8 @@ app.use((error, _req, res, _next) => {
 // there is no port to listen on. Locally it is a normal server.
 // API_PORT is separate from PORT so a harness-injected PORT (for Vite) can't
 // steal it.
-if (!process.env.VERCEL) {
+// Tests (Vitest sets VITEST) drive the app in-process through Supertest.
+if (!process.env.VERCEL && !process.env.VITEST) {
   const PORT = process.env.API_PORT || 8787
   app.listen(PORT, () => {
     console.log(`VOIDAJ API on http://localhost:${PORT}  (companion: ${process.env.ANTHROPIC_API_KEY ? 'LLM' : 'rule-based fallback'})`)
