@@ -28,7 +28,7 @@ function HomeSearch({ communities, posts, jobs, events }) {
   const results = useMemo(() => (term.length < 2 ? [] : [
     ...USERS.filter((u) => has(u.name, u.title, u.handle)).map((u) => ({ id: u.id, icon: 'user', kind: 'Person', title: u.name, to: `/profile/${u.id}` })),
     ...communities.filter((c) => has(c.name, c.tagline, c.tags)).map((c) => ({ id: c.id, icon: 'community', kind: 'Community', title: c.name, to: `/community/${c.id}` })),
-    ...events.filter((e) => has(e.title, e.venue, e.tags)).map((e) => ({ id: e.id, icon: 'calendar', kind: 'Event', title: e.title, to: e.communityId ? `/community/${e.communityId}?tab=events` : `/events?event=${e.id}` })),
+    ...events.filter((e) => has(e.title, e.venue, e.tags)).map((e) => ({ id: e.id, icon: 'calendar', kind: 'Event', title: e.title, to: `/event/${e.id}` })),
     ...jobs.filter((j) => has(j.title, j.area, j.category)).map((j) => ({ id: j.id, icon: 'briefcase', kind: 'Job', title: j.title, to: `/jobs?job=${j.id}` })),
     ...posts.filter((p) => has(p.title, p.body)).map((p) => ({ id: p.id, icon: 'chat', kind: 'Post', title: p.title, to: `/post/${p.id}` })),
   ].slice(0, 6)), [term, communities, events, jobs, posts]) // eslint-disable-line
@@ -148,7 +148,7 @@ function Row({ title, to, children }) {
 
 export function EventTile({ event }) {
   const c = findCommunity(event.communityId)
-  const to = c ? `/community/${c.id}?tab=events` : `/events?event=${event.id}`
+  const to = `/event/${event.id}`
   return (
     <div className="tile event-tile card-link" style={{ '--accent': c?.accent ?? 'var(--gold)' }}>
       <div className="tile-top">
@@ -222,6 +222,53 @@ function Welcome() {
   )
 }
 
+// "Your Space": you, your numbers and your citizen level.
+function YourSpace() {
+  const { user, profile } = useApp()
+  const [j, setJ] = useState(null)
+  useEffect(() => { api.journey('me').then(setJ).catch(() => {}) }, [user?.id])
+  return (
+    <section className="card home-side-card ys-card">
+      <Link to="/profile/me" className="ys-me">
+        <Avatar user={user} size={44} />
+        <span><b>{user.name}</b><em>View profile</em></span>
+      </Link>
+      <div className="ys-stats">
+        <Link to="/profile/me"><b>{profile.connections.length}</b><span>Connections</span></Link>
+        <Link to="/communities?tab=mine"><b>{profile.communities.length}</b><span>Communities</span></Link>
+        <Link to="/badges"><b>{j ? j.badges.length + j.custom.length : '–'}</b><span>Badges</span></Link>
+      </div>
+      {j && (
+        <Link to="/badges" className="ys-level">
+          <span><b>{j.level.name}</b>{j.next && <em>{j.toNext} pts to {j.next.name}</em>}</span>
+          <span className="lv-bar"><span style={{ width: `${Math.max(4, j.progress)}%` }} /></span>
+        </Link>
+      )}
+    </section>
+  )
+}
+
+// "My City": the city photo as a map with glowing pins, and what's on.
+function MyCityCard({ city, events, jobs }) {
+  const photo = `/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`
+  return (
+    <section className="card home-side-card mc-card">
+      <div className="row-head"><h2>My City · {city}</h2><Link to="/city">Open <Icon name="arrow" size={13} /></Link></div>
+      <Link to="/city" className="mc-map" style={{ '--img': `url(${photo}), url(/images/city/lagos.jpg)` }} aria-label={`Open the map of ${city}`}>
+        <i className="mc-pin p1"><Icon name="calendar" size={12} /></i>
+        <i className="mc-pin p2"><Icon name="briefcase" size={12} /></i>
+        <i className="mc-pin p3"><Icon name="users" size={12} /></i>
+        <i className="mc-pin p4"><Icon name="store" size={12} /></i>
+        <span className="mc-cta"><Icon name="map-pin" size={13} /> View map</span>
+      </Link>
+      <div className="mc-counts">
+        <Link to="/events"><Icon name="calendar" size={14} /> {events.length} events</Link>
+        <Link to="/jobs"><Icon name="briefcase" size={14} /> {jobs.length} jobs</Link>
+      </div>
+    </section>
+  )
+}
+
 // A compact row for the side column: face, name, Follow.
 function SidePerson({ person }) {
   const { user, profile, follow } = useApp()
@@ -275,7 +322,7 @@ export default function Home() {
 
   // Events, people and jobs sit between posts rather than above them.
   const weave = (list) => list.flatMap((p, n) => {
-    const out = [<FeedPost key={p.id} post={p} />]
+    const out = [<FeedPost key={p.id} post={p} onLoomed={(np) => np.audience !== 'community' && setFeed((f) => [np, ...(f || [])])} />]
     if (n === 1 && events.length) out.push(
       <div key="events" className="feed-inline"><Row title={`Happening in ${city}`} to="/events">{events.map((e) => <EventTile key={e.id} event={e} />)}</Row></div>)
     if (n === 3 && people.length) out.push(
@@ -345,8 +392,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Wide screens: what's around you sits beside the feed. */}
+        {/* Wide screens: what's around you sits beside the feed — Nuel's
+            "Hybrid Experience" desktop concept (Nov 3): your space, your city
+            on a map, then what's coming up and quick opportunities. */}
         <aside className="home-aside">
+          {user && <YourSpace />}
+          <MyCityCard city={city} events={events} jobs={jobs} />
           {events.length > 0 && (
             <section className="card home-side-card">
               <div className="row-head"><h2>Happening in {city}</h2><Link to="/events">See all <Icon name="arrow" size={13} /></Link></div>

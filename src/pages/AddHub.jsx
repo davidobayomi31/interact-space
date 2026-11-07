@@ -107,7 +107,7 @@ export default function AddHub() {
       )}
       {picking === 'event' && (
         <Sheet title="New event" icon="calendar" tone="pink" onClose={close}>
-          <EventForm onCancel={close} onCreated={(ev) => navigate(ev.communityId ? `/community/${ev.communityId}?tab=events` : `/events?event=${ev.id}`)} />
+          <EventForm onCancel={close} onCreated={(ev) => navigate(`/event/${ev.id}`)} />
         </Sheet>
       )}
     </div>

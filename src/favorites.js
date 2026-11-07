@@ -37,3 +37,22 @@ export function toggleFavorite(item) {
 }
 
 export const removeFavorite = (kind, id) => write(read().filter((f) => !same(f, kind, id)))
+
+// ── Stash: saves sorted into collections (Nuel's mockup v2.0) ────────
+// A save with no collection is in "All Stash".
+export const STASH_COLLECTIONS = [
+  { id: 'all', label: 'All Stash', icon: 'layers' },
+  { id: 'jobs', label: 'Jobs & Opportunities', icon: 'briefcase' },
+  { id: 'events', label: 'Events', icon: 'calendar' },
+  { id: 'businesses', label: 'Businesses', icon: 'store' },
+  { id: 'trips', label: 'Trips', icon: 'car' },
+  { id: 'ideas', label: 'Ideas & Inspiration', icon: 'sparkle' },
+]
+
+export const stashOf = (list, kind, id) => list.find((f) => same(f, kind, id))
+
+// Put an item in a collection (or move it there if it's already stashed).
+export function stash(item, collection = 'all') {
+  const list = read().filter((f) => !same(f, item.kind, item.id))
+  write([{ ...item, collection, savedAt: Date.now() }, ...list])
+}

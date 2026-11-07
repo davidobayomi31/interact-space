@@ -153,7 +153,7 @@ export function EventCard({ event, shared = [], source, because }) {
   const day = d.toLocaleDateString('en-GB', { day: 'numeric' })
   const month = d.toLocaleDateString('en-GB', { month: 'short' })
   return (
-    <div className={`card event-card ${community ? 'card-link' : ''}`}>
+    <div className="card event-card card-link">
       {(event.cover ?? community?.cover) && <img className="event-card-photo" src={event.cover ?? community.cover} alt="" loading="lazy" />}
       <div className="event-head">
         <div className="date-block" style={{ '--accent': community?.accent ?? 'var(--gold)' }}>
@@ -161,9 +161,7 @@ export function EventCard({ event, shared = [], source, because }) {
           <span className="date-month">{month}</span>
         </div>
         <div>
-          {community
-            ? <Link to={`/community/${community.id}?tab=events`} className="card-title stretched">{event.title}</Link>
-            : <div className="card-title">{event.title}</div>}
+          <Link to={`/event/${event.id}`} className="card-title stretched">{event.title}</Link>
           <div className="meta-dim">
             <Icon name="clock" size={12} /> {event.time} · <Icon name="map-pin" size={12} /> {event.venue}
           </div>

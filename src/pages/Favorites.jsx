@@ -1,9 +1,11 @@
-// Saved — everything the member has hearted, in one place, filterable by
-// kind. Reached from the profile menu. Saved in this browser for now (see favorites.js).
+// My Stash — everything the member has saved, in one place, sorted into
+// collections (Nuel's mockup v2.0: All Stash, Jobs & Opportunities, Events,
+// Businesses, Trips, Ideas & Inspiration) and filterable by kind. Kept in
+// this browser for now (see favorites.js).
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/Icons.jsx'
-import { useFavorites, removeFavorite } from '../favorites.js'
+import { useFavorites, removeFavorite, STASH_COLLECTIONS } from '../favorites.js'
 
 const KINDS = [
   { id: 'all', label: 'All' },
@@ -18,15 +20,26 @@ const ICON = Object.fromEntries(KINDS.filter((k) => k.icon).map((k) => [k.id, k.
 export default function Favorites() {
   const favorites = useFavorites()
   const [kind, setKind] = useState('all')
-  const shown = kind === 'all' ? favorites : favorites.filter((f) => f.kind === kind)
+  const [coll, setColl] = useState('all')
+  const inColl = coll === 'all' ? favorites : favorites.filter((f) => (f.collection || 'all') === coll)
+  const shown = kind === 'all' ? inColl : inColl.filter((f) => f.kind === kind)
+  const collCount = (id) => (id === 'all' ? favorites.length : favorites.filter((f) => (f.collection || 'all') === id).length)
   const count = (id) => (id === 'all' ? favorites.length : favorites.filter((f) => f.kind === id).length)
 
   return (
     <div className="page notif-page">
       <section className="discover-hero">
-        <h1><Icon name="heart" size={24} /> Saved</h1>
-        <p className="meta-dim">Your favorites: communities, posts, people, jobs and events you’ve hearted to come back to.</p>
+        <h1><Icon name="bookmark" size={24} /> My Stash</h1>
+        <p className="meta-dim">Posts, people, jobs, events and communities you’ve kept for later, sorted into collections.</p>
       </section>
+
+      <div className="stash-colls" role="tablist" aria-label="Collections">
+        {STASH_COLLECTIONS.map((c) => (
+          <button key={c.id} role="tab" aria-selected={coll === c.id} className={coll === c.id ? 'on' : ''} onClick={() => setColl(c.id)}>
+            <Icon name={c.icon} size={18} /><b>{c.label}</b><em>{collCount(c.id)} saved</em>
+          </button>
+        ))}
+      </div>
 
       <div className="filter-row" role="tablist" aria-label="What to show">
         {KINDS.map((k) => (

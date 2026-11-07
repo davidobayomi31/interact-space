@@ -10,7 +10,7 @@ import q, {
   init, selfUser, publicUser, getUserByEmail, getUserById,
   serializeCommunity, serializePost, threadForPost,
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
-  serializeAd, serializeLive, serializeEvent, parseJson, mediaLabel, timeAgo,
+  serializeAd, serializeLive, serializeEvent, SPARK_KINDS, journey, parseJson, mediaLabel, timeAgo,
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
 } from './db.js'
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
@@ -647,6 +647,9 @@ app.get('/api/users/:id', async (req, res) => {
     : await getUserById(key)
   if (!row || row.deleted_at) return err(res, 404, 'Person not found.')
   const id = row.id
+  // Their citizen level, kept fresh whenever someone opens the profile.
+  const j = await journey(row)
+  row.citizen_level = j.level.level
   const [comms, conns, followers, following, posts, events, jobs, hired] = await Promise.all([
     q.all('SELECT m.community_id, m.created_at, c.name FROM memberships m LEFT JOIN communities c ON c.id = m.community_id WHERE m.user_id = ? ORDER BY m.created_at DESC', id),
     q.get('SELECT COUNT(*)::int AS n FROM connections WHERE user_id = ?', id),
@@ -661,7 +664,7 @@ app.get('/api/users/:id', async (req, res) => {
   const activity = [
     ...posts.slice(0, 6).map((p) => ({ kind: 'post', text: `Posted “${(p.title || p.body || 'a photo').slice(0, 60)}”${p.community ? ` in ${p.community}` : p.audience === 'city' ? ' to the city' : ''}`, at: p.created_at, to: `/post/${p.id}` })),
     ...comms.slice(0, 6).map((m) => ({ kind: 'community', text: `Joined ${m.name || 'a community'}`, at: m.created_at, to: `/community/${m.community_id}` })),
-    ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: e.community_id ? `/community/${e.community_id}?tab=events` : `/events?event=${e.id}` })),
+    ...events.slice(0, 4).map((e) => ({ kind: 'event', text: `Created the event “${e.title}”`, at: e.created_at, to: `/event/${e.id}` })),
     ...jobs.slice(0, 4).map((j) => ({ kind: 'job', text: `Posted a quick job: ${j.title}`, at: j.created_at, to: `/jobs?job=${j.id}` })),
   ].filter((a) => a.at).sort((a, b) => b.at - a.at).slice(0, 10)
   res.json({ user: {
@@ -671,6 +674,8 @@ app.get('/api/users/:id', async (req, res) => {
     joinedAt: row.created_at,
     stats: { connections: conns.n, followers: followers.n, following: following.n, communities: comms.length, events: events.length, posts: posts.length, jobsPosted: jobs.length, jobsDone: hired.n },
     activity,
+    journey: { points: j.points, level: j.level, next: j.next, toNext: j.toNext, progress: j.progress,
+      badges: [...j.badges, ...j.custom].filter((b) => id === req.userId || !b.hidden) },
   } })
 })
 
@@ -778,6 +783,32 @@ app.get('/api/rsvps', async (req, res) => {
   res.json({ counts: Object.fromEntries(counts.map((r) => [r.event_id, r.n])), mine: mine.map((r) => r.event_id) })
 })
 
+// One event's people, for its details page (Nuel, Oct 29: "when I tap on
+// this I would like it to show details about it and the organizers").
+// Organisers are whoever created it (or the demo host), then the staff of
+// the community it belongs to. Going is everyone who tapped Join.
+app.get('/api/events/:id/people', async (req, res) => {
+  const id = String(req.params.id).slice(0, 80)
+  const row = await q.get('SELECT * FROM events WHERE id = ?', id)
+  const communityId = row?.community_id || String(req.query.community || '').slice(0, 80) || null
+  const hostId = row?.creator_id || String(req.query.host || '').slice(0, 80) || null
+  const [host, staff, going] = await Promise.all([
+    hostId ? getUserById(hostId) : null,
+    communityId ? q.all(`SELECT u.*, m.role FROM memberships m JOIN users u ON u.id = m.user_id
+      WHERE m.community_id = ? AND m.role IN ${STAFF_SQL} AND u.deleted_at IS NULL
+      ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END LIMIT 6`, communityId) : [],
+    q.all(`SELECT u.* FROM event_rsvps r JOIN users u ON u.id = r.user_id WHERE r.event_id = ? AND u.deleted_at IS NULL
+      ORDER BY r.created_at DESC LIMIT 40`, id),
+  ])
+  const organizers = []
+  if (host) organizers.push({ user: publicUser(host), role: 'Host' })
+  for (const s of staff) {
+    if (organizers.some((o) => o.user.id === s.id)) continue
+    organizers.push({ user: publicUser(s), role: s.role === 'owner' ? 'Community owner' : s.role === 'admin' ? 'Community admin' : 'Moderator' })
+  }
+  res.json({ event: row ? serializeEvent(row) : null, organizers: organizers.filter((o) => o.user), going: going.map(publicUser).filter(Boolean) })
+})
+
 app.post('/api/events/:id/rsvp', requireAuth, async (req, res) => {
   const id = String(req.params.id).slice(0, 80)
   const { changes } = await q.run('DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?', id, req.userId)
@@ -862,6 +893,114 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
   const id = uid('c')
   await q.run('INSERT INTO comments (id, post_id, parent_id, author_id, body, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, post.id, parentId || null, req.userId, body.trim(), now())
   res.json({ post: await serializePost(post, req.userId), comments: await threadForPost(post.id, req.userId) })
+})
+
+// ── Spark and Loom (the engagement system) ──────────────────────────
+// Spark: react to a post. Send the same kind again, or null, to take it back.
+app.post('/api/posts/:id/spark', requireAuth, async (req, res) => {
+  const post = await q.get('SELECT * FROM posts WHERE id = ?', req.params.id)
+  if (!post || post.hidden) return err(res, 404, 'Post not found.')
+  const kind = req.body?.kind ?? null
+  if (kind !== null && !SPARK_KINDS.includes(kind)) return err(res, 400, 'Unknown spark.')
+  if (kind === null) await q.run('DELETE FROM post_sparks WHERE post_id = ? AND user_id = ?', post.id, req.userId)
+  else await q.run(`INSERT INTO post_sparks (post_id, user_id, kind, created_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT (post_id, user_id) DO UPDATE SET kind = EXCLUDED.kind, created_at = EXCLUDED.created_at`, post.id, req.userId, kind, now())
+  res.json({ post: await serializePost(post, req.userId) })
+})
+
+// Loom: spread a post to your feed (everyone or your city) or into one of
+// your communities, with an optional line of your own on top.
+app.post('/api/posts/:id/loom', requireAuth, async (req, res) => {
+  let post = await q.get('SELECT * FROM posts WHERE id = ?', req.params.id)
+  if (!post || post.hidden) return err(res, 404, 'Post not found.')
+  // Looming a Loom spreads the original.
+  if (post.loom_of) post = (await q.get('SELECT * FROM posts WHERE id = ? AND hidden = 0', post.loom_of)) || post
+  const to = ['public', 'city', 'community'].includes(req.body?.to) ? req.body.to : 'public'
+  const note = String(req.body?.note || '').trim().slice(0, 500)
+  const me = await getUserById(req.userId)
+  const id = uid('p')
+  if (to === 'community') {
+    const communityId = String(req.body?.communityId || '')
+    const member = await q.get('SELECT 1 FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, communityId)
+    if (!member) return err(res, 403, 'Join the community to loom into it.')
+    await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, loom_of, created_at) VALUES (?, ?, ?, ?, ?, '[]', 'community', ?, ?, ?)`,
+      id, communityId, req.userId, `Loomed: ${(post.title || post.body || 'a post').slice(0, 100)}`, note, me?.city || 'Lagos', post.id, now())
+  } else {
+    await q.run(`INSERT INTO posts (id, community_id, author_id, title, body, media, audience, city, loom_of, created_at) VALUES (?, NULL, ?, '', ?, '[]', ?, ?, ?, ?)`,
+      id, req.userId, note, to, me?.city || 'Lagos', post.id, now())
+  }
+  res.json({ post: await serializePost(await q.get('SELECT * FROM posts WHERE id = ?', id), req.userId) })
+})
+
+// Posts carrying a #hashtag, newest first.
+app.get('/api/tags/:tag', async (req, res) => {
+  const tag = String(req.params.tag || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 40)
+  if (!tag) return res.json({ tag, posts: [] })
+  const rows = await q.all(`SELECT * FROM posts WHERE hidden = 0 AND (LOWER(body) ~ ? OR LOWER(title) ~ ?)
+    ORDER BY created_at DESC LIMIT 60`, `#${tag}([^a-z0-9_]|$)`, `#${tag}([^a-z0-9_]|$)`)
+  res.json({ tag, posts: await Promise.all(rows.map((p) => serializePost(p, req.userId))) })
+})
+
+// @handle → the member, for mentions.
+app.get('/api/handles/:handle', async (req, res) => {
+  const h = '@' + String(req.params.handle || '').replace(/^@/, '').toLowerCase().slice(0, 40)
+  const row = await q.get('SELECT * FROM users WHERE LOWER(handle) = ? AND deleted_at IS NULL', h)
+  if (!row) return err(res, 404, 'No one has that handle.')
+  res.json({ user: publicUser(row) })
+})
+
+// Handles that start with what's been typed, for the @ suggestions.
+app.get('/api/handles', async (req, res) => {
+  const start = String(req.query.q || '').replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 30)
+  const rows = await q.all(`SELECT * FROM users WHERE deleted_at IS NULL AND (LOWER(handle) LIKE ? OR LOWER(name) LIKE ?)
+    ORDER BY COALESCE(is_seed, 0), name LIMIT 6`, `@${start}%`, `${start}%`)
+  res.json({ users: rows.map(publicUser).filter(Boolean) })
+})
+
+// ── Citizen level and badges (Badging) ──────────────────────────────
+app.get('/api/users/:id/journey', async (req, res) => {
+  const key = req.params.id === 'me' ? req.userId : req.params.id
+  const row = key && (key.startsWith('@') ? await q.get('SELECT * FROM users WHERE LOWER(handle) = LOWER(?)', key) : await getUserById(key))
+  if (!row || row.deleted_at) return err(res, 404, 'Person not found.')
+  const j = await journey(row)
+  // Other people don't see badges you've hidden.
+  if (row.id !== req.userId) {
+    j.badges = j.badges.filter((b) => !b.hidden)
+    j.custom = j.custom.filter((b) => !b.hidden)
+    delete j.stats
+  }
+  res.json(j)
+})
+
+const BADGE_STYLES = ['violet', 'blue', 'teal', 'gold', 'red', 'green', 'orange', 'silver']
+app.post('/api/badges', requireAuth, async (req, res) => {
+  const name = String(req.body?.name || '').trim().slice(0, 32)
+  if (name.length < 2) return err(res, 400, 'Give the badge a name.')
+  const style = BADGE_STYLES.includes(req.body?.style) ? req.body.style : 'violet'
+  const count = (await q.get('SELECT COUNT(*)::int AS n FROM custom_badges WHERE owner_id = ?', req.userId)).n
+  if (count >= 12) return err(res, 400, 'You can make up to 12 badges.')
+  await q.run('INSERT INTO custom_badges (id, owner_id, name, style, created_at) VALUES (?, ?, ?, ?, ?)', uid('bd'), req.userId, name, style, now())
+  res.json(await journey(await getUserById(req.userId)))
+})
+
+// Show or hide a badge on your profile (earned or made).
+app.post('/api/badges/:id/visibility', requireAuth, async (req, res) => {
+  const id = String(req.params.id).slice(0, 60)
+  const hide = !!req.body?.hidden
+  const custom = await q.get('SELECT id FROM custom_badges WHERE id = ? AND owner_id = ?', id, req.userId)
+  if (custom) await q.run('UPDATE custom_badges SET hidden = ? WHERE id = ?', hide ? 1 : 0, id)
+  else {
+    const me = await getUserById(req.userId)
+    const set = new Set(parseJson(me.hidden_badges))
+    hide ? set.add(id) : set.delete(id)
+    await q.run('UPDATE users SET hidden_badges = ? WHERE id = ?', JSON.stringify([...set]), req.userId)
+  }
+  res.json(await journey(await getUserById(req.userId)))
+})
+
+app.delete('/api/badges/:id', requireAuth, async (req, res) => {
+  await q.run('DELETE FROM custom_badges WHERE id = ? AND owner_id = ?', req.params.id, req.userId)
+  res.json(await journey(await getUserById(req.userId)))
 })
 
 // ── Voting (quality signal, not feed fuel) ───────────────────────────
@@ -1314,9 +1453,9 @@ async function messageContext(raw, other) {
   }
   if (kind === 'event') {
     const e = await q.get('SELECT id, title, date, time, venue, cover FROM events WHERE id = ?', id)
-    if (e) return { kind, id: e.id, title: e.title, sub: [e.date, e.time, e.venue].filter(Boolean).join(' · '), image: String(e.cover || '').startsWith('data:') ? '' : e.cover || '', link: '/events' }
+    if (e) return { kind, id: e.id, title: e.title, sub: [e.date, e.time, e.venue].filter(Boolean).join(' · '), image: String(e.cover || '').startsWith('data:') ? '' : e.cover || '', link: `/event/${e.id}` }
     // The city calendar ships with the app, so take its title as given.
-    if (/^ev-[\w-]+$/.test(id)) return { kind, id, title: clip(raw.title), sub: clip(raw.sub), image: /^\/images\/[\w/-]+\.jpg$/.test(raw.image || '') ? raw.image : '', link: '/events' }
+    if (/^ev-[\w-]+$/.test(id)) return { kind, id, title: clip(raw.title), sub: clip(raw.sub), image: /^\/images\/[\w/-]+\.jpg$/.test(raw.image || '') ? raw.image : '', link: `/event/${id}` }
     return null
   }
   if (kind === 'profile') return { kind, id: other.id, title: other.name, sub: 'From their profile', link: `/profile/${other.id}` }

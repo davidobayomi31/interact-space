@@ -95,6 +95,25 @@ function buildRows(messages, meId) {
   return rows
 }
 
+// The time under each group of bubbles, and on your own messages the
+// delivery ticks (Nuel, Oct 29: "show read and delivered sign"): one grey
+// tick while sending, two grey ticks once delivered, two blue once read.
+function Delivery({ m, mine, isGroup }) {
+  const time = new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (!mine || isGroup) return <span className="dm-meta">{time}</span>
+  const state = m.pending ? 'sending' : m.read ? 'read' : 'delivered'
+  const label = state === 'read' ? 'Read' : state === 'delivered' ? 'Delivered' : 'Sending'
+  return (
+    <span className={`dm-meta ${state}`} title={label}>
+      {time}
+      <svg className="dm-ticks" viewBox="0 0 18 11" width="17" height="11" aria-label={label} role="img">
+        <path d="M1 6l3.2 3.2L11 2" />
+        {state !== 'sending' && <path d="M7.5 8.6l.6.6L15 2" />}
+      </svg>
+    </span>
+  )
+}
+
 // ── Thread ─────────────────────────────────────────────────────────────
 function Thread({ messages, meId, other, isGroup, intro }) {
   const boxRef = useRef(null)
@@ -105,7 +124,6 @@ function Thread({ messages, meId, other, isGroup, intro }) {
     if (box) box.scrollTop = box.scrollHeight
   }, [messages.length])
   const rows = useMemo(() => buildRows(messages, meId), [messages, meId])
-  const lastMine = [...messages].reverse().find((m) => (m.fromId ?? m.author?.id) === meId)
 
   return (
     <div className="dm-thread" ref={boxRef}>
@@ -122,11 +140,11 @@ function Thread({ messages, meId, other, isGroup, intro }) {
               {m.context && <OriginCard context={m.context} compact />}
               {m.media?.length > 0 && <div className="dm-media" title={stamp(m.createdAt)}><MediaView media={m.media} /></div>}
               {m.body && <div className="dm-bubble" title={stamp(m.createdAt)}>{m.body}</div>}
+              {last && <Delivery m={m} mine={mine} isGroup={isGroup} />}
             </div>
           </div>
         )
       })}
-      {!isGroup && lastMine?.read && <div className="dm-seen">Seen</div>}
     </div>
   )
 }
@@ -209,7 +227,7 @@ function NewMessage({ profile, onPick, onClose }) {
   )
 }
 
-const pendingLink = (p) => ({ job: `/jobs?job=${p.id}`, post: `/post/${p.id}`, event: '/events', community: `/community/${p.id}`, profile: `/profile/${p.id}`, map: '/city' }[p.kind])
+const pendingLink = (p) => ({ job: `/jobs?job=${p.id}`, post: `/post/${p.id}`, event: `/event/${p.id}`, community: `/community/${p.id}`, profile: `/profile/${p.id}`, map: '/city' }[p.kind])
 
 // ── Inbox ──────────────────────────────────────────────────────────────
 export default function Chats() {
@@ -250,6 +268,23 @@ export default function Chats() {
       setDmUser(other); setMessages(messages); loadConversations()
     }).catch(() => api.getUser(activeDm).then(setDmUser).catch(() => {}))
   }, [activeDm, tab]) // eslint-disable-line
+
+  // While a chat is open, look for new messages and for the other person
+  // reading yours, so the ticks turn blue without a refresh.
+  useEffect(() => {
+    if (tab !== 'direct' || !activeDm) return
+    const tick = () => {
+      if (document.hidden) return
+      api.getThread(activeDm).then(({ messages: fresh }) => {
+        setMessages((cur) => {
+          const same = cur.length === fresh.length && cur.every((m, i) => m.id === fresh[i].id && m.read === fresh[i].read)
+          return same ? cur : fresh
+        })
+      }).catch(() => {})
+    }
+    const t = setInterval(tick, 5000)
+    return () => clearInterval(t)
+  }, [activeDm, tab])
 
   // Name what the chat is about, for the banner above the composer.
   useEffect(() => {

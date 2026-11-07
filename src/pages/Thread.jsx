@@ -6,7 +6,8 @@ import { findCommunity } from '../communities.js'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from '../components/Icons.jsx'
-import { Avatar, FavoriteButton } from '../components/bits.jsx'
+import { Avatar } from '../components/bits.jsx'
+import { EngageBar, RichText } from '../components/Engage.jsx'
 import { Vote } from '../components/Vote.jsx'
 import { ReportButton } from '../components/ReportButton.jsx'
 import { MediaView } from '../components/Media.jsx'
@@ -45,7 +46,7 @@ function CommentNode({ comment, depth, onReplied }) {
                 <strong>{comment.author.name}</strong>
                 <span className="meta-dim">· {comment.ago} ago</span>
               </div>
-              <p className="comment-text">{comment.body}</p>
+              <p className="comment-text"><RichText text={comment.body} /></p>
               <div className="comment-actions">
                 <button className="link-btn" onClick={() => (user ? setReplying((r) => !r) : navigate('/auth'))}>
                   <Icon name="reply" size={13} /> Reply
@@ -118,13 +119,20 @@ export default function Thread() {
                 {user && post.author.id !== user.id && <> · <Link to={`/chats?dm=${post.author.id}&post=${post.id}`}><Icon name="message-circle" size={12} /> Message</Link></>}
               </div>
             </div>
-            <h1 className="thread-title">{post.title}</h1>
-            {post.body && <p className="thread-body">{post.body}</p>}
+            {post.title && <h1 className="thread-title">{post.title}</h1>}
+            {post.body && <p className="thread-body"><RichText text={post.body} /></p>}
             <MediaView media={post.media} />
+            {post.loomOf && !post.loomOf.missing && (
+              <Link to={`/post/${post.loomOf.id}`} className="fp-loomed">
+                <span className="fp-loomed-who"><Avatar user={post.loomOf.author} size={22} /> <b>{post.loomOf.author.name}</b> <em>· {post.loomOf.ago} ago</em></span>
+                {post.loomOf.title && <strong>{post.loomOf.title}</strong>}
+                {post.loomOf.body && <p><RichText text={post.loomOf.body} /></p>}
+                <MediaView media={post.loomOf.media} />
+              </Link>
+            )}
+            <EngageBar post={post} stashItem={{ kind: 'post', id: post.id, title: post.title || post.body?.slice(0, 60) || 'Post', subtitle: community ? `in ${community.name}` : '', href: `/post/${post.id}` }} />
             <div className="post-stats">
-              <span className="post-stat"><Icon name="chat" size={14} /> {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}</span>
               <ReportButton targetType="post" targetId={post.id} />
-              <FavoriteButton label item={{ kind: 'post', id: post.id, title: post.title, subtitle: community ? `in ${community.name}` : '', href: `/post/${post.id}` }} />
             </div>
           </div>
         </div>
@@ -132,14 +140,14 @@ export default function Thread() {
 
       <section className="thread-comments">
         <div className="comments-head">
-          <Icon name="chat" size={16} /> {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
-          <span className="meta-dim comments-sort">· sorted by most helpful</span>
+          <Icon name="chat" size={16} /> Takes ({post.commentCount})
+          <span className="meta-dim comments-sort">· most helpful first</span>
         </div>
 
         {user ? (
           <form className="card composer thread-composer" onSubmit={addTopComment}>
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add your answer…" aria-label="Add a comment" />
-            <button className="btn primary small" disabled={!text.trim() || busy}>Comment</button>
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Share your take…" aria-label="Share your take" />
+            <button className="btn primary small" disabled={!text.trim() || busy}>Post take</button>
           </form>
         ) : (
           <div className="card sign-in-nudge">
@@ -148,7 +156,7 @@ export default function Thread() {
           </div>
         )}
 
-        {comments.length === 0 && <p className="meta-dim empty-note">No comments yet — be the first to answer.</p>}
+        {comments.length === 0 && <p className="meta-dim empty-note">No takes yet — be the first to share yours.</p>}
         {comments.map((c) => <CommentNode key={c.id} comment={c} depth={0} onReplied={setData} />)}
       </section>
       </div>

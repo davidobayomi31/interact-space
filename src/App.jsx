@@ -23,6 +23,9 @@ import NewCommunity from './pages/NewCommunity.jsx'
 import Explore from './pages/Explore.jsx'
 import Communities from './pages/Communities.jsx'
 import Events from './pages/Events.jsx'
+import EventDetail from './pages/EventDetail.jsx'
+import Tag from './pages/Tag.jsx'
+import Badges from './pages/Badges.jsx'
 import Business from './pages/Business.jsx'
 import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
@@ -122,7 +125,8 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/id"><Icon name="badge-check" size={15} /> VOIDAJ ID</Link>
           <Link role="menuitem" to="/communities?tab=mine"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
-          <Link role="menuitem" to="/saved"><Icon name="bookmark" size={15} /> Saved</Link>
+          <Link role="menuitem" to="/saved"><Icon name="bookmark" size={15} /> My Stash</Link>
+          <Link role="menuitem" to="/badges"><Icon name="award" size={15} /> My Badges</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
           {user.isAdmin && <Link role="menuitem" to="/admin"><Icon name="lock" size={15} /> Admin</Link>}
           <Link role="menuitem" to="/settings"><Icon name="edit" size={15} /> Settings</Link>
@@ -278,6 +282,9 @@ export default function App() {
               <Route path="/explore" element={<Explore />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/tag/:tag" element={<Tag />} />
+              <Route path="/badges" element={<Badges />} />
               <Route path="/business/:id" element={<Business />} />
               <Route path="/add" element={<AddHub />} />
               <Route path="/notifications" element={<Notifications />} />
