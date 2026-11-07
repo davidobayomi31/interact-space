@@ -493,6 +493,40 @@ UPDATE jobs SET remote = 1 WHERE category IN ('tech-support', 'tutoring') AND re
 -- event"). JSON: { kind, id, title, sub, image, link }.
 ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS context TEXT DEFAULT '';
 
+-- The VOIDAJ engagement system (Nuel's mockup v2.0, Nov 2):
+--   Spark  — a reaction, one per person per post, of five kinds.
+--   Loom   — spreading a post: a new post that carries the original.
+-- Take is a comment and Stash is a save, so they need nothing new here.
+-- Existing likes carry over as plain Sparks.
+CREATE TABLE IF NOT EXISTS post_sparks (
+  post_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'spark',
+  created_at BIGINT,
+  PRIMARY KEY (post_id, user_id)
+);
+INSERT INTO post_sparks (post_id, user_id, kind, created_at)
+  SELECT target_id, user_id, 'spark', 0 FROM votes WHERE target_type = 'post' AND value = 1
+  ON CONFLICT DO NOTHING;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS loom_of TEXT;
+CREATE INDEX IF NOT EXISTS idx_posts_loom ON posts(loom_of);
+
+-- Badges a member made themselves (Badging → Create).
+CREATE TABLE IF NOT EXISTS custom_badges (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  style TEXT NOT NULL DEFAULT 'violet',
+  hidden INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+
+-- Citizen level (New Citizen → Resident → … → City Icon), kept on the
+-- user so names in lists can show it without recounting. Badges a member
+-- has chosen to hide from their profile.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS citizen_level INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hidden_badges TEXT DEFAULT '[]';
+
 -- The same list as a read-only "spreadsheet" in Supabase's Table Editor
 -- (schema "admin", view "ceo_users"). It leaves out password hashes and
 -- private settings, and sits outside the public schema so Supabase's Data
@@ -621,12 +655,87 @@ export function visibleLocation(row) {
 export const ACTIVE_WINDOW_MS = 5 * 60 * 1000
 export const isActive = (row) => !!row?.last_seen_at && Date.now() - row.last_seen_at < ACTIVE_WINDOW_MS
 
+// ── Citizen levels and badges ────────────────────────────────────────
+// Everyone starts as a New Citizen of VOIDAJ (Nuel, Oct 29: "when this
+// goes what comes next?"). Points come from taking part; each level is a
+// step up the city. The default title follows the level; a title someone
+// wrote themselves is left alone.
+export const DEFAULT_TITLE = 'New citizen of VOIDAJ'
+export const LEVELS = [
+  { level: 0, name: 'New Citizen', at: 0, blurb: 'Just arrived in the city' },
+  { level: 1, name: 'Resident', at: 25, blurb: 'Settling in and taking part' },
+  { level: 2, name: 'Neighbour', at: 80, blurb: 'Known on the block' },
+  { level: 3, name: 'Local Voice', at: 200, blurb: 'People listen when you post' },
+  { level: 4, name: 'Community Pillar', at: 450, blurb: 'Holds communities together' },
+  { level: 5, name: 'City Icon', at: 900, blurb: 'A face of VOIDAJ' },
+]
+export const levelTitle = (n) => `${LEVELS[Math.min(Math.max(n || 0, 0), LEVELS.length - 1)].name} of VOIDAJ`
+
+// What each kind of taking part is worth.
+const POINTS = { posts: 5, takes: 2, sparksGiven: 1, sparksGot: 1, looms: 3, communities: 3, communitiesBuilt: 25, eventsHosted: 12, jobsDone: 10, jobsPosted: 4, followers: 1, verified: 20 }
+
+// Badges anyone can earn, and how.
+export const BADGES = [
+  { id: 'early-explorer', name: 'Early Explorer', style: 'green', how: 'Joined VOIDAJ in its first year', test: (s) => s.joinedYear <= 2026 },
+  { id: 'verified', name: 'Verified', style: 'blue', how: 'Had your ID checked', test: (s) => s.verified },
+  { id: 'first-post', name: 'First Words', style: 'teal', how: 'Shared your first post', test: (s) => s.posts >= 1 },
+  { id: 'top-contributor', name: 'Top Contributor', style: 'silver', how: 'Shared 10 or more posts', test: (s) => s.posts >= 10 },
+  { id: 'thinker', name: 'Hot Take', style: 'orange', how: 'Shared 10 or more takes', test: (s) => s.takes >= 10 },
+  { id: 'supporter', name: 'Supporter', style: 'red', how: 'Sparked 20 or more posts', test: (s) => s.sparksGiven >= 20 },
+  { id: 'connector', name: 'Connector', style: 'violet', how: 'Joined 3 or more communities', test: (s) => s.communities >= 3 },
+  { id: 'community-builder', name: 'Community Builder', style: 'gold', how: 'Started a community on VOIDAJ', test: (s) => s.communitiesBuilt >= 1 },
+  { id: 'event-host', name: 'Event Host', style: 'red', how: 'Hosted an event', test: (s) => s.eventsHosted >= 1 },
+  { id: 'weaver', name: 'Weaver', style: 'violet', how: 'Loomed 5 posts across VOIDAJ', test: (s) => s.looms >= 5 },
+  { id: 'trusted-hand', name: 'Trusted Hand', style: 'orange', how: 'Got hired for a quick job', test: (s) => s.jobsDone >= 1 },
+  { id: 'well-known', name: 'Well Known', style: 'gold', how: 'Reached 25 followers', test: (s) => s.followers >= 25 },
+]
+
+export async function journey(row) {
+  const id = row.id
+  const n = (sql, ...a) => q.get(sql, ...a).then((r) => r?.n ?? 0)
+  const [posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers, custom] = await Promise.all([
+    n('SELECT COUNT(*)::int AS n FROM posts WHERE author_id = ? AND hidden = 0 AND loom_of IS NULL', id),
+    n('SELECT COUNT(*)::int AS n FROM comments WHERE author_id = ? AND hidden = 0', id),
+    n('SELECT COUNT(*)::int AS n FROM post_sparks WHERE user_id = ?', id),
+    n('SELECT COUNT(*)::int AS n FROM post_sparks s JOIN posts p ON p.id = s.post_id WHERE p.author_id = ? AND s.user_id <> ?', id, id),
+    n('SELECT COUNT(*)::int AS n FROM posts WHERE author_id = ? AND loom_of IS NOT NULL', id),
+    n('SELECT COUNT(*)::int AS n FROM memberships WHERE user_id = ?', id),
+    n("SELECT COUNT(*)::int AS n FROM memberships WHERE user_id = ? AND role = 'owner'", id),
+    n('SELECT COUNT(*)::int AS n FROM events WHERE creator_id = ?', id),
+    n("SELECT COUNT(*)::int AS n FROM job_interests WHERE user_id = ? AND status = 'hired'", id),
+    n('SELECT COUNT(*)::int AS n FROM jobs WHERE poster_id = ?', id),
+    n('SELECT COUNT(*)::int AS n FROM follows WHERE followee_id = ?', id),
+    q.all('SELECT * FROM custom_badges WHERE owner_id = ? ORDER BY created_at DESC', id),
+  ])
+  const stats = { posts, takes, sparksGiven, sparksGot, looms, communities, communitiesBuilt, eventsHosted, jobsDone, jobsPosted, followers,
+    verified: !!row.id_verified, joinedYear: new Date(row.created_at || Date.now()).getFullYear() }
+  const points = Object.entries(POINTS).reduce((sum, [k, w]) => sum + (k === 'verified' ? (stats.verified ? w : 0) : (stats[k] || 0) * w), 0)
+  const level = [...LEVELS].reverse().find((l) => points >= l.at)
+  const next = LEVELS[level.level + 1] || null
+  if ((row.citizen_level ?? 0) !== level.level) {
+    await q.run('UPDATE users SET citizen_level = ? WHERE id = ?', level.level, id)
+  }
+  const hidden = new Set(json(row.hidden_badges))
+  const earned = BADGES.filter((b) => b.test(stats)).map(({ test, ...b }) => ({ ...b, earned: true, hidden: hidden.has(b.id) }))
+  return {
+    points, level: { ...level, title: levelTitle(level.level) }, next,
+    toNext: next ? next.at - points : 0,
+    progress: next ? Math.round(((points - level.at) / (next.at - level.at)) * 100) : 100,
+    levels: LEVELS, stats,
+    badges: earned,
+    custom: custom.map((c) => ({ id: c.id, name: c.name, style: c.style, hidden: !!c.hidden, custom: true, how: 'Made by you' })),
+    catalog: BADGES.map(({ test, ...b }) => ({ ...b, earned: earned.some((e) => e.id === b.id) })),
+  }
+}
+
 // Pure — no database access — so it stays synchronous.
 export function publicUser(row) {
   if (!row) return null
   return {
     active: isActive(row), lastSeenAt: row.last_seen_at ?? null,
-    id: row.id, name: row.name, handle: row.handle, title: row.title,
+    id: row.id, name: row.name, handle: row.handle,
+    title: row.title === DEFAULT_TITLE && row.citizen_level ? levelTitle(row.citizen_level) : row.title,
+    citizenLevel: row.citizen_level ?? 0,
     ...visibleLocation(row), color: row.color, bio: row.bio,
     interests: json(row.interests), goals: json(row.goals), skills: json(row.skills),
     portfolio: json(row.portfolio),
@@ -692,12 +801,30 @@ async function myVote(viewerId, type, id) {
 const scoreOf = async (type, id) =>
   (await q.get('SELECT COALESCE(SUM(value),0) AS s FROM votes WHERE target_type = ? AND target_id = ?', type, id)).s
 
-export async function serializePost(row, viewerId) {
-  const [authorRow, countRow, score, mine] = await Promise.all([
+export const SPARK_KINDS = ['spark', 'insight', 'support', 'fire', 'relate']
+
+// The Sparks on a post: how many of each kind, and which one is yours.
+// base_score keeps the demo posts' starting numbers.
+async function sparksFor(row, viewerId) {
+  const [rows, mine] = await Promise.all([
+    q.all('SELECT kind, COUNT(*)::int AS n FROM post_sparks WHERE post_id = ? GROUP BY kind', row.id),
+    viewerId ? q.get('SELECT kind FROM post_sparks WHERE post_id = ? AND user_id = ?', row.id, viewerId) : null,
+  ])
+  const byKind = Object.fromEntries(rows.map((r) => [r.kind, r.n]))
+  const total = Math.max(0, (row.base_score || 0) + rows.reduce((n, r) => n + r.n, 0))
+  return { total, byKind, mine: mine?.kind || null }
+}
+
+export async function serializePost(row, viewerId, { nested = false } = {}) {
+  const [authorRow, countRow, score, mine, sparks, loomRow, original] = await Promise.all([
     getUserById(row.author_id),
     q.get('SELECT COUNT(*) AS n FROM comments WHERE post_id = ? AND hidden = 0', row.id),
     scoreOf('post', row.id),
     myVote(viewerId, 'post', row.id),
+    sparksFor(row, viewerId),
+    q.get('SELECT COUNT(*)::int AS n FROM posts WHERE loom_of = ? AND hidden = 0', row.id),
+    // A Loom carries the post it spreads (one level deep).
+    row.loom_of && !nested ? q.get('SELECT * FROM posts WHERE id = ?', row.loom_of) : null,
   ])
   const author = publicUser(authorRow) || { id: row.author_id, name: 'Unknown', color: '#888' }
   const community = row.community_id ? await q.get('SELECT id, name, accent, cover FROM communities WHERE id = ?', row.community_id) : null
@@ -709,6 +836,8 @@ export async function serializePost(row, viewerId) {
     score: row.base_score + score,
     myVote: mine,
     commentCount: countRow.n, createdAt: row.created_at, ago: timeAgo(row.created_at),
+    sparks, loomCount: loomRow.n,
+    loomOf: original && !original.hidden ? await serializePost(original, viewerId, { nested: true }) : row.loom_of ? { missing: true } : null,
   }
 }
 

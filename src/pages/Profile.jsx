@@ -24,8 +24,9 @@ import { FeedPost } from '../components/Feed.jsx'
 import { useFavorites } from '../favorites.js'
 import { PortfolioSection } from '../components/Portfolio.jsx'
 import { JobHistory } from '../components/JobHistory.jsx'
-import { VoicesSection, CopyLink } from '../components/Voices.jsx'
+import { VoicesSection, CopyLink, SECTION_CATALOG } from '../components/Voices.jsx'
 import { VoiceSections } from './Voice.jsx'
+import { BadgeArt } from './Badges.jsx'
 import { AboutSection } from '../components/Socials.jsx'
 import { OCCUPATIONS } from '../components/JobPeople.jsx'
 
@@ -105,17 +106,68 @@ function useResolvedVoice(handle) {
   return voice
 }
 
+// Your VIS (Voice Identity Sets): Main is the profile everyone sees; each
+// VIS is another side of you with its own @handle that only the people you
+// give it to can open. Nuel (Oct 29) circled the old tabs as unfinished, so
+// they're now a labelled switcher with a line saying what they are.
 function VoiceTabs({ voices, max, active, onPick }) {
   return (
-    <div className="profile-voice-tabs" role="tablist" aria-label="Your VIS">
-      <button type="button" role="tab" aria-selected={active === 'main'} className={active === 'main' ? 'on' : ''} onClick={() => onPick('main')}>Main</button>
-      {voices.map((v) => (
-        <button key={v.id} type="button" role="tab" aria-selected={active === v.id} className={active === v.id ? 'on' : ''} onClick={() => onPick(v.id)}>{v.name}</button>
-      ))}
-      {voices.length + 1 < max && (
-        <Link to="/voices/new" className="profile-voice-add" aria-label="Add a VIS"><Icon name="plus" size={12} /> VIS</Link>
-      )}
+    <div className="vis-switch">
+      <div className="vis-switch-head">
+        <b><Icon name="layers" size={14} /> Your VIS</b>
+        <span className="meta-dim">Different sides of you, each with its own @handle</span>
+      </div>
+      <div className="vis-tabs" role="tablist" aria-label="Your VIS">
+        <button type="button" role="tab" aria-selected={active === 'main'} className={active === 'main' ? 'on' : ''} onClick={() => onPick('main')}><Icon name="user" size={14} /> Main</button>
+        {voices.map((v) => (
+          <button key={v.id} type="button" role="tab" aria-selected={active === v.id} className={active === v.id ? 'on' : ''} onClick={() => onPick(v.id)}><Icon name="sparkle" size={14} /> {v.name}</button>
+        ))}
+        {voices.length + 1 < max && (
+          <Link to="/voices/new" className="vis-add" aria-label="Add a VIS"><Icon name="plus" size={14} /> New VIS</Link>
+        )}
+      </div>
     </div>
+  )
+}
+
+// One VIS, on your own profile: what it is, who sees it, what's in it,
+// and what you could still add to make it fuller.
+function VoicePanel({ voice, resolved }) {
+  const used = new Set(voice.sections)
+  const missing = SECTION_CATALOG.filter((s) => !used.has(s.id))
+  return (
+    <section className="vis-panel" role="tabpanel">
+      <div className="card vis-head">
+        <span className="vis-mark"><Icon name="sparkle" size={22} /></span>
+        <div className="vis-head-text">
+          <b>{voice.name}</b>
+          <span className="vis-handle">@{voice.handle}</span>
+          {voice.headline && <p>{voice.headline}</p>}
+          <span className="meta-dim vis-seen"><Icon name="eye" size={13} /> Seen only by people you give <strong>@{voice.handle}</strong></span>
+        </div>
+        <div className="vis-actions">
+          <Link to={`/v/${voice.handle}`} className="btn ghost small"><Icon name="eye" size={13} /> View as others</Link>
+          <CopyLink handle={voice.handle} />
+          <Link to={`/voices/${voice.id}`} className="btn primary small"><Icon name="edit" size={13} /> Edit</Link>
+        </div>
+      </div>
+      <div className="card vis-body">
+        {resolved ? <VoiceSections voice={resolved} /> : <p className="meta-dim vv-empty">Loading…</p>}
+      </div>
+      {missing.length > 0 && (
+        <div className="card vis-more">
+          <b>Make {voice.name} fuller</b>
+          <span className="meta-dim">Add what people who follow this side of you would want to see.</span>
+          <div className="vis-more-grid">
+            {missing.map((s) => (
+              <Link key={s.id} to={`/voices/${voice.id}`} className="vis-more-item">
+                <Icon name={s.icon} size={16} /><span><b>{s.label}</b><em>{s.blurb}</em></span><Icon name="plus" size={14} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -469,6 +521,27 @@ export default function Profile() {
             ))}
           </div>
         )}
+
+        {/* Citizen level, and the mockup's My Stash · My Badges row. */}
+        {user.journey && (
+          <Link to={isMe ? '/badges' : '#'} className="pf-level" onClick={(e) => !isMe && e.preventDefault()}>
+            <span className="pf-level-top"><b>{user.journey.level.name}</b>{user.journey.next && <em>{user.journey.toNext} pts to {user.journey.next.name}</em>}</span>
+            <span className="lv-bar"><span style={{ width: `${Math.max(4, user.journey.progress)}%` }} /></span>
+          </Link>
+        )}
+        {user.journey?.badges?.length > 0 && (
+          <div className="pf-badge-row" aria-label="Badges">
+            {user.journey.badges.slice(0, 6).map((b) => <span key={b.id} title={`${b.name} — ${b.how}`}><BadgeArt badge={b} size={34} /></span>)}
+            {user.journey.badges.length > 6 && <em>+{user.journey.badges.length - 6}</em>}
+          </div>
+        )}
+        {isMe && (
+          <div className="pf-quick">
+            <Link to="/saved"><Icon name="bookmark" size={17} /> My Stash</Link>
+            <Link to="/badges"><Icon name="award" size={17} /> My Badges</Link>
+            <Link to="/id"><Icon name="badge-check" size={17} /> VOIDAJ ID</Link>
+          </div>
+        )}
       </section>
 
       <IdMini user={user} isMe={isMe} />
@@ -478,17 +551,7 @@ export default function Profile() {
       {isMe && <VoiceTabs voices={voices} max={max} active={picked ? picked.id : 'main'} onPick={setActiveVoice} />}
 
       {picked ? (
-        <section className="profile-voice-view" role="tabpanel">
-          <div className="profile-voice-bar">
-            <span className="meta-dim"><Icon name="eye" size={13} /> Seen by: anyone you give <strong>@{picked.handle}</strong></span>
-            <div className="voice-actions">
-              <Link to={`/v/${picked.handle}`} className="btn ghost small"><Icon name="eye" size={13} /> View as others</Link>
-              <CopyLink handle={picked.handle} />
-              <Link to={`/voices/${picked.id}`} className="btn ghost small"><Icon name="edit" size={13} /> Edit</Link>
-            </div>
-          </div>
-          {resolved ? <VoiceSections voice={resolved} /> : <p className="meta-dim vv-empty">Loading…</p>}
-        </section>
+        <VoicePanel voice={picked} resolved={resolved} />
       ) : <>
         <nav className="pf-tabs pf2-tabs" role="tablist" aria-label="Profile">
           {visibleTabs.map((t) => (

@@ -23,14 +23,14 @@ function EventBig({ event, going, count, onJoin, focused }) {
   const cover = event.cover ?? c?.cover
   return (
     <article id={`event-${event.id}`} className={`ev-card card-link${focused ? ' ev-focused' : ''}`} style={{ '--accent': c?.accent ?? '#3B82F6' }}>
-      <Link to={c ? `/community/${c.id}?tab=events` : `/events?event=${event.id}`} className="ev-photo" aria-label={event.title}>
+      <Link to={`/event/${event.id}`} className="ev-photo" aria-label={event.title}>
         {cover ? <img src={cover} alt="" loading="lazy" /> : <span className="ev-photo-fallback"><Icon name="calendar" size={36} /></span>}
         <span className="ev-date"><b>{d.toLocaleDateString('en-GB', { day: 'numeric' })}</b>{d.toLocaleDateString('en-GB', { month: 'short' })}</span>
         {soon >= -0.5 && soon < 1 && <span className="ev-live">TODAY</span>}
       </Link>
       <div className="ev-body">
         <div className="ev-text">
-          <b>{event.title}</b>
+          <Link to={`/event/${event.id}`} className="ev-title"><b>{event.title}</b></Link>
           <span><Icon name="clock" size={12} /> {d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {event.time}</span>
           {event.venue && <span><Icon name="map-pin" size={12} /> {event.venue}</span>}
           <em>{count} going · {c ? c.name : event.audience === 'city' ? event.city || 'City' : 'Public'}</em>

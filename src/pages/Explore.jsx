@@ -53,7 +53,7 @@ function Discover({ posts, events, jobs, communities }) {
   const used = new Set(popular.map(firstPhoto))
   const unique = (items) => items.filter((t) => t.img && !used.has(t.img) && used.add(t.img))
   const trending = unique([
-    ...events.filter((e) => e.cover).slice(0, 3).map((e) => ({ key: e.id, to: `/events?event=${e.id}`, img: e.cover, title: e.title, sub: e.venue })),
+    ...events.filter((e) => e.cover).slice(0, 3).map((e) => ({ key: e.id, to: `/event/${e.id}`, img: e.cover, title: e.title, sub: e.venue })),
     ...photoPosts.filter((p) => !popular.includes(p)).map((p) => ({ key: p.id, to: `/post/${p.id}`, img: firstPhoto(p), title: (p.title || p.body).slice(0, 40), sub: p.author.name })),
     ...[...communities].filter((c) => c.cover).sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0)).slice(0, 3)
       .map((c) => ({ key: c.id, to: `/community/${c.id}`, img: c.cover, title: c.name, sub: `${c.memberCount >= 1000 ? `${(c.memberCount / 1000).toFixed(1)}k` : c.memberCount} members` })),

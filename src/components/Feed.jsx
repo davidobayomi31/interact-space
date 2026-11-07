@@ -1,6 +1,7 @@
 // ── The Home feed ────────────────────────────────────────────────────
 // Posts look like the mockup: face, name, when and who it's for, the
-// words, the photos, then like · comment · share · save. The composer
+// words (with #tags and @mentions as links), the photos, then the
+// engagement bar: Spark · Take · Loom · Stash (see Engage.jsx). The composer
 // at the top posts to Public (everyone), City (people in your city) or
 // one of your communities — Nuel: "what if I just wanted to make a
 // public post", "people can either post public or post city".
@@ -9,7 +10,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { Icon } from './Icons.jsx'
-import { Avatar, FavoriteButton } from './bits.jsx'
+import { Avatar } from './bits.jsx'
+import { EngageBar, RichText } from './Engage.jsx'
 import { MediaButtons, MediaTray, MediaView } from './Media.jsx'
 import { ReportButton } from './ReportButton.jsx'
 import { findCommunity } from '../communities.js'
@@ -26,44 +28,26 @@ function Audience({ post }) {
   return <span className="fp-aud"><Icon name="globe" size={12} /> Public</span>
 }
 
-// Like is an upvote: the heart fills and the count goes up.
-function Like({ post }) {
-  const { user } = useApp()
-  const navigate = useNavigate()
-  const [state, setState] = useState({ score: post.score, mine: post.myVote })
-  const [pop, setPop] = useState(false)
-  const toggle = async () => {
-    if (!user) return navigate('/auth')
-    const next = state.mine === 1 ? 0 : 1
-    setState((s) => ({ score: s.score + (next - s.mine), mine: next }))
-    if (next) { setPop(true); setTimeout(() => setPop(false), 400) }
-    try { const r = await api.vote('post', post.id, next); setState({ score: r.score, mine: r.myVote }) } catch { /* keep the optimistic count */ }
-  }
+// A Loom shows the post it spreads in a smaller card inside it.
+function LoomedPost({ post }) {
+  if (post.missing) return <div className="fp-loomed missing">The original post is no longer available.</div>
   return (
-    <button className={`fp-act ${state.mine === 1 ? 'liked' : ''} ${pop ? 'pop' : ''}`} onClick={toggle} aria-pressed={state.mine === 1} aria-label="Like">
-      <Icon name="heart" size={19} /> <span>{fmt(state.score)}</span>
-    </button>
+    <Link to={`/post/${post.id}`} className="fp-loomed">
+      <span className="fp-loomed-who"><Avatar user={post.author} size={22} /> <b>{post.author.name}</b> <em>· {post.ago} ago</em></span>
+      {post.title && <strong>{post.title}</strong>}
+      {post.body && <p><RichText text={post.body} /></p>}
+      <MediaView media={post.media} />
+    </Link>
   )
 }
 
-const fmt = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.max(0, n)))
-
-function Share({ post }) {
-  const [done, setDone] = useState(false)
-  const share = async () => {
-    const url = `${location.origin}/post/${post.id}`
-    try {
-      if (navigator.share) await navigator.share({ title: 'VOIDAJ', text: post.title || post.body?.slice(0, 80), url })
-      else { await navigator.clipboard.writeText(url); setDone(true); setTimeout(() => setDone(false), 1600) }
-    } catch { /* closed the share sheet */ }
-  }
-  return <button className="fp-act" onClick={share} aria-label="Share"><Icon name="share" size={18} /> <span>{done ? 'Copied' : 'Share'}</span></button>
-}
-
-export function FeedPost({ post }) {
+export function FeedPost({ post, onLoomed }) {
   const c = post.community ?? findCommunity(post.communityId)
+  const loomed = !!post.loomOf
+  const stashItem = { kind: 'post', id: post.id, title: post.title || post.body?.slice(0, 60) || post.loomOf?.title || post.loomOf?.body?.slice(0, 60) || 'Post', subtitle: c ? `in ${c.name}` : post.audience === 'city' ? post.city : 'Public', href: `/post/${post.id}` }
   return (
     <article className="card feed-post">
+      {loomed && <div className="fp-loom-tag"><Icon name="shuffle" size={13} /> {post.author.name.split(' ')[0]} loomed this</div>}
       <header className="fp-head">
         <Link to={`/profile/${post.author.id}`} className="fp-who">
           <Avatar user={post.author} size={42} />
@@ -74,17 +58,15 @@ export function FeedPost({ post }) {
         </Link>
         <ReportButton targetType="post" targetId={post.id} />
       </header>
-      <Link to={`/post/${post.id}`} className="fp-text">
-        {post.title && <strong>{post.title}</strong>}
-        {post.body && <p>{post.body}</p>}
-      </Link>
+      {(post.body || (post.title && !loomed)) && (
+        <div className="fp-text">
+          {post.title && !loomed && <Link to={`/post/${post.id}`}><strong>{post.title}</strong></Link>}
+          {post.body && <p><RichText text={post.body} /></p>}
+        </div>
+      )}
       <MediaView media={post.media} />
-      <footer className="fp-actions">
-        <Like post={post} />
-        <Link to={`/post/${post.id}`} className="fp-act" aria-label="Comments"><Icon name="chat" size={18} /> <span>{post.commentCount}</span></Link>
-        <Share post={post} />
-        <FavoriteButton className="fp-save" item={{ kind: 'post', id: post.id, title: post.title || post.body?.slice(0, 60) || 'Post', subtitle: c ? `in ${c.name}` : post.audience === 'city' ? post.city : 'Public', href: `/post/${post.id}` }} />
-      </footer>
+      {loomed && <LoomedPost post={post.loomOf} />}
+      <EngageBar post={post} stashItem={stashItem} onLoomed={onLoomed} />
     </article>
   )
 }
@@ -127,12 +109,22 @@ export function FeedComposer({ onPosted, onCancel, start = false, defaultAudienc
     )
   }
   if (!open) {
+    // The desktop concepts put Photo · Video · Event · Opportunity under
+    // "What's on your mind?"; a tap goes straight to the right place.
     return (
-      <button className="card composer-teaser" onClick={() => setOpen(true)}>
-        <Avatar user={user} size={36} />
-        <span>What’s happening in {city}?</span>
-        <Icon name="image" size={18} />
-      </button>
+      <div className="card composer-teaser-wrap">
+        <button className="composer-teaser" onClick={() => setOpen(true)}>
+          <Avatar user={user} size={36} />
+          <span>What’s happening in {city}?</span>
+          <Icon name="image" size={18} />
+        </button>
+        <div className="composer-quick">
+          <button type="button" onClick={() => setOpen(true)}><Icon name="image" size={15} className="q-photo" /> Photo</button>
+          <button type="button" onClick={() => setOpen(true)}><Icon name="video" size={15} className="q-video" /> Video</button>
+          <Link to="/add?pick=event"><Icon name="calendar" size={15} className="q-event" /> Event</Link>
+          <Link to="/jobs?post=1"><Icon name="briefcase" size={15} className="q-job" /> Opportunity</Link>
+        </div>
+      </div>
     )
   }
 
@@ -157,7 +149,7 @@ export function FeedComposer({ onPosted, onCancel, start = false, defaultAudienc
         <div className="fc-fields">
           {audience === 'community' && <input className="fc-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" maxLength={140} />}
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} autoFocus
-            placeholder={audience === 'city' ? `Tell ${city} what’s happening…` : audience === 'community' ? 'Start the discussion…' : 'Share with everyone…'} />
+            placeholder={audience === 'city' ? `Tell ${city} what’s happening… use #tags and @names` : audience === 'community' ? 'Start the discussion…' : 'Share with everyone… use #tags and @names'} />
         </div>
       </div>
       <MediaTray media={media} setMedia={setMedia} />
