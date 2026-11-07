@@ -1,193 +1,57 @@
-# Interact Space — V1: The Intelligent Community Network
+# Interact Space
 
-**Live:** https://interact-space.vercel.app
+A community platform where an **AI companion introduces you to people, communities and discussions** instead of feeding you an endless scroll. Built solo as the founding engineer for an early-stage startup; in testing with beta users.
+
+**Live:** https://voidaj.com
 
 ![Interact Space home screen](docs/screenshot.jpg)
 
-A connected world of communities, built for Mirac Inc. Two layers, one experience:
-the **Digital City** (communities, discussions, events, people) and the **AI Companion**
-(a guide that connects you to people — it never replaces them, and it never becomes a feed).
+## What it does
 
-**V1 is a real application, not a mock.** It has real accounts, a real database, real
-posts with threaded comments and voting, moderation, and an AI companion that can run on
-a real LLM. One city is seeded (Lagos, Nigeria) so nothing ever feels empty.
+- **Communities and discussions:** join communities, post, and reply in threaded comments ranked by up/down votes.
+- **AI companion:** ask "Introduce me to people in sustainable agriculture" and it recommends real communities, people and posts, each with a reason.
+- **Events, quick jobs and chat** between members.
+- **Moderation:** members report posts; owners, admins and moderators review a queue and remove or dismiss, with a moderation log.
 
-## What V1 does
+## Engineering highlights
 
-- **Real accounts + login** — email/password, bcrypt-hashed, session in an httpOnly cookie.
-- **AI-guided discovery (the identity)** — the companion guides you to communities, people
-  and discussions. Bounded and explained — every recommendation carries a *because*. No
-  endless feed anywhere.
-- **Real communities you can join** — membership lives in the database.
-- **Reddit structure, kept** — posts with **threaded comments** and **up/down voting**.
-  Votes are a *quality signal*: they rank the best answer to the top of a thread, they
-  don't power a scroll.
-- **AI companion** — a real Claude call over the live catalog (grounded: it can't invent a
-  community or person), with automatic fallback to a rule-based engine when no API key is set.
-- **Basic moderation** — any member can report a post or comment; moderators review a queue
-  and remove or dismiss.
+- **The AI can't make things up.** Claude picks from a catalog of live database records, and every ID it returns is checked against the database before it's shown. If the API key is missing or the call fails, a rule-based matcher takes over, so the feature never breaks.
+- **Serverless on Postgres.** The API runs as one Vercel serverless function. Data moved from SQLite to managed Postgres, because serverless functions have no disk that lasts between requests.
+- **Auth and roles:** bcrypt-hashed passwords, JWT sessions in httpOnly cookies, "sign out other devices", and community roles (owner > admin > moderator > member).
+- **Integration tests** drive the real Express app against a real Postgres in GitHub Actions: auth, membership rules, voting, moderation permissions, and the AI companion's grounding and fallback (with the Claude SDK mocked).
 
-## Run it
+## Tech
+
+React 18, Vite, Node.js, Express, PostgreSQL, Claude API, Vitest + Supertest, GitHub Actions, Vercel.
+
+## Run it locally
+
+Needs Node 20+ and Postgres:
 
 ```bash
 npm install
-npm run dev
+createdb interact
+cp .env.example .env    # set DATABASE_URL=postgres://<you>@127.0.0.1:5432/interact
+npm run dev             # API on :8787, web app on http://localhost:5173
 ```
 
-Open http://localhost:5173. `npm run dev` starts **both** the API (`server/`, port 8787)
-and the web app (Vite, port 5173) together.
+The first request creates the tables and seeds sample data. Add `ANTHROPIC_API_KEY` to `.env` to use the real AI companion; without it, the rule-based fallback runs.
 
-
-
-### Turn on the real AI companion (optional)
-
-The companion works out of the box using a rule-based engine. To use a real LLM:
-
-```bash
-cp .env.example .env
-# then put your key in .env:
-# ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Restart `npm run dev`. The companion now uses Claude and grounds every answer in the live
-database. No key? It transparently falls back to keyword matching — nothing breaks.
-
-## The demo journey
-
-Navigation follows Nuel's blueprint (`VOIDAJ-Blueprint.md`): **Home · Explore · My City ·
-Quick Jobs · Add Hub**, with Notifications, Chat and your Profile menu always in the top bar.
-
-1. **My City** (`/`) — the open city, explorable without an account: trending communities,
-   events, and live public discussions (real posts, real vote scores).
-2. **Join** (`/auth`) — create an account, then the **AI onboarding** (`/welcome`) collects
-   your goals and interests through conversation and reveals your starting map, each pick
-   traced to what you said.
-3. **Home** (`/home`, formerly `/space`) — your communities, a bounded catch-up digest, events, connections.
-4. **Communities** (`/community/:id`) — per-community identity, rules, moderators; start a
-   discussion (if you've joined).
-5. **Threads** (`/post/:id`) — a post with vote-ranked, threaded comments. Reply, vote, report.
-6. **Companion** (gold button, any screen) — "Introduce me to people in sustainable
-   agriculture", "What discussions should I read about farming?"
-7. **Explore** (`/explore`) — one search across people, communities, events, jobs and posts.
-   **Add Hub** (`/add`) — one place to create a post, event, job, community or voice.
-   **Notifications** (`/notifications`) — unread messages, matched jobs, interest in your jobs,
-   and open reports for communities you moderate.
-8. **Settings** (`/settings`, Profile menu → Settings) — account (name, username, phone, email,
-   password), privacy (location, who can message you), security (recent sign-ins, sign out
-   other devices), notifications, preferences (language, location, accessibility, interests),
-   help & support (report a problem), and data (download everything, delete your account).
-9. **Manage** (`/community/:id?tab=manage`) — each community's own moderation dashboard, a
-   tab only its staff see. `/mod` (Profile menu → Moderation) is the overview across every
-   community you help run. Start a community
-   (`/communities/new`) to own one. The dashboard shows members, activity, reports and the
-   moderation history. Roles: owner > admin > moderator > member; owners appoint admins
-   and moderators, admins appoint moderators.
-
-## Architecture
-
-```
-Browser (React + Vite, port 5173)
-   │  /api/*  (Vite proxy)
-   ▼
-Express API (server/, port 8787)
-   │
-   ├── pg  →  Postgres  (accounts, memberships, posts, comments,
-   │                       votes, reports, jobs, chats, ads)
-   └── Claude (optional) →  grounded companion  (falls back to rule engine)
-```
-
-- **Frontend** — React + React Router. Keeps the seeded *catalog* (communities, people,
-  events) for display; everything dynamic (accounts, posts, comments, votes, moderation,
-  companion) comes from the API. See `src/api.js`.
-- **Backend** — `server/index.js` (routes), `server/db.js` (schema + serialization),
-  `server/auth.js` (accounts/sessions), `server/companion.js` (LLM + fallback),
-  `server/seed.js` (one-time seed from `src/data/seed.js`).
-
-## Stack
-
-| Layer | Tech |
-| --- | --- |
-| Frontend | React 18, React Router, Vite, MapLibre GL (My City map) |
-| Backend | Node.js, Express, JWT sessions (httpOnly cookie), bcrypt |
-| Database | Postgres via `pg` (Neon in production) |
-| AI | Claude via `@anthropic-ai/sdk`, with a rule-based fallback |
-| Hosting | Vercel (static frontend + one serverless API function) |
-| Tests | Vitest + Supertest integration tests against a real Postgres, run in GitHub Actions |
-
-## Tests
-
-29 integration tests drive the real Express app (in-process, through Supertest) against a
-throwaway local Postgres database:
-
-- **Auth:** httpOnly session cookie, bcrypt-hashed passwords, duplicate emails, the same
-  error for a wrong password and an unknown email, forged tokens, "sign out other devices".
-- **Communities:** creator becomes owner, joining twice counts once, owners can't leave,
-  only members can post.
-- **Posts:** one vote per user with toggle-off, threaded replies ranked by score, replies
-  can't point at another post's comment.
-- **Moderation:** only community staff see and resolve reports; removing hides the post
-  and writes to the moderation log.
-- **AI companion:** with the Claude SDK mocked, IDs the model invents are dropped and only
-  real database items come back; a failed call or a non-JSON reply falls back to the
-  rule-based engine.
+**Tests:**
 
 ```bash
 createdb interact_test   # once
 npm test
 ```
 
-The suite wipes its database before each run, so it refuses to start unless the database
-is local and its name ends in `_test` (override with `TEST_DATABASE_URL`).
+The tests wipe their database, so they refuse to run unless it's local and named `*_test`.
 
-## Not in V1 (deliberately)
+## Where to look in the code
 
-No infinite home feed, no global karma leaderboard, no algorithmic scroll — the absence is
-the product. Multi-city, user-created communities, notifications, and the immersive
-"digital city" layer are future phases.
-
-## Deploy (Vercel + Neon, free)
-
-The frontend is served as static files from Vercel's CDN; everything under
-`/api/*` runs as one serverless function (`api/index.js`, which is just the
-Express app). Data lives in Postgres, so it survives deploys and restarts.
-
-**1. Create the database.** At [neon.tech](https://neon.tech), create a free
-project and copy the connection string (it looks like
-`postgres://user:pass@ep-something.neon.tech/neondb?sslmode=require`).
-
-**2. Import the repo at [vercel.com/new](https://vercel.com/new).** Vercel reads
-`vercel.json`; no build settings need changing.
-
-**3. Add environment variables** (Vercel → Settings → Environment Variables):
-
-| Variable | Value |
-| --- | --- |
-| `DATABASE_URL` | the Neon connection string |
-| `JWT_SECRET` | any long random string — signs login sessions |
-| `ANTHROPIC_API_KEY` | optional; turns on the real LLM companion |
-
-**4. Deploy.** The first request creates the schema and seeds the Lagos data.
-
-## Run it locally
-
-```bash
-npm install
-```
-
-You need a Postgres running locally. With Homebrew:
-
-```bash
-brew install postgresql@17 && brew services start postgresql@17 && createdb interact
-```
-
-Then point the app at it:
-
-```bash
-cp .env.example .env
-# set DATABASE_URL=postgres://<your-mac-username>@127.0.0.1:5432/interact
-npm run dev
-```
-
-Open http://localhost:5173. `npm run dev` starts both the API (`server/`, port
-8787) and the web app (Vite, port 5173). The first request creates the tables
-and seeds them; to start over, `dropdb interact && createdb interact`.
+| File | What it does |
+|---|---|
+| `server/index.js` | API routes |
+| `server/db.js` | Postgres schema and queries |
+| `server/companion.js` | AI companion: grounding and fallback |
+| `server/auth.js` | Sessions and passwords |
+| `test/` | Integration tests |
