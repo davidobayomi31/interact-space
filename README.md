@@ -112,6 +112,32 @@ Express API (server/, port 8787)
 | Database | Postgres via `pg` (Neon in production) |
 | AI | Claude via `@anthropic-ai/sdk`, with a rule-based fallback |
 | Hosting | Vercel (static frontend + one serverless API function) |
+| Tests | Vitest + Supertest integration tests against a real Postgres, run in GitHub Actions |
+
+## Tests
+
+29 integration tests drive the real Express app (in-process, through Supertest) against a
+throwaway local Postgres database:
+
+- **Auth:** httpOnly session cookie, bcrypt-hashed passwords, duplicate emails, the same
+  error for a wrong password and an unknown email, forged tokens, "sign out other devices".
+- **Communities:** creator becomes owner, joining twice counts once, owners can't leave,
+  only members can post.
+- **Posts:** one vote per user with toggle-off, threaded replies ranked by score, replies
+  can't point at another post's comment.
+- **Moderation:** only community staff see and resolve reports; removing hides the post
+  and writes to the moderation log.
+- **AI companion:** with the Claude SDK mocked, IDs the model invents are dropped and only
+  real database items come back; a failed call or a non-JSON reply falls back to the
+  rule-based engine.
+
+```bash
+createdb interact_test   # once
+npm test
+```
+
+The suite wipes its database before each run, so it refuses to start unless the database
+is local and its name ends in `_test` (override with `TEST_DATABASE_URL`).
 
 ## Not in V1 (deliberately)
 
