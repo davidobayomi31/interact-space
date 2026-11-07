@@ -1,5 +1,9 @@
 # Interact Space — V1: The Intelligent Community Network
 
+**Live:** https://interact-space.vercel.app
+
+![Interact Space home screen](docs/screenshot.jpg)
+
 A connected world of communities, built for Mirac Inc. Two layers, one experience:
 the **Digital City** (communities, discussions, events, people) and the **AI Companion**
 (a guide that connects you to people — it never replaces them, and it never becomes a feed).
@@ -101,7 +105,13 @@ Express API (server/, port 8787)
 
 ## Stack
 
-Vite · React · React Router · Express · Postgres (`pg`) · bcrypt · JWT · @anthropic-ai/sdk.
+| Layer | Tech |
+| --- | --- |
+| Frontend | React 18, React Router, Vite, MapLibre GL (My City map) |
+| Backend | Node.js, Express, JWT sessions (httpOnly cookie), bcrypt |
+| Database | Postgres via `pg` (Neon in production) |
+| AI | Claude via `@anthropic-ai/sdk`, with a rule-based fallback |
+| Hosting | Vercel (static frontend + one serverless API function) |
 
 ## Not in V1 (deliberately)
 
