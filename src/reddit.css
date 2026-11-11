@@ -1,0 +1,325 @@
+/* ══ Feed-site layout, glossy and glassy ═════════════════════════════
+   David, Nov 10: "follow Reddit's layout (the basic parts, not all)",
+   "white glossy and dark glassy", and "make the tabs and some sections
+   float".
+   - Layout borrowed: a top bar with the name on the left, a wide search in
+     the middle and Create + alerts + you on the right; a flat side list
+     under it with a highlighted active row; a feed of posts split by
+     hairlines instead of cards; the ads rail as a floating panel with a
+     small-caps heading; pill buttons.
+   - Dark mode is glass: obsidian, translucent dark panels with a blur, a
+     light top edge, a 1px rim and layered shadows. No coloured glow.
+   - Light mode is gloss: white panels with a soft top-to-bottom sheen, a
+     bright specular edge, a hairline rim and soft shadows; buttons are
+     polished black.
+   - Floating: tab bars are pills hovering above the content, and the map,
+     welcome card, tiles and shortcuts sit on a deeper shadow and lift on
+     hover.
+   Loaded last, after mono.css. */
+
+:root[data-mode="dark"] {
+  --bg: #08080A; --bg-raised: #08080A;
+  --surface: #131316; --surface-2: #1B1B20;
+  --border: rgba(255, 255, 255, 0.13); --border-soft: rgba(255, 255, 255, 0.09);
+  --text: #EEF1F3; --text-dim: #8BA2AD;
+  --rd-hover: rgba(255, 255, 255, 0.07);
+  --rd-pill: rgba(255, 255, 255, 0.07);
+  /* Glass: lighter at the top edge, darker below, over rgba(20, 20, 25, 0.6). */
+  --gl-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.025) 38%, rgba(255, 255, 255, 0) 100%), rgba(20, 20, 25, 0.6);
+  --gl-rim: rgba(255, 255, 255, 0.12);
+  --gl-spec: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  --gl-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 6px 14px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --gl-float: 0 28px 60px -12px rgba(0, 0, 0, 0.8), 0 10px 22px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --gl-blur: blur(16px) saturate(140%);
+  --gl-btn: linear-gradient(180deg, #FFFFFF 0%, #EDEDF2 46%, #D9D9E2 50%, #E8E8EF 100%);
+  --gl-btn-text: #0B0B10;
+  --gl-btn-shadow: inset 0 1px 0 #fff, inset 0 -2px 4px rgba(60, 60, 90, 0.25), 0 6px 14px -6px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+:root {
+  --rd-hover: rgba(15, 23, 42, 0.05); --rd-pill: #F1F3F6; --rd-top: 56px;
+  /* Gloss: white with a soft sheen, a bright top edge and soft shadows. */
+  --gl-fill: linear-gradient(180deg, #FFFFFF 0%, #F6F7FA 100%);
+  --gl-rim: rgba(15, 23, 42, 0.1);
+  --gl-spec: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(15, 23, 42, 0.05);
+  --gl-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 12px 26px -14px rgba(15, 23, 42, 0.28);
+  --gl-float: 0 24px 50px -16px rgba(15, 23, 42, 0.35), 0 6px 14px -6px rgba(15, 23, 42, 0.18);
+  --gl-blur: none;
+  --gl-btn: linear-gradient(180deg, #34343A 0%, #17171B 48%, #0A0A0D 52%, #1B1B20 100%);
+  --gl-btn-text: #fff;
+  --gl-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -1px 0 rgba(0, 0, 0, 0.5), 0 6px 14px -6px rgba(15, 23, 42, 0.5), 0 1px 2px rgba(15, 23, 42, 0.3);
+}
+:root[data-mode="dark"] body { background: #08080A; }
+:root[data-mode="dark"] .main, :root[data-mode="dark"] .app { background: transparent; }
+
+/* Panels: glass in dark, gloss in light. */
+.card, .ad-card, .shortcut, .itile, .home-search, .search-pill, .ev-card, .welcome-card {
+  background: var(--gl-fill); border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec), var(--gl-shadow);
+  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+}
+:root[data-mode="dark"] .card, :root[data-mode="dark"] .ad-card, :root[data-mode="dark"] .shortcut, :root[data-mode="dark"] .itile,
+:root[data-mode="dark"] .home-search, :root[data-mode="dark"] .search-pill, :root[data-mode="dark"] .welcome-card, :root[data-mode="dark"] .ev-card {
+  background: var(--gl-fill); border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec), var(--gl-shadow);
+}
+.card .card, :root[data-mode="dark"] .card .card { background: var(--rd-pill); box-shadow: none; }
+.card, .welcome-card { border-radius: 16px; }
+.city-tile { border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec), var(--gl-shadow); }
+
+/* Floating sections: a deeper shadow, and a small lift on hover. */
+.city-map-card, .welcome-card, .home-search, .shortcut, .city-tile, .feed-composer, .ev-card, .card-link,
+:root[data-mode="dark"] .city-map-card, :root[data-mode="dark"] .welcome-card, :root[data-mode="dark"] .home-search,
+:root[data-mode="dark"] .shortcut, :root[data-mode="dark"] .feed-composer, :root[data-mode="dark"] .ev-card {
+  box-shadow: var(--gl-spec), var(--gl-float);
+}
+.shortcut, .city-tile, .card-link, .ev-card { transition: transform 0.25s var(--ease-out), box-shadow 0.25s; }
+@media (hover: hover) { .shortcut:hover, .city-tile:hover, .card-link:hover, .ev-card:hover { transform: translateY(-3px); } }
+:root[data-mode="dark"] .card-link:hover, :root[data-mode="dark"] .tile.card-link:hover { border-color: var(--border-strong); box-shadow: var(--gl-spec), var(--gl-float); }
+
+/* Pill buttons, polished. */
+.btn { border-radius: 999px; }
+.btn.primary, .btn.primary:hover, :root[data-mode="dark"] .btn.primary, :root[data-mode="dark"] .btn.primary:hover {
+  background: var(--gl-btn); color: var(--gl-btn-text); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: var(--gl-btn-shadow);
+}
+:root:not([data-mode="dark"]) .btn.primary, :root:not([data-mode="dark"]) .btn.primary:hover { border-color: rgba(0, 0, 0, 0.6); }
+.btn.ghost, .btn.brand-outline, :root[data-mode="dark"] .btn.ghost, :root[data-mode="dark"] .btn.brand-outline {
+  background: var(--gl-fill); border: 1px solid var(--gl-rim); color: var(--text); box-shadow: var(--gl-spec);
+}
+
+/* ── Top bar (larger screens): name · search · Create, alerts, you ── */
+.topbar-search, .topbar-create { display: none; }
+@media (min-width: 681px) {
+  :root { --topbar-h: var(--rd-top); }
+  .topbar {
+    display: grid; grid-template-columns: 1fr minmax(260px, 640px) 1fr; align-items: center; gap: 16px;
+    height: var(--rd-top); padding: 0 16px; position: sticky; top: 0; z-index: 70;
+    background: var(--gl-fill); border-bottom: 1px solid var(--gl-rim); box-shadow: var(--gl-spec), 0 8px 24px -16px rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+  }
+  .topbar-brand { display: flex; }
+  .topbar-right { justify-content: flex-end; gap: 6px; }
+  .topbar-search-icon { display: none; }
+  /* The one search: a plain floating pill, no ring and no glow. */
+  .topbar-search {
+    display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; margin: 0; border-radius: 999px;
+    background: var(--gl-fill); color: var(--text-dim); border: 1px solid var(--gl-rim);
+    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: border-color 0.15s;
+  }
+  .topbar-search:hover, .topbar-search:focus-within { border-color: var(--border-strong); }
+  .topbar-search input, .topbar-search input:focus {
+    flex: 1; min-width: 0; height: 100%; padding: 0; border: 0 !important; outline: none; background: none !important;
+    box-shadow: none !important; color: var(--text); font-size: 14.5px; font-weight: 500;
+  }
+  .topbar-search input::placeholder { color: var(--text-dim); }
+  /* Explore's own bar would be a second search; the header one drives it. */
+  .explore2 .explore-search { display: none; }
+  .topbar-create {
+    display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px;
+    color: var(--text); font-weight: 600; font-size: 14px;
+  }
+  .topbar-create:hover { background: var(--rd-hover); }
+  .topbar .bar-icon { width: 38px; height: 38px; border-radius: 50%; }
+  .topbar .bar-icon:hover { background: var(--rd-hover); }
+  .assistant-drawer { top: calc(var(--rd-top) + 12px); }
+  .space-side, .community-side, .settings-nav { top: calc(var(--rd-top) + 16px); }
+  .page, .page.city2 { padding-top: 14px; }
+
+  /* Side list sits under the bar; the name lives in the bar. */
+  .sidenav {
+    top: var(--rd-top); padding-top: 12px; z-index: 40; border-right: 1px solid var(--gl-rim); box-shadow: var(--gl-spec), var(--gl-shadow);
+    background: var(--gl-fill); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+  }
+  .sidenav-brand { display: none; }
+  .ads-rail { z-index: 30; }
+}
+@media (min-width: 1001px) {
+  .sidenav { width: 240px; }
+  body.has-sidenav .app-shell { padding-left: 240px; }
+}
+
+/* Side list rows: flat, rounded, a raised row for where you are. */
+.sidenav-links, .sidenav-foot { gap: 2px; }
+.sidenav-links > a, .sidenav-foot > a:not(.btn), .sidenav-companion {
+  border-radius: 10px; padding: 9px 12px 9px 10px; font-size: 14.5px; font-weight: 500; color: var(--text);
+  background: transparent; box-shadow: none;
+}
+.sidenav-links > a:hover, .sidenav-foot > a:not(.btn):hover { background: var(--rd-hover); box-shadow: none; transform: none; }
+.sidenav-links > a.active:not(.sidenav-add), :root[data-mode="dark"] .sidenav-links > a.active:not(.sidenav-add),
+.sidenav-foot > a.active:not(.btn) { background: var(--gl-fill); box-shadow: var(--gl-spec), 0 1px 3px rgba(0, 0, 0, 0.25); font-weight: 600; }
+.sidenav .snav-ico, .sidenav-links > a.active .snav-ico, :root[data-mode="dark"] .sidenav-links > a.active .snav-ico {
+  background: none; box-shadow: none; color: var(--text); width: 22px; height: 22px; border: 0;
+}
+.sidenav .sidenav-links > a.active .snav-ico .icon { color: var(--text); stroke: var(--text); filter: none; }
+.sidenav-foot { border-top: 1px solid var(--border-soft); padding-top: 10px; margin-top: 6px; }
+/* Add Hub reads like "Start a community": a plain row with a plus. */
+.sidenav-add, :root[data-mode="dark"] .sidenav-add {
+  height: auto; background: transparent !important; color: var(--text) !important; border: 0; box-shadow: none !important;
+  justify-content: flex-start; font-size: 14.5px; font-weight: 500; padding: 9px 12px 9px 10px; margin-top: 8px;
+  border-top: 1px solid var(--border-soft); border-radius: 0 0 10px 10px;
+}
+.sidenav-add:hover { background: var(--rd-hover) !important; }
+.sidenav-add-plus { background: none; width: 22px; height: 22px; }
+
+/* ── Feed: posts are rows split by hairlines, not cards ── */
+.feed-post, :root[data-mode="dark"] .feed-post {
+  background: transparent; border: 0; border-bottom: 1px solid var(--border-soft); border-radius: 0; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none; padding: 14px 8px 6px; transition: background 0.15s;
+}
+.feed-post:hover { background: var(--rd-hover); }
+.feed-post .media-view { margin: 0; border-radius: 16px; overflow: hidden; }
+.fp-actions { border-top: 0; gap: 8px; padding-top: 2px; }
+.fp-act { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--gl-fill); border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec); color: var(--text); font-weight: 600; font-size: 13px; }
+.fp-act:hover { background: var(--rd-hover); }
+.fp-act.liked { color: #EC4899; }
+
+/* Tabs and chips float: pills hovering above the content. */
+.float-bar.chip-row, .float-bar.seg, .jobs-views-row.float-bar, .feed-tabs, .pf2-tabs,
+:root[data-mode="dark"] .float-bar.chip-row, :root[data-mode="dark"] .float-bar.seg, :root[data-mode="dark"] .jobs-views-row.float-bar,
+:root[data-mode="dark"] .feed-tabs, :root[data-mode="dark"] .pf2-tabs {
+  position: sticky; top: calc(var(--rd-top) + 10px); z-index: 30;
+  border-radius: 999px; padding: 5px; margin-inline: 2px; gap: 4px;
+  background: var(--gl-fill); border: 1px solid var(--gl-rim);
+  -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--gl-spec), var(--gl-float);
+}
+.chip-row:not(.float-bar) { padding: 0; }
+.feed-tabs button, .pf2-tabs button, .float-bar.chip-row button, .float-bar.seg button { border-radius: 999px; background: none; color: var(--text-dim); font-weight: 600; box-shadow: none; }
+.feed-tabs button.on, .pf2-tabs button.on, .chip-row button.on, .seg button.on, .filter-row button.on,
+:root[data-mode="dark"] .feed-tabs button.on, :root[data-mode="dark"] .pf2-tabs button.on, :root[data-mode="dark"] .chip-row button.on,
+:root[data-mode="dark"] .seg button.on, :root[data-mode="dark"] .filter-row button.on {
+  background: var(--gl-btn); color: var(--gl-btn-text); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: var(--gl-btn-shadow);
+}
+:root:not([data-mode="dark"]) .feed-tabs button.on, :root:not([data-mode="dark"]) .pf2-tabs button.on, :root:not([data-mode="dark"]) .chip-row button.on,
+:root:not([data-mode="dark"]) .seg button.on, :root:not([data-mode="dark"]) .filter-row button.on { border-color: rgba(0, 0, 0, 0.6); }
+.chip-row button:not(.on), .filter-row button:not(.on), :root[data-mode="dark"] .chip-row button:not(.on), :root[data-mode="dark"] .filter-row button:not(.on) {
+  background: var(--gl-fill); border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec); color: var(--text);
+}
+.float-bar.chip-row button:not(.on) { background: none; border-color: transparent; box-shadow: none; }
+
+/* ── Right rail: a floating panel with a small-caps heading ── */
+@media (min-width: 1081px) {
+  .ads-rail {
+    position: fixed; top: calc(var(--rd-top) + 16px); right: 16px; bottom: auto; left: auto; width: 220px;
+    max-height: calc(100dvh - var(--rd-top) - 32px); overflow-y: auto; scrollbar-width: none;
+    padding: 14px 16px; gap: 0; border-radius: 16px; border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec), var(--gl-float); background: var(--gl-fill);
+    -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+  }
+  body.has-ads-rail .app-shell { padding-right: 236px; }
+  body.has-ads-rail .main { padding-right: 24px; }
+  .ads-rail-label, .ads-rail-head { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); font-weight: 600; padding-bottom: 8px; }
+  .ads-stack { gap: 0; }
+  .ads-rail .ad-card, :root[data-mode="dark"] .ads-rail .ad-card {
+    background: transparent; border: 0; border-top: 1px solid var(--gl-rim); border-radius: 0; padding: 14px 0; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .ads-rail .ad-card:hover { background: transparent; }
+  .ads-rail-foot { border-top: 1px solid var(--border-soft); }
+}
+
+/* ── My City map: always a dark glass screen, in either mode ── */
+.city-map-card, .city-map-card:hover, :root[data-mode="dark"] .city-map-card { background: #0A0A0D; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), var(--gl-float); }
+.cm-canvas { background: #07070E; }
+.cm::after {
+  background:
+    linear-gradient(180deg, rgba(8, 8, 14, 0.5), rgba(8, 8, 14, 0) 80px),
+    linear-gradient(0deg, rgba(8, 8, 14, 0.55), rgba(8, 8, 14, 0) 120px);
+}
+.cm-all, .cm .maplibregl-ctrl-group, .cm .maplibregl-ctrl.maplibregl-ctrl-attrib, .cm-pin-pill, .city-map-card .city-place.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025) 40%, rgba(255, 255, 255, 0)), rgba(20, 20, 25, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.35), 0 16px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  color: #EEF1F3;
+}
+.cm .maplibregl-ctrl-group button + button { border-top-color: rgba(255, 255, 255, 0.1); }
+.cm-all:hover, .cm-pin:hover .cm-pin-pill { background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)), rgba(28, 28, 34, 0.65); }
+.city-place strong { color: #fff; }
+.city-place span { color: #A9AEB8; }
+.city-place-hint { background: rgba(255, 255, 255, 0.1); border-color: transparent; color: #EEF1F3 !important; }
+.cm-pin-dot { background: #EEF1F3; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14), 0 2px 6px rgba(0, 0, 0, 0.7); }
+.cm-pin-face { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25); }
+.cm-pin-pill em { background: rgba(255, 255, 255, 0.14); box-shadow: none; }
+.cm-pin.on .cm-pin-pill { background: linear-gradient(180deg, #FFFFFF 0%, #EDEDF2 46%, #D9D9E2 50%, #E8E8EF 100%); color: #0B0B10; border-color: rgba(255, 255, 255, 0.8); box-shadow: inset 0 1px 0 #fff, 0 10px 22px rgba(0, 0, 0, 0.6); }
+.cm-pin.on .cm-pin-pill em { background: #0B0B10; color: #fff; }
+.cm-pin.on .cm-pin-dot { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22), 0 2px 6px rgba(0, 0, 0, 0.7); }
+
+@media (prefers-reduced-motion: reduce) { .feed-post { transition: none; } .shortcut:hover, .city-tile:hover, .card-link:hover, .ev-card:hover { transform: none; } }
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-mode="dark"] .card, .topbar, .sidenav, .ads-rail, .feed-tabs, .pf2-tabs, .float-bar, .cm-all, .cm-pin-pill, .city-map-card .city-place.glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ══ No white glow ═══════════════════════════════════════════════════
+   David, Nov 10: "that white glow in the tabs section… and the white
+   around the search bar and all similar places". Focus rings are a quiet
+   grey line (no halo), and the bright highlight lines on glass edges are
+   dimmed so panels, tabs and chips don't look lit from inside. */
+:root[data-mode="dark"] {
+  --gl-spec: inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  --gl-rim: rgba(255, 255, 255, 0.09);
+  --gl-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 4px 10px -4px rgba(0, 0, 0, 0.7);
+}
+/* Focus: a grey border, no ring. */
+:root[data-mode="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+:root[data-mode="dark"] select:focus, :root[data-mode="dark"] textarea:focus,
+:root[data-mode="dark"] .auth-card .field input:focus {
+  outline: none; border-color: rgba(255, 255, 255, 0.28) !important; box-shadow: none !important;
+}
+:root[data-mode="dark"] .search-pill:focus-within, :root[data-mode="dark"] .explore-search:focus-within, :root[data-mode="dark"] .home-search:focus-within {
+  outline: none !important; border-color: rgba(255, 255, 255, 0.28) !important; box-shadow: var(--gl-spec) !important; background: var(--gl-fill) !important;
+}
+:root[data-mode="dark"] .explore-search, :root[data-mode="dark"] .home-search { border-color: var(--gl-rim); }
+/* Tabs and chips: no lit edges or white outer shadow. */
+:root[data-mode="dark"] .float-bar.chip-row, :root[data-mode="dark"] .float-bar.seg, :root[data-mode="dark"] .jobs-views-row.float-bar,
+:root[data-mode="dark"] .feed-tabs, :root[data-mode="dark"] .pf2-tabs {
+  border-color: var(--gl-rim); box-shadow: var(--gl-spec), 0 18px 36px -12px rgba(0, 0, 0, 0.75);
+}
+:root[data-mode="dark"] .chip-row button:not(.on), :root[data-mode="dark"] .filter-row button:not(.on) {
+  border-color: var(--gl-rim); box-shadow: none;
+}
+:root[data-mode="dark"] .chip-row button.on, :root[data-mode="dark"] .seg button.on, :root[data-mode="dark"] .filter-row button.on,
+:root[data-mode="dark"] .feed-tabs button.on, :root[data-mode="dark"] .pf2-tabs button.on { border-color: transparent; }
+:root[data-mode="dark"] .fp-act, :root[data-mode="dark"] .btn.ghost, :root[data-mode="dark"] .btn.brand-outline, :root[data-mode="dark"] .topbar-search { box-shadow: none; }
+/* The map's glass is dimmed the same way. */
+.cm-all, .cm .maplibregl-ctrl-group, .cm .maplibregl-ctrl.maplibregl-ctrl-attrib, .cm-pin-pill, .city-map-card .city-place.glass {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.city-map-card, .city-map-card:hover, :root[data-mode="dark"] .city-map-card { border-color: rgba(255, 255, 255, 0.09); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--gl-float); }
+
+/* Home: the city card spans the row now that the Jobs / Events / My City tiles
+   are gone (they are all in the side list). */
+.home3 .home-top { grid-template-columns: minmax(0, 1fr); }
+
+/* The Home search wrapper is just a holder: the pill inside is the panel. */
+.home-search, :root[data-mode="dark"] .home-search {
+  background: none; border: 0; box-shadow: none; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.explore-search, :root[data-mode="dark"] .explore-search {
+  background: var(--gl-fill); border: 1px solid var(--gl-rim); box-shadow: var(--gl-spec); border-radius: 999px;
+}
+/* Content runs up to the ads panel with one even gap. */
+@media (min-width: 1081px) {
+  body.has-ads-rail .app-shell { padding-right: 236px; }
+  body.has-ads-rail .main { padding-right: 0; }
+}
+
+/* Status rings run the full width of the page, above the two columns. */
+.home3 > .stories { margin: 0 -6px; }
+.home3 > .stories .stories-track { padding: 4px 6px 6px; }
+
+/* Home: statuses and quick icons on the left, your card on the right. */
+.home-strip { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.home-strip-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.home-strip .stories { margin: 0 -6px; }
+.home-strip .stories-track { padding: 4px 6px 6px; }
+@media (min-width: 1240px) {
+  .home-strip.has-card { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 28%, 380px); gap: 24px; align-items: start; }
+}
+
+/* Status rings: the brand blue-to-purple, not white. Seen ones stay grey. */
+.story-ring:not(.seen):not(.none), :root[data-mode="dark"] .story-ring:not(.seen):not(.none) {
+  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); box-shadow: none;
+}
+
+/* Communities banner: no glow on the banner or its faces. */
+.cm-hero, :root[data-mode="dark"] .cm-hero { box-shadow: var(--gl-spec), var(--gl-float); border: 1px solid var(--gl-rim); }
+.cm-hero-faces img { border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5); }

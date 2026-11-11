@@ -1,0 +1,254 @@
+/* ══════════════════════════════════════════════════════════════════════
+   VOIDAJ mono — Nuel, Nov 10: "for the theme I would like that if it's
+   not white then it has to be black. The purple violet and all that is
+   for the name and logo."
+   Loaded last, so it wins over neon.css and glass.css. Light is white,
+   dark is black, and everything in between is a neutral grey. The
+   blue → violet brand colours stay only on the VOIDAJ wordmark, the VJ
+   mark and its tile. Green (verified, success), red (danger, badges) and
+   amber (warnings, ratings) keep their colour, because they carry meaning.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink: #0A0A0A;
+  --bg: #FFFFFF;
+  --bg-raised: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F5;
+  --border: #E4E4E7;
+  --border-soft: #EEEEF0;
+  --border-strong: #D4D4D8;
+  --text: #0A0A0A;
+  --text-dim: #6B6B73;
+  --brand: #0A0A0A;
+  --brand-strong: #000000;
+  --brand-soft: #F1F1F2;
+  --on-brand: #FFFFFF;
+  --teal: #0A0A0A;
+  --teal-strong: #0A0A0A;
+  --teal-soft: #F1F1F2;
+  --purple: #0A0A0A;
+  --purple-soft: #F1F1F2;
+  --violet: #0A0A0A;
+  --pink: #0A0A0A;
+  --grad: linear-gradient(#0A0A0A, #0A0A0A);
+  --grad-btn: linear-gradient(#0A0A0A, #0A0A0A);
+  --grad-teal: linear-gradient(#0A0A0A, #0A0A0A);
+  --night: #000000;
+  --glow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --glow-strong: 0 0 0 1px rgba(0, 0, 0, 0.14);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -14px rgba(0, 0, 0, 0.14);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.05), 0 18px 36px -16px rgba(0, 0, 0, 0.22);
+  --glass: rgba(255, 255, 255, 0.92);
+  --glass-fill: #FFFFFF;
+  --glass-fill-strong: #FFFFFF;
+  --glass-edge: #D4D4D8;
+  --glass-line: #E4E4E7;
+  --glass-sheen: linear-gradient(transparent, transparent);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -16px rgba(0, 0, 0, 0.16);
+  --gloss: linear-gradient(transparent, transparent);
+  /* The brand, kept for the name and the logo only. */
+  --vj-blue: #3B82F6;
+  --vj-violet: #8B5CF6;
+  --vj-grad: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+}
+
+:root[data-mode="dark"] {
+  --ink: #FAFAFA;
+  --bg: #000000;
+  --bg-raised: #000000;
+  --surface: #0C0C0D;
+  --surface-2: #18181B;
+  --border: rgba(255, 255, 255, 0.14);
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --text: #FAFAFA;
+  --text-dim: #A1A1AA;
+  --brand: #FFFFFF;
+  --brand-strong: #FFFFFF;
+  --brand-soft: rgba(255, 255, 255, 0.1);
+  --on-brand: #000000;
+  --teal: #FFFFFF;
+  --teal-strong: #FFFFFF;
+  --teal-soft: rgba(255, 255, 255, 0.1);
+  --purple: #FFFFFF;
+  --purple-soft: rgba(255, 255, 255, 0.1);
+  --violet: #FFFFFF;
+  --pink: #FFFFFF;
+  --grad: linear-gradient(#FFFFFF, #FFFFFF);
+  --grad-btn: linear-gradient(#FFFFFF, #FFFFFF);
+  --grad-teal: linear-gradient(#FFFFFF, #FFFFFF);
+  --night: #000000;
+  --glow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --glow-strong: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-lift: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --glass: rgba(0, 0, 0, 0.9);
+  --glass-fill: #0C0C0D;
+  --glass-fill-strong: #0C0C0D;
+  --glass-edge: rgba(255, 255, 255, 0.24);
+  --glass-line: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+/* ── Plain white or plain black behind everything ── */
+body, :root[data-mode="dark"] body { background: var(--bg); background-attachment: initial; }
+
+/* ── Surfaces: solid, no frosted blue ── */
+.card, .tile, .shortcut, .sheet, .glass,
+:root[data-mode="dark"] .card, :root[data-mode="dark"] .tile, :root[data-mode="dark"] .shortcut {
+  background: var(--surface);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-color: var(--glass-line);
+  box-shadow: var(--glass-shadow);
+}
+.card .card, :root[data-mode="dark"] .card .card { background: var(--surface-2); box-shadow: none; }
+.card-link:hover, .tile.card-link:hover,
+:root[data-mode="dark"] .card-link:hover, :root[data-mode="dark"] .tile.card-link:hover { border-color: var(--border-strong); box-shadow: var(--shadow-lift); }
+.topbar, .mobile-nav, .sidenav, .footer, .ads-rail,
+:root[data-mode="dark"] .topbar, :root[data-mode="dark"] .mobile-nav,
+:root[data-mode="dark"] .sidenav, :root[data-mode="dark"] .footer, :root[data-mode="dark"] .ads-rail {
+  background: var(--bg); border-color: var(--border-soft); box-shadow: none;
+}
+:root[data-mode="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root[data-mode="dark"] select, :root[data-mode="dark"] textarea { background: var(--surface-2); border-color: var(--border); }
+:root[data-mode="dark"] input::placeholder, :root[data-mode="dark"] textarea::placeholder { color: #71717A; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+select:focus, textarea:focus { border-color: var(--ink) !important; box-shadow: 0 0 0 3px var(--brand-soft); }
+input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color: var(--ink); }
+
+/* ── Buttons: black on white, white on black ── */
+.btn.primary, .btn.primary:hover,
+:root[data-mode="dark"] .btn.primary, :root[data-mode="dark"] .btn.primary:hover {
+  background: var(--ink); color: var(--on-brand); border-color: transparent; box-shadow: none; filter: none;
+}
+.btn.primary:hover { opacity: 0.88; }
+.btn.primary:disabled, :root[data-mode="dark"] .btn.primary:disabled { background: var(--surface-2); color: var(--text-dim); opacity: 1; }
+.btn.primary .icon { color: inherit; }
+.btn.violet { background: var(--ink); color: var(--on-brand); }
+.btn.ghost, .btn.brand-outline,
+:root[data-mode="dark"] .btn.ghost, :root[data-mode="dark"] .btn.brand-outline { background: var(--surface); border-color: var(--border); color: var(--text); }
+.btn.ghost:hover, .btn.brand-outline:hover,
+:root[data-mode="dark"] .btn.ghost:hover, :root[data-mode="dark"] .btn.brand-outline:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.link-btn, .row-head a, a.link { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Selected chips, tabs and segments */
+.seg button.on, :root[data-mode="dark"] .seg button.on,
+.feed-tabs button.on, :root[data-mode="dark"] .feed-tabs button.on,
+.chip.on, .filter-chip.on, .pill.on {
+  background: var(--ink); color: var(--on-brand); box-shadow: none; border-color: transparent;
+}
+
+/* ── Navigation: the active place is ink, not blue ── */
+.sidenav-links > a.active:not(.sidenav-add), :root[data-mode="dark"] .sidenav-links > a.active:not(.sidenav-add),
+.sidenav-foot > a.active:not(.btn) { background: var(--surface-2); color: var(--text); box-shadow: none; }
+.sidenav-links > a.active .icon { color: var(--text); }
+.sidenav-add, :root[data-mode="dark"] .sidenav-add, .mobile-nav-plus, :root[data-mode="dark"] .mobile-nav-plus {
+  background: var(--ink); color: var(--on-brand); box-shadow: none;
+}
+.mobile-nav a.active, :root[data-mode="dark"] .mobile-nav a.active { color: var(--text); text-shadow: none; }
+:root[data-mode="dark"] .mobile-nav a.active .icon { filter: none; }
+.topbar-right .bar-icon.active { color: var(--text); background: var(--surface-2); }
+.me-chip .avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--border); }
+
+/* ── Icon tiles: grey tiles with an ink icon ── */
+.itile, .itile-blue, .itile-violet, .itile-grad, .itile-pink, .itile-orange, .itile-yellow,
+.itile-teal, .itile-green, .itile-indigo, .itile-red, .itile-navy, .itile-ghost {
+  --itile: var(--surface-2); --itile-glow: transparent;
+}
+.itile, :root[data-mode="dark"] .itile {
+  background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+.itile .icon { filter: none; }
+.story-ring:not(.seen):not(.none), :root[data-mode="dark"] .story-ring:not(.seen):not(.none) { box-shadow: none; }
+
+/* ── The name and the logo keep the brand colours ── */
+.voidaj-logo, :root[data-mode="dark"] .voidaj-logo { color: var(--text); }
+.voidaj-logo-a, :root[data-mode="dark"] .voidaj-logo-a {
+  background: var(--vj-grad); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
+}
+.voidaj-logo.light { color: #fff; }
+.voidaj-lockup-tile, :root[data-mode="dark"] .voidaj-lockup-tile { background: var(--vj-grad); color: #fff; box-shadow: none; }
+.grad-text, .auth-card h1 .grad-text { background: var(--vj-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.auth-orb { display: none; }
+.auth-screen, :root[data-mode="dark"] .auth-screen { background: var(--bg); }
+
+/* ── "Soon" tags and other small brand tints become grey ── */
+.soon-badge, :root[data-mode="dark"] .soon-badge { background: var(--surface-2); color: var(--text-dim); }
+
+/* ── Pieces that set their own blue ── */
+.sidenav-add, :root[data-mode="dark"] .sidenav-add { color: var(--on-brand) !important; filter: none; }
+.sidenav-add-plus { background: transparent; }
+.snav-ico, :root[data-mode="dark"] .snav-ico { color: var(--text-dim); background: transparent; box-shadow: none; }
+.sidenav-links > a.active .snav-ico, :root[data-mode="dark"] .sidenav-links > a.active .snav-ico { color: var(--on-brand); background: var(--ink); box-shadow: none; }
+.sidenav .sidenav-links > a.active .snav-ico .icon { color: var(--on-brand); stroke: var(--on-brand); filter: none; }
+.sidenav-links > a.active:not(.sidenav-add), :root[data-mode="dark"] .sidenav-links > a.active:not(.sidenav-add) { background: transparent; box-shadow: none; }
+.ads-rail::before, :root[data-mode="dark"] .ads-rail::before { display: none; }
+.addhub-banner-art { filter: none; }
+.story-ring { background: var(--ink); }
+.story-ring.seen { background: var(--border-strong); }
+.story-ring.none { background: transparent; }
+/* Black heroes stay black in both modes, so their main button is white. */
+.welcome-card, .city-hero { box-shadow: none; border: 1px solid var(--border-soft); }
+.welcome-card .btn.primary, .city-hero .btn.primary { background: #fff; color: #000; }
+
+/* ── Sign in with Google / Apple ── */
+.auth-social { display: grid; gap: 10px; margin: 18px 0 4px; }
+.auth-social-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; height: 46px; width: 100%;
+  font-size: 14.5px; font-weight: 600; border-radius: 12px; text-decoration: none;
+}
+.auth-social-btn.google { background: #fff; color: #1F1F1F; border: 1px solid #DADCE0; }
+.auth-social-btn.apple { background: #000; color: #fff; border: 1px solid #000; }
+:root[data-mode="dark"] .auth-social-btn.apple { border-color: rgba(255, 255, 255, 0.35); }
+.auth-social-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.auth-social-btn em { font-style: normal; font-size: 11.5px; font-weight: 600; opacity: 0.75; margin-left: 4px; }
+.auth-social-btn em::before { content: '· '; }
+.auth-or { display: flex; align-items: center; gap: 12px; margin: 14px 0; color: var(--text-dim); font-size: 12.5px; }
+.auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── The sign-in screen: black in both modes, like the welcome hero ── */
+.auth-screen, :root[data-mode="dark"] .auth-screen { background: #000; color: #fff; }
+.auth-card {
+  background: #0C0C0D; border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.auth-tagline, .auth-tagline span:nth-child(odd), .auth-card .auth-sub, .auth-card .auth-switch { color: #A1A1AA; }
+.auth-card .field > span { color: #D4D4D8; }
+.auth-card .field input { background: #18181B !important; border-color: rgba(255, 255, 255, 0.14) !important; }
+.auth-card .field input::placeholder { color: #71717A; }
+.auth-card .field input:focus { border-color: #fff !important; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14) !important; }
+.auth-card .btn.primary, .auth-card .btn.primary:hover { background: #fff; color: #000; box-shadow: none; }
+.auth-card .auth-switch .link-btn { color: #fff; }
+.auth-card .auth-explore { color: #A1A1AA !important; }
+.auth-mode-switch { background: #18181B; border-color: rgba(255, 255, 255, 0.1); }
+.auth-mode-switch button { color: #A1A1AA; }
+.auth-mode-switch button.on, .chip-row .auth-mode-switch button.on { background: #fff; color: #000; box-shadow: none; }
+.auth-card .auth-or { color: #A1A1AA; }
+.auth-card .auth-or::before, .auth-card .auth-or::after { background: rgba(255, 255, 255, 0.14); }
+.auth-card .auth-social-btn.apple { border-color: rgba(255, 255, 255, 0.35); }
+
+/* ── Everything that was painted with the brand gradient and white text ──
+   The gradient is now plain ink (black in light, white in dark), so its
+   text and icons take the opposite colour. */
+.chip-row button.on, .fc-audience button.on, .seg button.on, :root[data-mode="dark"] .seg button.on,
+.feed-tabs button.on, .pf2-tabs button.on, .explore2 .filter-row button.on, .job-timing button.on,
+.dm-chips button.on, .vis-tabs button.on, .ads-rail .ad-card .ad-cta,
+.assistant-fab, .story-plus, .mobile-nav-plus, :root[data-mode="dark"] .mobile-nav-plus, .mc-cta, .dm-send-round,
+.dm-row.mine .dm-bubble, :root[data-mode="dark"] .dm-row.mine .dm-bubble {
+  background: var(--ink); color: var(--on-brand); border-color: transparent; box-shadow: none;
+}
+.chip-row button.on .soon-badge, .chip-row button.on .filter-count, .explore2 .filter-row button.on .filter-count { background: color-mix(in srgb, var(--on-brand) 22%, transparent); color: var(--on-brand); }
+.mobile-nav-plus, :root[data-mode="dark"] .mobile-nav-plus { box-shadow: 0 0 0 4px var(--bg); }
+.story-plus { border-color: var(--bg) !important; }
+.theme-swatch::after { background: var(--ink); }
+
+/* ── Dark-mode pieces that set their own navy ── */
+:root[data-mode="dark"] .dm { background: var(--surface); --dm-soft: var(--surface-2); --dm-hover: rgba(255, 255, 255, 0.06); }
+:root[data-mode="dark"] .dm-item.active, :root[data-mode="dark"] .dm-item:hover { background: rgba(255, 255, 255, 0.06); }
+:root[data-mode="dark"] .dm-row.theirs .dm-bubble { background: var(--surface-2); }
+:root[data-mode="dark"] .dm-search, :root[data-mode="dark"] .dm-composer-pill { background: var(--surface-2) !important; }
+:root[data-mode="dark"] .dm-intro-btn { background: var(--surface-2); }
+.dm-origin, :root[data-mode="dark"] .dm-origin { background: var(--surface-2); border-color: var(--border); box-shadow: none; }
+:root[data-mode="dark"] .settings2 .settings-nav { background: var(--surface); }
+:root[data-mode="dark"] .cm-pop, :root[data-mode="dark"] .ev-card, :root[data-mode="dark"] .job-cat:not([style]) { background: var(--surface); }

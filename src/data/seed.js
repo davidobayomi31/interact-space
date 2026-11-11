@@ -1,4 +1,4 @@
-// ── Interact Space seed data ─────────────────────────────────────────
+// ── VOIDAJ seed data ─────────────────────────────────────────
 // One city (Lagos, Nigeria) fully populated so the demo never feels empty.
 // All dates are relative to a demo "today" of 2026-07-17.
 

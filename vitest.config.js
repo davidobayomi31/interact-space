@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 // Postgres database. They wipe that database before every run, so refuse to
 // start unless it is clearly a local test database.
 const DATABASE_URL = process.env.TEST_DATABASE_URL
-  || `postgres://${os.userInfo().username}@127.0.0.1:5432/interact_test`
+  || `postgres://${os.userInfo().username}@127.0.0.1:5432/voidaj_test`
 
 const { hostname, pathname } = new URL(DATABASE_URL)
 if (!['localhost', '127.0.0.1', '[::1]'].includes(hostname) || !pathname.endsWith('_test')) {

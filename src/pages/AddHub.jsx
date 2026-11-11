@@ -12,20 +12,21 @@ import { useApp } from '../state.jsx'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { FeedComposer } from '../components/Feed.jsx'
 import { EventForm } from '../components/EventForm.jsx'
+import { FEATURES } from '../features.js'
 
 const ROWS = [
   { id: 'post', icon: 'edit', tone: 'violet', title: 'Post', sub: 'Share photos, updates and ideas — public, your city or a community', sheet: true },
   { id: 'event', icon: 'calendar', tone: 'pink', title: 'Event', sub: 'A meetup, class or gathering — public, your city or a community', sheet: true },
   { id: 'job', icon: 'briefcase', tone: 'orange', title: 'Job', sub: 'Get local help — plumbing, moving, tutoring and more', to: '/jobs?post=1' },
   { id: 'community', icon: 'community', tone: 'teal', title: 'Community', sub: 'Bring people together around a place or a passion', to: '/communities/new' },
-  { id: 'voice', icon: 'megaphone', tone: 'blue', title: 'Voice', sub: 'A focused page for one side of who you are', to: '/voices/new' },
-]
+  { id: 'business', icon: 'store', tone: 'green', title: 'Business', sub: 'Showcase your business, services or products', to: '/business/new' },
+  { id: 'voice', icon: 'megaphone', tone: 'blue', title: 'Voice', sub: 'A focused page for one side of who you are', to: '/voices/new', on: FEATURES.vis },
+].filter((r) => r.on !== false)
 const SOON = [
-  { id: 'trip', icon: 'car', tone: 'indigo', title: 'Trip', sub: 'Offer or find a ride — road trips and carpools' },
-  { id: 'business', icon: 'store', tone: 'green', title: 'Business', sub: 'Promote your shop, brand or service' },
-  { id: 'organization', icon: 'layers', tone: 'yellow', title: 'Organization', sub: 'Schools, NGOs, churches, associations' },
+  { id: 'trip', icon: 'car', tone: 'indigo', title: 'Trip', sub: 'Offer or find a ride — road trips and carpools', on: FEATURES.trips },
+  { id: 'organization', icon: 'layers', tone: 'yellow', title: 'Organization', sub: 'Schools, NGOs, churches, associations', on: FEATURES.organization },
   { id: 'service', icon: 'hand-coins', tone: 'red', title: 'Service', sub: 'List what you offer so people can hire you' },
-]
+].filter((r) => r.on !== false)
 
 function Sheet({ title, icon, tone, onClose, children }) {
   useEffect(() => {

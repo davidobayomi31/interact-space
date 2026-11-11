@@ -1,4 +1,4 @@
-// ── Interact Space database ──────────────────────────────────────────
+// ── VOIDAJ database ──────────────────────────────────────────────────
 // Postgres. Owns everything dynamic: accounts, membership, posts,
 // threaded comments, votes, connections, reports, jobs, chats and ads.
 //
@@ -19,7 +19,7 @@ const url = process.env.DATABASE_URL
 if (!url) {
   throw new Error(
     'DATABASE_URL is not set. Copy .env.example to .env and point it at a Postgres database ' +
-    '(locally: postgres://postgres@127.0.0.1:5432/interact).',
+    '(locally: postgres://postgres@127.0.0.1:5432/voidaj).',
   )
 }
 
@@ -546,6 +546,80 @@ CREATE OR REPLACE VIEW admin.ceo_users AS
   FROM users u
   WHERE u.deleted_at IS NULL
   ORDER BY (COALESCE(u.is_seed, 0) = 1), u.created_at DESC;
+
+-- Sign in with Google / Apple (Nuel, Nov 9): each provider's own id for
+-- the person, so they land in the same account every time.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_sub TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub ON users (google_sub) WHERE google_sub IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_apple_sub ON users (apple_sub) WHERE apple_sub IS NOT NULL;
+
+-- Business on VOIDAJ (Nuel's mockup, Nov 8; routes in server/business.js):
+-- a business profile, its listings, followers, reviews and promotions.
+CREATE TABLE IF NOT EXISTS businesses (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'other',
+  description TEXT DEFAULT '',
+  city TEXT DEFAULT 'Lagos',
+  area TEXT DEFAULT '',
+  logo TEXT DEFAULT '',
+  cover TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  website TEXT DEFAULT '',
+  hours TEXT DEFAULT '',
+  verified INTEGER DEFAULT 0,
+  views INTEGER DEFAULT 0,
+  enquiries INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS businesses_owner ON businesses (owner_id);
+CREATE TABLE IF NOT EXISTS business_listings (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'product',
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  price BIGINT,
+  status TEXT DEFAULT '',
+  image TEXT DEFAULT '',
+  area TEXT DEFAULT '',
+  views INTEGER DEFAULT 0,
+  enquiries INTEGER DEFAULT 0,
+  created_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS business_listings_biz ON business_listings (business_id);
+CREATE TABLE IF NOT EXISTS business_follows (
+  business_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  created_at BIGINT,
+  PRIMARY KEY (business_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS business_reviews (
+  business_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  stars INTEGER NOT NULL,
+  body TEXT DEFAULT '',
+  created_at BIGINT,
+  PRIMARY KEY (business_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS business_promotions (
+  id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL,
+  listing_id TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  days INTEGER NOT NULL,
+  budget INTEGER NOT NULL,
+  reach_low INTEGER,
+  reach_high INTEGER,
+  views_at_start INTEGER DEFAULT 0,
+  enquiries_at_start INTEGER DEFAULT 0,
+  starts_at BIGINT,
+  ends_at BIGINT
+);
+CREATE INDEX IF NOT EXISTS business_promotions_live ON business_promotions (ends_at);
 `
 
 // ── Roles ────────────────────────────────────────────────────────────
@@ -785,6 +859,8 @@ export async function selfUser(row) {
     settings: readSettings(row),
     createdAt: row.created_at,
     isAdmin: !!row.is_admin,
+    hasPassword: !!row.password_hash,
+    linked: { google: !!row.google_sub, apple: !!row.apple_sub },
   }
 }
 

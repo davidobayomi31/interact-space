@@ -641,7 +641,6 @@ a.pf2-idcard:hover { box-shadow: var(--glow-strong); }
 .chip-row .soon-badge { height: 17px; padding: 0 6px; font-size: 9.5px; }
 .chip-row button.on .soon-badge { background: rgba(255, 255, 255, 0.25); color: #fff; }
 
-.city-map-card { position: relative; border-radius: 22px; overflow: hidden; background: var(--night); box-shadow: var(--glow); }
 .city-map-card .ng-map { border: 0; background: none; padding: 16px 16px 92px; }
 .city-map-card .ng-land { fill: rgba(59, 130, 246, 0.16); stroke: #7FB0FF; stroke-width: 1.6; filter: drop-shadow(0 0 8px rgba(76, 141, 255, 0.6)); }
 .city-map-card .ng-river { stroke: rgba(0, 200, 150, 0.7); fill: none; stroke-width: 1.4; }
@@ -652,16 +651,6 @@ a.pf2-idcard:hover { box-shadow: var(--glow-strong); }
 .city-map-card .ng-city:hover .ng-dot { stroke: #fff; }
 .city-map-card .ng-pulse { fill: rgba(139, 92, 246, 0.35); animation: vj-pulse 1.8s ease-in-out infinite; }
 .city-map-card .ng-count { fill: #fff; font-size: 9px !important; font-weight: 800; stroke: none !important; }
-.city-place {
-  position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
-  background: rgba(6, 16, 42, 0.78); border: 1px solid rgba(127, 176, 255, 0.3); color: #fff; backdrop-filter: blur(12px);
-  animation: vj-rise 0.3s var(--ease-out) both;
-}
-.city-place > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.city-place strong { font-size: 17px; }
-.city-place span { font-size: 12.5px; color: #B4C3E3; }
-.city-place-hint { font-size: 11px !important; color: #7FB0FF !important; white-space: nowrap; }
-@media (max-width: 480px) { .city-place-hint { display: none; } }
 .city-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 @media (max-width: 600px) { .city-tiles { grid-template-columns: repeat(2, 1fr); } }
 .city-tile {
@@ -968,7 +957,6 @@ a.ad-card, a.phone-ad { color: var(--text); text-decoration: none; }
 }
 .xp-place-art { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: radial-gradient(circle at 30% 20%, rgba(0, 200, 150, 0.35), transparent 60%), radial-gradient(circle at 80% 90%, rgba(124, 58, 237, 0.35), transparent 60%), var(--surface-2); }
 .xp-place-art .xp-place-name { font-size: 15px; font-weight: 800; color: var(--text); }
-.city-place-photo { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(127, 176, 255, 0.4); }
 .ev-card.ev-focused { border-color: transparent; box-shadow: 0 0 0 2px #EC4899, 0 0 34px -8px rgba(236, 72, 153, 0.8); }
 .event-form .fc-audience { margin-bottom: 2px; }
 .sheet .event-form { box-shadow: none; border: 0; padding: 0; background: none !important; }

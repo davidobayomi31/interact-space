@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AppProvider, useApp } from './state.jsx'
 import { Icon } from './components/Icons.jsx'
 import { VoidajLockup } from './components/VoidajMark.jsx'
@@ -27,6 +27,9 @@ import EventDetail from './pages/EventDetail.jsx'
 import Tag from './pages/Tag.jsx'
 import Badges from './pages/Badges.jsx'
 import Business from './pages/Business.jsx'
+import Businesses from './pages/Businesses.jsx'
+import BusinessNew from './pages/BusinessNew.jsx'
+import Promote from './pages/Promote.jsx'
 import AddHub from './pages/AddHub.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
@@ -35,6 +38,7 @@ import MyCity from './pages/MyCity.jsx'
 import Admin from './pages/Admin.jsx'
 import IdCard from './pages/IdCard.jsx'
 import * as api from './api.js'
+import { FEATURES } from './features.js'
 
 const IMMERSIVE = ['/welcome', '/auth']
 
@@ -125,6 +129,7 @@ function ProfileMenu({ inSide = false }) {
           <Link role="menuitem" to="/id"><Icon name="badge-check" size={15} /> VOIDAJ ID</Link>
           <Link role="menuitem" to="/communities?tab=mine"><Icon name="community" size={15} /> My Communities</Link>
           <Link role="menuitem" to="/jobs"><Icon name="briefcase" size={15} /> My Jobs</Link>
+          <Link role="menuitem" to="/businesses"><Icon name="store" size={15} /> Businesses</Link>
           <Link role="menuitem" to="/saved"><Icon name="bookmark" size={15} /> My Stash</Link>
           <Link role="menuitem" to="/badges"><Icon name="award" size={15} /> My Badges</Link>
           {user.moderatorOf?.length > 0 && <Link role="menuitem" to="/mod"><Icon name="shield" size={15} /> Moderation</Link>}
@@ -134,6 +139,37 @@ function ProfileMenu({ inSide = false }) {
         </div>
       )}
     </div>
+  )
+}
+
+// The one search box on larger screens. On a page that has its own list to
+// search (communities, jobs, businesses, Explore) it searches that page, via
+// ?q= in the URL; anywhere else typing takes you to Explore. Those pages hide
+// their own box on larger screens, so there is only ever one search.
+const SEARCH_SCOPES = {
+  '/explore': 'Search VOIDAJ',
+  '/communities': 'Search communities',
+  '/jobs': 'Search jobs — e.g. plumber, Yaba',
+  '/businesses': 'Search businesses, services, offers',
+}
+function HeaderSearch() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [params, setParams] = useSearchParams()
+  const scoped = SEARCH_SCOPES[location.pathname]
+  const [text, setText] = useState('')
+  const value = scoped ? (params.get('q') || '') : text
+  const change = (v) => {
+    setText(v)
+    if (scoped) setParams((p) => { v ? p.set('q', v) : p.delete('q'); return p }, { replace: true })
+    else if (v) navigate(`/explore?q=${encodeURIComponent(v)}`)
+  }
+  const label = scoped || 'Search VOIDAJ'
+  return (
+    <form className="topbar-search" role="search" onSubmit={(e) => { e.preventDefault(); if (!scoped) navigate(value ? `/explore?q=${encodeURIComponent(value)}` : '/explore') }}>
+      <Icon name="search" size={17} />
+      <input type="search" value={value} onChange={(e) => change(e.target.value)} placeholder={label} aria-label={label} />
+    </form>
   )
 }
 
@@ -150,8 +186,14 @@ function Header() {
         <VoidajLockup size={16} />
       </Link>
 
+      {/* Larger screens: a search bar in the middle, like a feed site's header. */}
+      <HeaderSearch />
+
       <div className="topbar-right">
-        <NavLink to="/explore" className="icon-btn subtle bar-icon" aria-label="Search">
+        {user && (
+          <NavLink to="/add" className="topbar-create"><Icon name="plus" size={18} /> Create</NavLink>
+        )}
+        <NavLink to="/explore" className="icon-btn subtle bar-icon topbar-search-icon" aria-label="Search">
           <Icon name="search" size={19} />
         </NavLink>
         {user ? (
@@ -209,9 +251,11 @@ function SideNav() {
         </NavLink>
       </div>
       <div className="sidenav-foot">
-        <button className="sidenav-companion" onClick={() => setAssistantOpen(true)} title="Companion">
-          <Eagle size={24} /> <span>Companion</span>
-        </button>
+        {FEATURES.companion && (
+          <button className="sidenav-companion" onClick={() => setAssistantOpen(true)} title="Companion">
+            <Eagle size={24} /> <span>Companion</span>
+          </button>
+        )}
         {user ? (
           <>
             <NavLink to="/notifications" title="Notifications" aria-label={attention ? `Notifications, ${attention} new` : 'Notifications'}>
@@ -285,6 +329,10 @@ export default function App() {
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/tag/:tag" element={<Tag />} />
               <Route path="/badges" element={<Badges />} />
+              <Route path="/businesses" element={<Businesses />} />
+              <Route path="/business/new" element={<BusinessNew />} />
+              <Route path="/business/:id/edit" element={<BusinessNew />} />
+              <Route path="/business/:id/promote" element={<Promote />} />
               <Route path="/business/:id" element={<Business />} />
               <Route path="/add" element={<AddHub />} />
               <Route path="/notifications" element={<Notifications />} />
@@ -297,9 +345,9 @@ export default function App() {
               <Route path="/communities/new" element={<NewCommunity />} />
               <Route path="/community/:id" element={<Community />} />
               <Route path="/post/:id" element={<Thread />} />
-              <Route path="/v/:handle" element={<Voice />} />
-              <Route path="/voices/new" element={<VoiceBuilder />} />
-              <Route path="/voices/:id" element={<VoiceBuilder />} />
+              {FEATURES.vis && <Route path="/v/:handle" element={<Voice />} />}
+              {FEATURES.vis && <Route path="/voices/new" element={<VoiceBuilder />} />}
+              {FEATURES.vis && <Route path="/voices/:id" element={<VoiceBuilder />} />}
               <Route path="/mod" element={<Moderation />} />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/u/:handle" element={<Profile />} />
@@ -313,7 +361,7 @@ export default function App() {
           </main>
           <Footer />
           <AdsRail />
-          <Assistant />
+          {FEATURES.companion && <Assistant />}
           <MobileNav />
         </div>
       </BrowserRouter>

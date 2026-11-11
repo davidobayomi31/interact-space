@@ -10,7 +10,6 @@ import { useCommunities, findCommunity } from '../communities.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { StoriesRow } from '../components/Stories.jsx'
 import { FeedPost, FeedComposer } from '../components/Feed.jsx'
-import { VoidajMark } from '../components/VoidajMark.jsx'
 import { useApp } from '../state.jsx'
 import * as api from '../api.js'
 import { useAds, pickSearchAd, SearchAd } from '../components/AdsRail.jsx'
@@ -61,33 +60,6 @@ function HomeSearch({ communities, posts, jobs, events }) {
   )
 }
 
-// A city at dusk: towers in deep navy against a blue sky, lit windows
-// picked out in warm gold and white. Drawn, so it loads instantly.
-function Skyline() {
-  const towers = [
-    [0, 62, 22], [20, 40, 18], [36, 70, 26], [60, 24, 16], [74, 50, 22], [94, 12, 14], [106, 44, 24],
-    [128, 30, 18], [144, 58, 26], [168, 6, 16], [182, 36, 22], [202, 52, 20], [220, 20, 18], [236, 46, 26],
-    [260, 30, 16], [274, 60, 22], [294, 38, 26],
-  ]
-  return (
-    <svg className="city-hero-skyline" viewBox="0 0 320 100" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <g fill="#0A1A33" opacity="0.55">
-        {towers.map(([x, y, w], i) => <rect key={i} x={x + 6} y={y + 14} width={w} height={100 - y} />)}
-      </g>
-      <g fill="#081429">
-        {towers.map(([x, y, w], i) => <rect key={i} x={x} y={y + 24} width={w - 2} height={100 - y} />)}
-      </g>
-      <g>
-        {towers.flatMap(([x, y, w], i) => Array.from({ length: Math.floor((76 - y) / 9) }, (_, r) =>
-          (i * 7 + r * 3) % 4 === 0 ? null : (
-            <rect key={`${i}-${r}`} x={x + 3 + ((r + i) % 2) * (w / 2 - 3)} y={y + 30 + r * 9} width="3" height="3"
-              fill={(i + r) % 3 === 0 ? '#FFD27A' : '#BFD6FF'} opacity={(i + r) % 2 ? 0.9 : 0.55} />
-          )))}
-      </g>
-    </svg>
-  )
-}
-
 // A photo that quietly removes itself if it fails to load, leaving the
 // drawn fallback (icon or skyline) underneath.
 export function Cover({ src, className = 'tile-photo' }) {
@@ -95,37 +67,6 @@ export function Cover({ src, className = 'tile-photo' }) {
   if (!src || !ok) return null
   return <img className={className} src={src} alt="" loading="lazy" decoding="async" onError={() => setOk(false)} />
 }
-
-// Drop a photo at public/images/city/<city>.jpg (lower case) and the hero uses it.
-function CityHero({ city }) {
-  return (
-    <Link to="/city" className="city-hero">
-      <Cover src={`/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`} className="city-hero-photo" />
-      <div className="city-hero-text">
-        <strong>Explore your city</strong>
-        <span>Events, jobs, hubs and more in {city}</span>
-      </div>
-      <span className="city-hero-go" aria-hidden="true"><Icon name="arrow" size={18} /></span>
-      <Skyline />
-    </Link>
-  )
-}
-
-const SHORTCUTS = [
-  { to: '/jobs', icon: 'briefcase', label: 'Quick Jobs', tone: 'orange' },
-  { to: '/events', icon: 'calendar', label: 'Events', tone: 'pink' },
-  { to: '/city', icon: 'map-pin', label: 'My City', tone: 'teal' },
-]
-
-// The mockup's icon row under the status rings.
-const QUICK = [
-  { to: '/add?pick=post', icon: 'edit', label: 'Post', tone: 'blue' },
-  { to: '/add?pick=event', icon: 'calendar', label: 'Event', tone: 'pink' },
-  { to: '/jobs?post=1', icon: 'briefcase', label: 'Job', tone: 'orange' },
-  { to: '/communities', icon: 'users', label: 'Community', tone: 'teal' },
-  { to: '/city', icon: 'map-pin', label: 'Map', tone: 'green' },
-  { to: '/explore', icon: 'grid', label: 'More', tone: 'violet' },
-]
 
 const TABS = [
   { id: 'foryou', label: 'For You' },
@@ -207,28 +148,56 @@ export function PersonTile({ person }) {
   )
 }
 
-// Signed-out visitors meet the brand first, like the app's welcome screen.
-function Welcome() {
+// The top of Home: the city's photo full-bleed, a short line over it, and
+// a glass panel of what's on. Signed-out visitors get the brand line and
+// the way in; members get a greeting and their city. (David, Nov 10:
+// "follow the images sent as examples".)
+function Hero({ user, first, city, counts, me }) {
+  const hour = new Date().getHours()
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   return (
-    <section className="welcome-card">
-      <VoidajMark size={30} light />
-      <h1>A new space for people, communities &amp; opportunities.</h1>
-      <p>{PURPOSE}</p>
-      <div className="welcome-actions">
-        <Link to="/auth" className="btn primary">Get started <Icon name="arrow" size={15} /></Link>
-        <Link to="/auth?mode=login" className="btn ghost">Log in</Link>
+    <section className="hero-x">
+      <Cover src={`/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`} className="hero-x-photo" />
+      <div className="hero-x-shade" aria-hidden="true" />
+      <div className="hero-x-body">
+        <span className="hero-x-eyebrow"><Icon name="map-pin" size={13} /> {city}, Nigeria</span>
+        {user
+          ? <h1>{greet}, <em>{first}</em>.</h1>
+          : <h1>A new space for <em>people</em>, communities &amp; opportunities.</h1>}
+        <p>{user ? `Here’s what’s happening around ${city} today.` : PURPOSE}</p>
+        <div className="hero-x-actions">
+          {user ? (
+            <>
+              <Link to="/city" className="btn primary">Explore {city} <Icon name="arrow" size={15} /></Link>
+              <Link to="/add" className="btn glass"><Icon name="plus" size={15} /> Create</Link>
+            </>
+          ) : (
+            <>
+              <Link to="/auth" className="btn primary">Get started <Icon name="arrow" size={15} /></Link>
+              <Link to="/auth?mode=login" className="btn glass">Log in</Link>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="hero-x-side">
+        {me}
+        <nav className="hero-x-stats" aria-label={`What’s on in ${city}`}>
+          <Link to="/events"><b>{counts.events}</b><span>Events</span></Link>
+          <Link to="/jobs"><b>{counts.jobs}</b><span>Open jobs</span></Link>
+          <Link to="/communities"><b>{counts.communities}</b><span>Communities</span></Link>
+        </nav>
       </div>
     </section>
   )
 }
 
 // "Your Space": you, your numbers and your citizen level.
-function YourSpace() {
+function YourSpace({ inHero = false }) {
   const { user, profile } = useApp()
   const [j, setJ] = useState(null)
   useEffect(() => { api.journey('me').then(setJ).catch(() => {}) }, [user?.id])
   return (
-    <section className="card home-side-card ys-card">
+    <section className={inHero ? 'hero-x-me' : 'card home-side-card ys-card'}>
       <Link to="/profile/me" className="ys-me">
         <Avatar user={user} size={44} />
         <span><b>{user.name}</b><em>View profile</em></span>
@@ -244,27 +213,6 @@ function YourSpace() {
           <span className="lv-bar"><span style={{ width: `${Math.max(4, j.progress)}%` }} /></span>
         </Link>
       )}
-    </section>
-  )
-}
-
-// "My City": the city photo as a map with glowing pins, and what's on.
-function MyCityCard({ city, events, jobs }) {
-  const photo = `/images/city/${city.toLowerCase().replace(/\s+/g, '-')}.jpg`
-  return (
-    <section className="card home-side-card mc-card">
-      <div className="row-head"><h2>My City · {city}</h2><Link to="/city">Open <Icon name="arrow" size={13} /></Link></div>
-      <Link to="/city" className="mc-map" style={{ '--img': `url(${photo}), url(/images/city/lagos.jpg)` }} aria-label={`Open the map of ${city}`}>
-        <i className="mc-pin p1"><Icon name="calendar" size={12} /></i>
-        <i className="mc-pin p2"><Icon name="briefcase" size={12} /></i>
-        <i className="mc-pin p3"><Icon name="users" size={12} /></i>
-        <i className="mc-pin p4"><Icon name="store" size={12} /></i>
-        <span className="mc-cta"><Icon name="map-pin" size={13} /> View map</span>
-      </Link>
-      <div className="mc-counts">
-        <Link to="/events"><Icon name="calendar" size={14} /> {events.length} events</Link>
-        <Link to="/jobs"><Icon name="briefcase" size={14} /> {jobs.length} jobs</Link>
-      </div>
     </section>
   )
 }
@@ -337,36 +285,18 @@ export default function Home() {
 
   return (
     <div className="page home2 home3">
-      {user
-        ? <div className="home-greeting"><h1>Hi {first} <span aria-hidden="true">👋</span></h1><p className="meta-dim">Here’s what’s happening around {city}.</p></div>
-        : <Welcome />}
+      <Hero user={user} first={first} city={city} me={user ? <YourSpace inHero /> : null} counts={{
+        events: [...madeEvents, ...EVENTS].length,
+        jobs: jobs.length,
+        communities: communities.filter((c) => (c.city || '').toLowerCase() === city.toLowerCase()).length || communities.length,
+      }} />
 
+      {/* Phones only: on larger screens the header search does this. */}
       <HomeSearch communities={communities} posts={posts} jobs={jobs} events={[...madeEvents, ...EVENTS]} />
-
-      <div className="home-top">
-        <CityHero city={city} />
-        <nav className="shortcut-tiles" aria-label="Shortcuts">
-          {SHORTCUTS.map((s) => (
-            <Link key={s.to} to={s.to} className="shortcut">
-              <IconTile name={s.icon} tone={s.tone} size={40} iconSize={20} />
-              <span>{s.label}</span>
-            </Link>
-          ))}
-        </nav>
-      </div>
 
       <div className="home-body">
         <div className="home-main">
           <StoriesRow />
-
-          <nav className="quick-icons" aria-label="Create and find">
-            {QUICK.map((a) => (
-              <Link key={a.label} to={user || a.to === '/explore' || a.to === '/city' || a.to === '/communities' ? a.to : '/auth'} className="quick-icon">
-                <IconTile name={a.icon} tone={a.tone} size={48} iconSize={22} />
-                <span>{a.label}</span>
-              </Link>
-            ))}
-          </nav>
 
           <div className="feed-tabs" role="tablist" aria-label="Feed">
             {TABS.map((t) => (
@@ -396,14 +326,6 @@ export default function Home() {
             "Hybrid Experience" desktop concept (Nov 3): your space, your city
             on a map, then what's coming up and quick opportunities. */}
         <aside className="home-aside">
-          {user && <YourSpace />}
-          <MyCityCard city={city} events={events} jobs={jobs} />
-          {events.length > 0 && (
-            <section className="card home-side-card">
-              <div className="row-head"><h2>Happening in {city}</h2><Link to="/events">See all <Icon name="arrow" size={13} /></Link></div>
-              {events.slice(0, 4).map((e) => <EventTile key={e.id} event={e} />)}
-            </section>
-          )}
           {people.length > 0 && (
             <section className="card home-side-card">
               <div className="row-head"><h2>People to follow</h2><Link to="/explore?type=people">See all <Icon name="arrow" size={13} /></Link></div>

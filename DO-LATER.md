@@ -7,7 +7,7 @@ Things we agreed to build, but not yet. Don't build them until someone picks one
 From Nuel's message on Oct 14. **Not built yet.** The current `/welcome` onboarding stays as it is for now.
 
 ### Step 1: Welcome and intent
-- Welcome the person to Interact Space and explain in one line what it's for.
+- Welcome the person to VOIDAJ and explain in one line what it's for.
 - Ask why they're here (pick one or more): find community, find work or hire, grow a business, share their voice, meet people, discover what's happening nearby.
 - Their answer shapes everything after onboarding (see "After onboarding" below).
 

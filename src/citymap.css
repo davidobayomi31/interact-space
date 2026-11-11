@@ -1,0 +1,138 @@
+/* ══ My City map ═════════════════════════════════════════════════════
+   A dark dashboard map (David, Nov 10: "modernize the map UI"): a black
+   vector base, glass pills for the cities, glass controls, and the
+   selected city's card floating bottom-left. The map stays dark in light
+   mode too, like a screen set into the page. Loaded after mono.css. */
+
+/* Tighter header so the filters and map sit higher on the page. */
+@media (min-width: 681px) {
+  .page.city2 { padding-top: 6px; }
+}
+.city2 { gap: 12px; }
+.city2 .city2-head { margin: 0; padding-top: 0; align-items: flex-end; }
+.city2 .city2-head h1 { font-size: 24px; letter-spacing: -0.02em; }
+.city2 .city2-head p { margin-top: 2px; }
+.city2 > .chip-row.float-bar { align-self: flex-start; max-width: 100%; }
+
+/* The card that holds the map. */
+.city-map-card {
+  position: relative; border-radius: 20px; overflow: hidden; isolation: isolate;
+  background: #0A0B0E; border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 30px 60px -34px rgba(0, 0, 0, 0.85);
+}
+:root:not([data-mode="dark"]) .city-map-card { border-color: rgba(10, 11, 14, 0.14); box-shadow: 0 24px 50px -30px rgba(10, 11, 14, 0.55); }
+.cm { position: relative; }
+.cm-canvas { width: 100%; height: clamp(540px, calc(100dvh - 190px), 900px); background: #080C14; }
+/* A soft vignette so the edges and the controls read as one surface. */
+.cm::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(10, 11, 14, 0.55), rgba(10, 11, 14, 0) 90px),
+    linear-gradient(0deg, rgba(10, 11, 14, 0.6), rgba(10, 11, 14, 0) 140px),
+    radial-gradient(120% 90% at 50% 45%, transparent 60%, rgba(0, 0, 0, 0.45));
+}
+.cm .maplibregl-marker { z-index: 2; }
+.cm .maplibregl-ctrl-top-right, .cm .maplibregl-ctrl-top-left, .cm .maplibregl-ctrl-bottom-right { z-index: 3; }
+.cm .maplibregl-ctrl-top-right { top: 6px; right: 6px; }
+.cm .maplibregl-ctrl-bottom-right { bottom: 6px; right: 6px; }
+
+/* Shared glass for the controls, pills and the city card. */
+.cm-all, .cm .maplibregl-ctrl-group, .cm .maplibregl-ctrl-attrib, .cm-pin-pill, .city-map-card .city-place.glass {
+  background: rgba(18, 20, 26, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(16px) saturate(150%); backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 10px 26px -12px rgba(0, 0, 0, 0.85);
+}
+
+/* Zoom. */
+.cm .maplibregl-ctrl-group { border-radius: 12px; overflow: hidden; }
+.cm .maplibregl-ctrl-group:not(:empty) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 10px 26px -12px rgba(0, 0, 0, 0.85); }
+.cm .maplibregl-ctrl-group button { width: 36px; height: 36px; background: transparent; transition: background 0.15s; }
+.cm .maplibregl-ctrl-group button + button { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.cm .maplibregl-ctrl-group button:not(:disabled):hover { background: rgba(255, 255, 255, 0.08); }
+.cm .maplibregl-ctrl-group button:focus-visible { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6); }
+.cm .maplibregl-ctrl-icon { filter: invert(1); opacity: 0.85; }
+
+/* "All of Nigeria". */
+.cm-all {
+  position: absolute; top: 16px; left: 16px; z-index: 3; display: inline-flex; align-items: center; gap: 7px;
+  height: 36px; padding: 0 14px 0 12px; border-radius: 12px; cursor: pointer;
+  color: #E9EBEF; font: 600 12.5px/1 inherit; letter-spacing: -0.005em; transition: background 0.15s, border-color 0.15s;
+}
+.cm-all svg { opacity: 0.7; }
+.cm-all:hover { background: rgba(30, 33, 41, 0.75); border-color: rgba(255, 255, 255, 0.18); }
+
+/* Attribution, folded to a small (i) pill. */
+.cm .maplibregl-ctrl.maplibregl-ctrl-attrib, .cm .maplibregl-ctrl-attrib.maplibregl-compact, .cm .maplibregl-ctrl-attrib.maplibregl-compact-show { background: rgba(18, 20, 26, 0.62); }
+.cm .maplibregl-ctrl-attrib { color: #9AA0AB; font-size: 10.5px; }
+.cm .maplibregl-ctrl-attrib.maplibregl-compact { min-height: 26px; border-radius: 999px; padding: 2px 28px 2px 4px; margin: 10px; }
+.cm .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) { padding: 0; width: 26px; }
+.cm .maplibregl-ctrl-attrib.maplibregl-compact-show { border-radius: 12px; padding: 5px 30px 5px 10px; }
+.cm .maplibregl-ctrl-attrib a { color: #C9CDD5; }
+.cm .maplibregl-ctrl-attrib-button { background-color: transparent; filter: invert(1); opacity: 0.7; width: 24px; height: 24px; top: 0; right: 0; }
+.cm .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button { top: 1px; right: 1px; }
+
+/* City pins: a glass pill (photo, name, count) above a dot on the spot. */
+.cm-pin { display: flex; flex-direction: column; align-items: center; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; }
+.cm-pin-pill {
+  display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px 0 3px; border-radius: 999px; white-space: nowrap;
+  color: #F3F4F6; font-size: 12px; font-weight: 600; letter-spacing: -0.005em;
+  transition: transform 0.2s var(--ease-out), background 0.2s, border-color 0.2s, color 0.2s;
+}
+.cm-pin-pill b { font-weight: 650; }
+.cm-pin-face { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: #1F2229; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); transition: width 0.2s, height 0.2s; }
+.cm-pin-face img { width: 100%; height: 100%; object-fit: cover; }
+.cm-pin-face i { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.cm-pin-pill em {
+  font-style: normal; font-size: 10.5px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; margin-right: -5px;
+  border-radius: 999px; display: inline-grid; place-items: center; background: rgba(255, 255, 255, 0.12); color: #fff;
+}
+.cm-pin-dot {
+  position: relative; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14), 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+.cm-pin.live .cm-pin-dot::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.55);
+  animation: cm-ping 2.2s var(--ease-out) infinite;
+}
+@keyframes cm-ping { from { transform: scale(0.6); opacity: 1; } to { transform: scale(2.1); opacity: 0; } }
+.cm-pin:hover .cm-pin-pill, .cm-pin:focus-visible .cm-pin-pill { transform: translateY(-2px); background: rgba(30, 33, 41, 0.78); border-color: rgba(255, 255, 255, 0.22); }
+.cm-pin:focus-visible { outline: none; }
+.cm-pin:focus-visible .cm-pin-pill { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7); }
+.cm .maplibregl-marker.cm-pin.on { z-index: 4; }
+.cm-pin.on .cm-pin-pill { height: 38px; padding-left: 4px; background: #fff; border-color: transparent; color: #0A0B0E; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.9); }
+.cm-pin.on .cm-pin-face { width: 30px; height: 30px; box-shadow: none; }
+.cm-pin.on .cm-pin-pill em { background: #0A0B0E; color: #fff; }
+.cm-pin.on .cm-pin-dot { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22), 0 0 18px rgba(255, 255, 255, 0.55); }
+
+/* The selected city, floating bottom-left. */
+.city-map-card .city-place.glass {
+  position: absolute; left: 16px; bottom: 16px; right: auto; z-index: 3; width: min(460px, calc(100% - 32px));
+  display: flex; align-items: center; gap: 14px; padding: 10px 16px 10px 10px; border-radius: 16px; color: #fff;
+  animation: vj-rise 0.3s var(--ease-out) both;
+}
+.city-place > div { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.city-place strong { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.city-place span { font-size: 12.5px; color: #A3A9B4; }
+.city-place-photo { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14); }
+.city-place-hint {
+  flex-shrink: 0; height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center;
+  font-size: 11px !important; font-weight: 600; color: #C9CDD5 !important; white-space: nowrap;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 680px) {
+  .cm-canvas { height: 460px; }
+  .city-map-card { border-radius: 18px; }
+  .city-map-card .city-place.glass { left: 10px; right: 10px; bottom: 10px; width: auto; }
+  .cm-all { top: 10px; left: 10px; }
+  .cm .maplibregl-ctrl-top-right { top: 0; right: 0; }
+  /* The card covers the bottom, so the (i) sits under the zoom buttons. */
+  .cm .maplibregl-ctrl-bottom-right { bottom: auto; top: 90px; right: 0; }
+  .cm-far .cm-pin:not(.on) .cm-pin-pill b { display: none; }
+  .cm-far .cm-pin:not(.on) .cm-pin-pill { padding-right: 3px; height: 28px; gap: 4px; }
+  .cm-far .cm-pin:not(.on) .cm-pin-pill:has(em) { padding-right: 8px; }
+  .cm-far .cm-pin:not(.on) .cm-pin-face { width: 22px; height: 22px; }
+}
+@media (max-width: 480px) { .city-place-hint { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .cm-pin.live .cm-pin-dot::after { animation: none; opacity: 0.5; } }

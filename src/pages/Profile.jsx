@@ -26,6 +26,7 @@ import { PortfolioSection } from '../components/Portfolio.jsx'
 import { JobHistory } from '../components/JobHistory.jsx'
 import { VoicesSection, CopyLink, SECTION_CATALOG } from '../components/Voices.jsx'
 import { VoiceSections } from './Voice.jsx'
+import { FEATURES } from '../features.js'
 import { BadgeArt } from './Badges.jsx'
 import { AboutSection } from '../components/Socials.jsx'
 import { OCCUPATIONS } from '../components/JobPeople.jsx'
@@ -403,7 +404,7 @@ export default function Profile() {
   const [posts, setPosts] = useState(null)
   const [followers, setFollowers] = useState(null)
 
-  const { voices, max } = useMyVoices(isMe && !loading && profile.onboarded)
+  const { voices, max } = useMyVoices(FEATURES.vis && isMe && !loading && profile.onboarded)
   const [activeVoice, setActiveVoice] = useState('main')
   const picked = isMe ? voices.find((v) => v.id === activeVoice) : null
   const resolved = useResolvedVoice(picked?.handle)
@@ -548,7 +549,7 @@ export default function Profile() {
       </div>
 
       <div className="pf2-content">
-      {isMe && <VoiceTabs voices={voices} max={max} active={picked ? picked.id : 'main'} onPick={setActiveVoice} />}
+      {FEATURES.vis && isMe && <VoiceTabs voices={voices} max={max} active={picked ? picked.id : 'main'} onPick={setActiveVoice} />}
 
       {picked ? (
         <VoicePanel voice={picked} resolved={resolved} />
@@ -588,7 +589,7 @@ export default function Profile() {
             )}
 
             <PortfolioSection items={user.portfolio} editable={isMe} onSave={(portfolio) => saveProfile({ portfolio })} />
-            {isMe && <VoicesSection profile={profile} />}
+            {FEATURES.vis && isMe && <VoicesSection profile={profile} />}
           </div>
         )}
 

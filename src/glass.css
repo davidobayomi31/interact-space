@@ -98,65 +98,10 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, te
 .seg { background: var(--glass-fill); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--glass-line); }
 .itile { background: var(--gloss), var(--itile, var(--grad)); box-shadow: 0 8px 18px -8px var(--itile-glow, rgba(59, 130, 246, 0.9)), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.12); }
 
-/* ══ My City map ═════════════════════════════════════════════════════ */
-.city-map-card { background: #050C1F; box-shadow: var(--glass-shadow), 0 30px 60px -30px rgba(37, 99, 235, 0.6); border: 1px solid var(--glass-line); }
-.cm { position: relative; }
-.cm-canvas { height: clamp(360px, 56vh, 560px); width: 100%; background: radial-gradient(60% 60% at 50% 50%, #0E2350, #030817); }
-.cm .maplibregl-ctrl-group { background: var(--glass-sheen), rgba(10, 20, 48, 0.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(170, 200, 255, 0.25); border-radius: 12px; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.8); overflow: hidden; }
-.cm .maplibregl-ctrl-group button { width: 34px; height: 34px; }
-.cm .maplibregl-ctrl-group button + button { border-top-color: rgba(170, 200, 255, 0.18); }
-.cm .maplibregl-ctrl-icon { filter: invert(1) brightness(1.4); }
-.cm .maplibregl-ctrl-attrib { background: rgba(3, 8, 23, 0.55); color: #9FB2D9; font-size: 10px; }
-.cm .maplibregl-ctrl-attrib a { color: #C7D6F5; }
-.cm-all {
-  position: absolute; top: 12px; left: 12px; z-index: 2; height: 34px; padding: 0 14px; border-radius: 999px;
-  color: #EAF1FF; font: 700 12.5px/1 inherit; cursor: pointer; border: 1px solid rgba(170, 200, 255, 0.28);
-  background: var(--glass-sheen), rgba(10, 20, 48, 0.55);
-}
-
-/* Pins: a round photo of the city in a glass bubble, with its name. */
-.cm-pin { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; border: 0; background: none; cursor: pointer; }
-.cm-pin-face {
-  position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 3px; border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.2));
-  box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.35);
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
-}
-.cm-pin-face img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.cm-pin-face i { width: 14px; height: 14px; border-radius: 50%; background: var(--grad); }
-.cm-pin-face::after { content: ''; position: absolute; inset: 3px 3px 50% 3px; border-radius: 50% 50% 40% 40%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0)); pointer-events: none; }
-.cm-pin-label {
-  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; white-space: nowrap;
-  color: #fff; font-size: 11.5px; background: rgba(6, 14, 36, 0.62); border: 1px solid rgba(170, 200, 255, 0.25);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-}
-.cm-pin-label em { font-style: normal; font-size: 10px; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--grad-btn); }
-.cm-pin.live .cm-pin-face { box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.7), 0 0 0 2px #4C8DFF, 0 0 18px rgba(76, 141, 255, 0.8); }
-.cm-pin:hover .cm-pin-face, .cm-pin:focus-visible .cm-pin-face { transform: translateY(-2px) scale(1.06); }
-.cm-pin.on .cm-pin-face { width: 52px; height: 52px; box-shadow: 0 10px 22px -6px rgba(0, 0, 0, 0.75), 0 0 0 2.5px #A48BFF, 0 0 26px rgba(139, 92, 246, 0.95); }
-.cm-pin.on .cm-pin-label { background: var(--gloss), var(--grad-btn); border-color: transparent; }
-
-/* The selected-city card floats over the bottom of the map. */
-.city-map-card .city-place.glass {
-  position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 2; color: #fff;
-  background: var(--glass-sheen), rgba(8, 18, 44, 0.55); border: 1px solid rgba(170, 200, 255, 0.25);
-  box-shadow: inset 0 1px 0 rgba(200, 220, 255, 0.25), 0 16px 34px -16px rgba(0, 0, 0, 0.9);
-}
-@media (max-width: 680px) {
-  .cm-canvas { height: 420px; }
-  .cm-pin-face { width: 32px; height: 32px; }
-  .cm-pin.on .cm-pin-face { width: 42px; height: 42px; }
-  .cm .maplibregl-ctrl-top-right { top: 0; }
-}
+/* My City map: see citymap.css */
 
 @media (prefers-reduced-transparency: reduce) {
   .card, .tile, .shortcut, .sheet, .glass, .sidenav, .ads-rail, .topbar, .mobile-nav { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface); }
-}
-@media (max-width: 680px) {
-  .cm-far .cm-pin:not(.on) .cm-pin-label b { display: none; }
-  .cm-far .cm-pin:not(.on) .cm-pin-label:not(:has(em)) { display: none; }
-  .cm-far .cm-pin:not(.on) .cm-pin-label { padding: 0 3px; height: 18px; }
-  .cm-far .cm-pin:not(.on) .cm-pin-face { width: 26px; height: 26px; padding: 2px; }
 }
 
 /* ══ One glossy icon colour (David, Oct 28: "don't make them all

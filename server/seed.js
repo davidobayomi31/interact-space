@@ -78,7 +78,7 @@ export async function seedIfEmpty() {
     const randomHash = bcrypt.hashSync(crypto.randomUUID(), 8)
     for (const u of USERS) {
       await t.run(USER_SQL,
-        u.id, `${u.handle.replace('@', '')}@seed.interact.local`, randomHash,
+        u.id, `${u.handle.replace('@', '')}@seed.voidaj.local`, randomHash,
         u.name, u.handle, u.title, u.city, u.area, u.color, u.bio,
         JSON.stringify(u.interests || []), JSON.stringify(u.goals || []),
         JSON.stringify(u.skills || []), now - 30 * DAY)
@@ -173,6 +173,56 @@ export async function seedExtras() {
   // seeded "verified pros only" jobs stand in as checked ones.
   if (!(await q.get('SELECT 1 FROM jobs WHERE verified = 1 LIMIT 1'))) {
     await q.run(`UPDATE jobs SET verified = 1 WHERE verified_only = 1 AND poster_id IN (SELECT id FROM users WHERE COALESCE(is_seed, 0) = 1)`)
+  }
+
+  // Business on VOIDAJ (Nuel, Nov 8): a few sample businesses run by the
+  // sample members, with listings, so Explore Businesses isn't empty on a
+  // new database. Akinyede Estates is the one from Nuel's mockup.
+  if ((await q.get('SELECT COUNT(*) AS n FROM businesses')).n === 0) {
+    const BIZ = [
+      { id: 'biz-akinyede', owner: 'u-tunde', name: 'Akinyede Estates', category: 'real-estate', area: 'Lekki', verified: 1,
+        description: 'Real estate · Property management · Sales & rentals across Lagos.', cover: '/images/city/lagos.jpg', hours: 'Mon–Sat, 9am–6pm',
+        listings: [
+          { kind: 'property', title: '4 Bedroom Duplex', price: 220000000, status: 'for-sale', area: 'Lekki, Lagos', image: '/images/city/lagos.jpg', description: 'Fully detached duplex with a BQ, fitted kitchen and 24-hour power. Gated estate.', promote: true },
+          { kind: 'property', title: '2 Bedroom Flat', price: 4500000, status: 'for-rent', area: 'Yaba, Lagos', image: '/images/communities/lagos-entrepreneurs.jpg', description: 'Yearly rent. Close to the tech hubs.' },
+          { kind: 'service', title: 'Property management', price: null, area: 'Lagos', description: 'We collect rent, handle repairs and keep your tenants happy.' },
+        ] },
+      { id: 'biz-nue-auto', owner: 'u-chidi', name: 'Nue Auto Services', category: 'auto', area: 'Ikeja', verified: 1,
+        description: 'Brake service, diagnostics and repairs. We come to you.', cover: '/images/jobs/auto-repair.jpg',
+        listings: [
+          { kind: 'service', title: 'Brake service & replacement', price: 35000, area: 'Ikeja, Lagos', image: '/images/jobs/auto-repair.jpg' },
+          { kind: 'offer', title: 'Free diagnostics this month', price: 0, area: 'Ikeja, Lagos' },
+        ] },
+      { id: 'biz-kola-foods', owner: 'u-adaeze', name: 'Kola Foods', category: 'food', area: 'Surulere', verified: 0,
+        description: 'Snacks made from grandma’s recipes. Small chops for parties.', cover: '/images/events/ev-market-popup.jpg',
+        listings: [
+          { kind: 'product', title: 'Party small-chops tray (50 pieces)', price: 25000, area: 'Surulere, Lagos', image: '/images/events/ev-market-popup.jpg' },
+        ] },
+      { id: 'biz-adire-funke', owner: 'u-funke', name: 'Adire by Funke', category: 'fashion', area: 'Balogun', verified: 0,
+        description: 'Modern cuts, hand-dyed textiles.', cover: '/images/communities/balogun-market-hub.jpg',
+        listings: [
+          { kind: 'product', title: 'Hand-dyed adire two-piece', price: 38000, area: 'Lagos Island', image: '/images/communities/balogun-market-hub.jpg' },
+        ] },
+      { id: 'biz-sunhome', owner: 'u-emeka', name: 'SunHome Solar', category: 'home-services', area: 'Ikorodu', verified: 1,
+        description: 'Off the generator in 3 weeks. Solar installs and maintenance.', cover: '/images/events/ev-solar-workshop.jpg',
+        listings: [
+          { kind: 'service', title: '3kVA home solar install', price: 1850000, area: 'Lagos', image: '/images/events/ev-solar-workshop.jpg' },
+        ] },
+    ]
+    for (const b of BIZ) {
+      await q.run(`INSERT INTO businesses (id, owner_id, name, category, description, city, area, cover, hours, verified, created_at)
+        VALUES (?, ?, ?, ?, ?, 'Lagos', ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`, b.id, b.owner, b.name, b.category, b.description, b.area, b.cover, b.hours || '', b.verified, now - 3 * DAY)
+      for (const [i, l] of b.listings.entries()) {
+        const lid = `${b.id}-l${i + 1}`
+        await q.run(`INSERT INTO business_listings (id, business_id, kind, title, description, price, status, image, area, views, enquiries, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`, lid, b.id, l.kind, l.title, l.description || '', l.price, l.status || '', l.image || '', l.area || '',
+          40 + i * 17, 3 + i, now - (2 * DAY) - i * HOUR)
+        if (l.promote) {
+          await q.run(`INSERT INTO business_promotions (id, business_id, listing_id, goal, audience, days, budget, reach_low, reach_high, views_at_start, enquiries_at_start, starts_at, ends_at)
+            VALUES (?, ?, ?, 'enquiries', 'nearby', 14, 15000, 8000, 25000, 0, 0, ?, ?) ON CONFLICT DO NOTHING`, `${lid}-promo`, b.id, lid, now - DAY, now + 30 * DAY)
+        }
+      }
+    }
   }
 
   if ((await q.get('SELECT COUNT(*) AS n FROM ads')).n === 0) {

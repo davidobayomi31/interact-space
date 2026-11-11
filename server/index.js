@@ -1,4 +1,4 @@
-// ── Interact Space API server ────────────────────────────────────────
+// ── VOIDAJ API server ────────────────────────────────────────
 import 'dotenv/config'
 import express from 'express'
 import cookieParser from 'cookie-parser'
@@ -16,6 +16,8 @@ import q, {
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
 import { companionReply } from './companion.js'
+import * as social from './social.js'
+import { businessRoutes, businessContext, countEnquiry } from './business.js'
 import { storageReady, uploadImage, readImage, cleanCover } from './storage.js'
 
 const app = express()
@@ -138,6 +140,65 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/logout', async (req, res) => { clearSession(res); res.json({ ok: true }) })
 
+// ── Sign in with Google / Apple (server/social.js) ───────────────────
+// Which buttons work: a provider is on once its keys are set.
+app.get('/api/auth/providers', (_req, res) => res.json(social.providers()))
+
+// Find the member this Google or Apple account belongs to: first by the
+// provider's own id, then by a verified email (an existing email account
+// gets the provider linked to it), and otherwise make a new account.
+async function socialSignIn(req, provider, profile) {
+  const col = provider === 'google' ? 'google_sub' : 'apple_sub'
+  let row = await q.get(`SELECT * FROM users WHERE ${col} = ?`, profile.sub)
+  if (!row && profile.email) {
+    row = await getUserByEmail(profile.email)
+    if (row && !row.is_seed && !row.deleted_at) await q.run(`UPDATE users SET ${col} = ? WHERE id = ?`, profile.sub, row.id)
+  }
+  if (row && (row.is_seed || row.deleted_at)) throw new Error('That account can’t be used to sign in.')
+  if (!row) {
+    const id = uid('u')
+    const name = (profile.name || profile.email?.split('@')[0] || 'New member').trim().slice(0, 80)
+    const handle = '@' + (name.toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, '') || 'member')
+    const color = NEW_USER_COLORS[Math.floor(Math.random() * NEW_USER_COLORS.length)]
+    await q.run(`INSERT INTO users (id, email, password_hash, name, handle, title, color, photo, ${col}, created_at)
+      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`, id, profile.email, name, handle, 'New citizen of VOIDAJ', color, profile.photo || '', profile.sub, now())
+    row = await getUserById(id)
+  }
+  return row
+}
+
+for (const provider of ['google', 'apple']) {
+  const label = provider === 'google' ? 'Google' : 'Apple'
+  app.get(`/api/auth/${provider}/start`, (req, res) => {
+    if (!social.providers()[provider]) return res.redirect(`${social.baseUrl(req)}/auth?error=${encodeURIComponent(`Sign in with ${label} isn’t set up yet.`)}`)
+    const state = social.newState(res, provider, social.baseUrl(req).startsWith('https://'))
+    res.redirect(provider === 'google' ? social.googleAuthUrl(req, state) : social.appleAuthUrl(req, state))
+  })
+
+  // Google comes back with a GET; Apple posts a form (response_mode=form_post).
+  const callback = async (req, res) => {
+    const base = social.baseUrl(req)
+    const input = provider === 'apple' ? { ...req.query, ...(req.body || {}) } : req.query
+    const fail = (msg) => res.redirect(`${base}/auth?mode=login&error=${encodeURIComponent(msg)}`)
+    if (input.error) return fail(input.error === 'access_denied' || input.error === 'user_cancelled_authorize' ? 'Sign-in was cancelled.' : `${label} sign-in didn’t finish.`)
+    if (!social.providers()[provider]) return fail(`Sign in with ${label} isn’t set up yet.`)
+    if (!social.checkState(req, res, provider, input.state)) return fail('That sign-in link expired. Please try again.')
+    try {
+      const profile = provider === 'google'
+        ? await social.googleProfile(req, String(input.code || ''))
+        : await social.appleProfile(req, String(input.code || ''), input.user)
+      const row = await socialSignIn(req, provider, profile)
+      issueSession(res, row.id, row.token_version)
+      await recordLogin(req, row.id)
+      res.redirect(`${base}${row.onboarded ? '/home' : '/welcome'}`)
+    } catch (e) {
+      fail(e.message || `${label} sign-in didn’t finish.`)
+    }
+  }
+  app.get(`/api/auth/${provider}/callback`, callback)
+  app.post(`/api/auth/${provider}/callback`, express.urlencoded({ extended: false }), callback)
+}
+
 app.get('/api/auth/me', async (req, res) => res.json({ user: req.userId ? await selfUser(req.userRow) : null }))
 
 const PRIVACY_LEVELS = ['exact', 'city-only', 'hidden']
@@ -249,7 +310,7 @@ app.patch('/api/auth/me', requireAuth, async (req, res) => {
 // Changing how you sign in always asks for the current password.
 app.post('/api/auth/email', requireAuth, async (req, res) => {
   const { email, password } = req.body || {}
-  if (!checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
+  if (req.userRow.password_hash && !checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return err(res, 400, 'Enter a valid email address.')
   const other = await getUserByEmail(email)
   if (other && other.id !== req.userId) return err(res, 409, 'Another account already uses that email.')
@@ -259,7 +320,8 @@ app.post('/api/auth/email', requireAuth, async (req, res) => {
 
 app.post('/api/auth/password', requireAuth, async (req, res) => {
   const { current, next } = req.body || {}
-  if (!checkPassword(current || '', req.userRow.password_hash)) return err(res, 401, 'Your current password isn’t right.')
+  // An account made with Google or Apple sets its first password without one.
+  if (req.userRow.password_hash && !checkPassword(current || '', req.userRow.password_hash)) return err(res, 401, 'Your current password isn’t right.')
   if (!next || next.length < 6) return err(res, 400, 'New password must be at least 6 characters.')
   // A new password signs out every other session; this one gets a fresh token.
   const version = (req.userRow.token_version || 0) + 1
@@ -296,7 +358,7 @@ app.get('/api/me/export', requireAuth, async (req, res) => {
     q.all('SELECT community_id, stars, review FROM ratings WHERE user_id = ?', id),
     q.all('SELECT at, user_agent, ip FROM login_events WHERE user_id = ? ORDER BY at DESC', id),
   ])
-  const { password_hash, token_version, ...account } = req.userRow
+  const { password_hash, token_version, google_sub, apple_sub, ...account } = req.userRow
   res.setHeader('Content-Disposition', `attachment; filename="voidaj-data-${new Date().toISOString().slice(0, 10)}.json"`)
   res.json({ exportedAt: new Date().toISOString(), account, memberships, connections, posts, comments, messages, jobs, applications, voices, events, ratings, logins })
 })
@@ -306,7 +368,7 @@ app.get('/api/me/export', requireAuth, async (req, res) => {
 // credited to "Former member", so other people's conversations still read.
 app.delete('/api/auth/me', requireAuth, async (req, res) => {
   const { password } = req.body || {}
-  if (!checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
+  if (req.userRow.password_hash && !checkPassword(password || '', req.userRow.password_hash)) return err(res, 401, 'That password isn’t right.')
   const id = req.userId
   const owned = await q.all("SELECT community_id FROM memberships WHERE user_id = ? AND role = 'owner'", id)
   await transaction(async (t) => {
@@ -333,7 +395,7 @@ app.delete('/api/auth/me', requireAuth, async (req, res) => {
       'DELETE FROM login_events WHERE user_id = ?',
     ]) await t.run(sql, ...Array((sql.match(/\?/g) || []).length).fill(id))
     await t.run("UPDATE jobs SET status = 'closed' WHERE poster_id = ?", id)
-    await t.run(`UPDATE users SET email = NULL, password_hash = NULL, name = 'Former member', handle = NULL,
+    await t.run(`UPDATE users SET email = NULL, password_hash = NULL, google_sub = NULL, apple_sub = NULL, name = 'Former member', handle = NULL,
       title = '', bio = '', area = NULL, phone = '', interests = '[]', goals = '[]', skills = '[]',
       job_skills = '[]', portfolio = '[]', socials = '[]', settings = '{}', id_verified = 0,
       token_version = COALESCE(token_version, 0) + 1, deleted_at = ? WHERE id = ?`, now(), id)
@@ -511,7 +573,7 @@ app.put('/api/communities/:id/cover', requireAuth, async (req, res) => {
 // Takes a photo the browser has already shrunk (a data URL) and returns a
 // link to store as a cover. With Supabase Storage set up the photo goes to
 // the bucket; locally without it, the data URL comes straight back.
-const UPLOAD_FOLDERS = { community: 'communities', event: 'events', avatar: 'avatars', 'profile-cover': 'profile-covers' }
+const UPLOAD_FOLDERS = { community: 'communities', event: 'events', avatar: 'avatars', 'profile-cover': 'profile-covers', 'business-logo': 'business-logos', 'business-cover': 'business-covers', listing: 'listings' }
 app.post('/api/uploads', requireAuth, async (req, res) => {
   const folder = UPLOAD_FOLDERS[req.body?.kind]
   if (!folder) return err(res, 400, 'Unknown upload type.')
@@ -1432,7 +1494,7 @@ app.get('/api/v/:handle', async (req, res) => {
 // What a message is about. The client says which job, post, event,
 // community or profile; the title, picture and link come from the
 // database where they can, so nobody can label a chat with a fake job.
-const CONTEXT_KINDS = ['job', 'post', 'event', 'community', 'profile', 'map']
+const CONTEXT_KINDS = ['job', 'post', 'event', 'community', 'profile', 'map', 'business']
 async function messageContext(raw, other) {
   const kind = raw?.kind
   if (!CONTEXT_KINDS.includes(kind)) return null
@@ -1460,6 +1522,7 @@ async function messageContext(raw, other) {
   }
   if (kind === 'profile') return { kind, id: other.id, title: other.name, sub: 'From their profile', link: `/profile/${other.id}` }
   if (kind === 'map') return { kind, id: clip(raw.id, 40), title: clip(raw.title || raw.id, 40), sub: 'From My City', link: '/city' }
+  if (kind === 'business') return businessContext(raw, other)
   return null
 }
 
@@ -1507,10 +1570,12 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
   let media
   try { media = cleanMedia(req.body?.media) } catch (e) { return err(res, 400, e.message) }
   if (!body && !media.length) return err(res, 400, 'Write something first.')
+  const context = await messageContext(req.body?.context, other)
   // Respect who the recipient lets message them. A conversation they've
-  // already had with you stays open either way.
+  // already had with you stays open either way, and so does an enquiry to
+  // a business they run (that's what a business page is for).
   const allow = readSettings(other).messages
-  if (allow !== 'everyone') {
+  if (allow !== 'everyone' && context?.kind !== 'business') {
     const talked = await q.get('SELECT 1 FROM dm_messages WHERE from_id = ? AND to_id = ? LIMIT 1', other.id, req.userId)
     const connected = await q.get('SELECT 1 FROM connections WHERE (user_id = ? AND other_id = ?) OR (user_id = ? AND other_id = ?) LIMIT 1',
       other.id, req.userId, req.userId, other.id)
@@ -1520,10 +1585,10 @@ app.post('/api/messages/:userId', requireAuth, async (req, res) => {
         : `${other.name} only takes messages from their connections.`)
     }
   }
-  const context = await messageContext(req.body?.context, other)
   const id = uid('dm')
   await q.run('INSERT INTO dm_messages (id, from_id, to_id, body, media, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     id, req.userId, other.id, body, JSON.stringify(media), context ? JSON.stringify(context) : '', now())
+  await countEnquiry(context)
   res.json({ message: serializeDm(await q.get('SELECT * FROM dm_messages WHERE id = ?', id)) })
 })
 
@@ -1650,6 +1715,9 @@ app.post('/api/live/:id/stop', requireAuth, async (req, res) => {
   await q.run('UPDATE live_streams SET ended_at = ? WHERE id = ?', now(), stream.id)
   res.json({ ok: true })
 })
+
+// ── Business on VOIDAJ (server/business.js) ──────────────────────────
+businessRoutes(app)
 
 // ── Companion ────────────────────────────────────────────────────────
 app.post('/api/companion', async (req, res) => {
