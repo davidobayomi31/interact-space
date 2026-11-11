@@ -1,4 +1,4 @@
-# Interact Space — The Plan in Plain English
+# VOIDAJ — The Plan in Plain English
 
 Seven phases. Each one has a goal, the work, and what you can show someone
 when it's done. Detail for every phase is further down this file.
@@ -24,7 +24,7 @@ plumbing, and it's about a week, and skipping it makes every later phase worse.
 ---
 
 ### Phase 1 — The AI Identity Builder ⭐
-**Goal:** the thing that makes Interact Space different from everything else.
+**Goal:** the thing that makes VOIDAJ different from everything else.
 
 Today "onboarding" is a fake AI. It's a fixed 6-question script and a list of
 about 50 keywords it looks for. It cannot ask a follow-up question.
@@ -143,9 +143,9 @@ Phase 3 is what stops it being copied. Phases 4 to 6 are what make it a business
 ---
 ---
 
-# Interact Space — Roadmap to V1
+# VOIDAJ — Roadmap to V1
 
-*(Note: "JACK" was the earlier working name. Everything below uses **Interact Space**. The name never made it into the codebase — there are zero occurrences of "JACK" in `src/`, `server/`, or `index.html`, so no rename work is needed.)*
+*(Note: "JACK", then "VOIDAJ", were earlier working names. Everything below uses **VOIDAJ**. The name never made it into the codebase — there are zero occurrences of "JACK" in `src/`, `server/`, or `index.html`, so no rename work is needed.)*
 
 ---
 
@@ -260,7 +260,7 @@ New endpoint: `POST /api/onboarding/turn`, backed by a new `server/identity.js` 
 
 **How it works** — a tool-use loop, not a script:
 
-- System prompt gives Claude one job: *interview this person until you can build their Interact Space identity.* It knows the facet kinds and the six `section` types, and it knows to ask about offers and needs, not hobbies.
+- System prompt gives Claude one job: *interview this person until you can build their VOIDAJ identity.* It knows the facet kinds and the six `section` types, and it knows to ask about offers and needs, not hobbies.
 - Claude is given **tools**, and the server executes them:
   - `set_identity({ name, area, city, privacy })`
   - `add_facet({ kind, headline, summary })`

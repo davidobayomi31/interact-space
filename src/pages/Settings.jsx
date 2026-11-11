@@ -11,6 +11,7 @@ import { TAGS, CHARTER } from '../data/seed.js'
 import { Icon, IconTile } from '../components/Icons.jsx'
 import { Avatar } from '../components/bits.jsx'
 import { Eagle } from '../components/Eagle.jsx'
+import { FEATURES } from '../features.js'
 
 const SECTIONS = [
   { id: 'account', icon: 'user', tone: 'blue', label: 'Account', sub: 'Name, username, email, phone, password' },
@@ -134,6 +135,9 @@ function Appearance() {
 function Terms() {
   return (
     <>
+      <Block title="Who can use VOIDAJ" sub="Minimum age">
+        <p className="meta-dim">You must be at least <strong>16 years old</strong> to create a VOIDAJ account or use VOIDAJ. By creating an account you confirm that you are 16 or older. If we learn that someone under 16 has an account, we may close it.</p>
+      </Block>
       <Block title="The VOIDAJ Charter" sub="Applies in every community, in every city.">
         <ol className="settings-charter">{CHARTER.map((c) => <li key={c}>{c}</li>)}</ol>
       </Block>
@@ -237,6 +241,7 @@ function Account() {
       if (pw.next !== pw.confirm) throw new Error('The new passwords don’t match.')
       await api.changePassword(pw.current, pw.next)
       setPw({ current: '', next: '', confirm: '' })
+      if (user.hasPassword === false) setUser(await api.me())
     }, 'Password changed — other devices have been signed out')
   }
 
@@ -261,11 +266,20 @@ function Account() {
         <p className="meta-dim settings-foot">Headline, bio, skills and portfolio are edited on <Link to="/profile/me">your profile</Link>.</p>
       </Block>
 
-      <Block title="Email" sub="Used to sign in. Confirm with your password to change it.">
+      {(user.linked?.google || user.linked?.apple) && (
+        <Block title="Signed in with" sub="You can use these as well as your email.">
+          <ul className="settings-consequences">
+            {user.linked.google && <li>Google</li>}
+            {user.linked.apple && <li>Apple</li>}
+          </ul>
+        </Block>
+      )}
+
+      <Block title="Email" sub={user.hasPassword === false ? 'Used to sign in.' : 'Used to sign in. Confirm with your password to change it.'}>
         <form className="settings-form" onSubmit={saveEmail}>
           <div className="settings-row">
             <Field label="Email address"><input type="email" value={email.email} onChange={(e) => setEmail({ ...email, email: e.target.value })} required /></Field>
-            <Field label="Current password"><input type="password" value={email.password} onChange={(e) => setEmail({ ...email, password: e.target.value })} required autoComplete="current-password" /></Field>
+            {user.hasPassword !== false && <Field label="Current password"><input type="password" value={email.password} onChange={(e) => setEmail({ ...email, password: e.target.value })} required autoComplete="current-password" /></Field>}
           </div>
           <div className="settings-actions">
             <button className="btn primary small" disabled={emailSave.busy || email.email === user.email}>Update email</button>
@@ -274,15 +288,15 @@ function Account() {
         </form>
       </Block>
 
-      <Block title="Password" sub="Changing it signs you out everywhere else.">
+      <Block title="Password" sub={user.hasPassword === false ? 'You signed up with Google or Apple. Add a password to sign in with your email too.' : 'Changing it signs you out everywhere else.'}>
         <form className="settings-form" onSubmit={savePw}>
-          <Field label="Current password"><input type="password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required autoComplete="current-password" /></Field>
+          {user.hasPassword !== false && <Field label="Current password"><input type="password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required autoComplete="current-password" /></Field>}
           <div className="settings-row">
             <Field label="New password" hint="At least 6 characters."><input type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={6} autoComplete="new-password" /></Field>
             <Field label="Confirm new password"><input type="password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required minLength={6} autoComplete="new-password" /></Field>
           </div>
           <div className="settings-actions">
-            <button className="btn primary small" disabled={pwSave.busy}>Change password</button>
+            <button className="btn primary small" disabled={pwSave.busy}>{user.hasPassword === false ? 'Add password' : 'Change password'}</button>
             {pwSave.note}
           </div>
         </form>
@@ -550,16 +564,20 @@ function Help() {
         </form>
       </Block>
 
-      <Block title="Contact support" sub="For quick questions about how Voidaj works, the Companion can usually answer straight away.">
-        <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}><Eagle size={18} /> Ask the Companion</button>
-      </Block>
+      {FEATURES.companion && (
+        <Block title="Contact support" sub="For quick questions about how Voidaj works, the Companion can usually answer straight away.">
+          <button className="btn brand-outline small" onClick={() => setAssistantOpen(true)}><Eagle size={18} /> Ask the Companion</button>
+        </Block>
+      )}
     </>
   )
 }
 
 // ── Data ─────────────────────────────────────────────────────────────
 function Data() {
-  const { setUser } = useApp()
+  const { user, setUser } = useApp()
+  // Accounts made with Google or Apple have no password: they type DELETE.
+  const noPassword = user?.hasPassword === false
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
   const [password, setPassword] = useState('')
@@ -582,7 +600,7 @@ function Data() {
 
       <Block title="Delete your account" sub="This can’t be undone." danger>
         <ul className="settings-consequences">
-          <li>Your profile, voices, connections, private messages and sign-in are removed.</li>
+          <li>Your profile, connections, private messages and sign-in are removed.</li>
           <li>Your posts and comments stay in their threads, credited to “Former member”.</li>
           <li>Jobs you posted are closed. Communities you own pass to their most senior remaining member.</li>
         </ul>
@@ -590,11 +608,11 @@ function Data() {
           <button className="btn danger small" onClick={() => setConfirming(true)}><Icon name="trash" size={14} /> Delete my account</button>
         ) : (
           <form className="settings-form" onSubmit={remove}>
-            <Field label="Enter your password to confirm">
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" autoFocus />
+            <Field label={noPassword ? 'Type DELETE to confirm' : 'Enter your password to confirm'}>
+              <input type={noPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete={noPassword ? 'off' : 'current-password'} autoFocus />
             </Field>
             <div className="settings-actions">
-              <button className="btn danger small" disabled={del.busy || !password}>Permanently delete</button>
+              <button className="btn danger small" disabled={del.busy || (noPassword ? password !== 'DELETE' : !password)}>Permanently delete</button>
               <button type="button" className="btn ghost small" onClick={() => { setConfirming(false); setPassword('') }}>Cancel</button>
               {del.note}
             </div>

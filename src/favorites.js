@@ -4,6 +4,7 @@
 // the server, so they don't follow the member to another device yet.
 // Each one keeps the title and link it was saved with.
 import { useSyncExternalStore } from 'react'
+import { FEATURES } from './features.js'
 
 const KEY = 'voidaj:favorites'
 const listeners = new Set()
@@ -45,7 +46,7 @@ export const STASH_COLLECTIONS = [
   { id: 'jobs', label: 'Jobs & Opportunities', icon: 'briefcase' },
   { id: 'events', label: 'Events', icon: 'calendar' },
   { id: 'businesses', label: 'Businesses', icon: 'store' },
-  { id: 'trips', label: 'Trips', icon: 'car' },
+  ...(FEATURES.trips ? [{ id: 'trips', label: 'Trips', icon: 'car' }] : []),
   { id: 'ideas', label: 'Ideas & Inspiration', icon: 'sparkle' },
 ]
 

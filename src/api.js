@@ -18,6 +18,8 @@ export const me = () => req('/auth/me').then((d) => d.user)
 export const register = (body) => req('/auth/register', { method: 'POST', body }).then((d) => d.user)
 export const login = (body) => req('/auth/login', { method: 'POST', body }).then((d) => d.user)
 export const logout = () => req('/auth/logout', { method: 'POST' })
+// Which of Google / Apple sign-in are set up on this server.
+export const authProviders = () => req('/auth/providers')
 export const patchMe = (body) => req('/auth/me', { method: 'PATCH', body }).then((d) => d.user)
 // Settings
 export const changeEmail = (email, password) => req('/auth/email', { method: 'POST', body: { email, password } }).then((d) => d.user)
@@ -152,3 +154,24 @@ export const journey = (userId = 'me') => req(`/users/${encodeURIComponent(userI
 export const createBadge = (name, style) => req('/badges', { method: 'POST', body: { name, style } })
 export const setBadgeHidden = (id, hidden) => req(`/badges/${encodeURIComponent(id)}/visibility`, { method: 'POST', body: { hidden } })
 export const deleteBadge = (id) => req(`/badges/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+// Business on VOIDAJ (server/business.js)
+export const businessMeta = () => req('/business-meta')
+export const listBusinesses = (params = {}) => {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
+  return req(`/businesses${qs ? `?${qs}` : ''}`).then((d) => d.businesses)
+}
+export const myBusinesses = () => req('/businesses/mine').then((d) => d.businesses)
+export const promotedListings = (city) => req(`/businesses/promoted${city ? `?city=${encodeURIComponent(city)}` : ''}`).then((d) => d.listings)
+export const getBusiness = (id) => req(`/businesses/${id}`).then((d) => d.business)
+export const createBusiness = (body) => req('/businesses', { method: 'POST', body }).then((d) => d.business)
+export const updateBusiness = (id, body) => req(`/businesses/${id}`, { method: 'PATCH', body }).then((d) => d.business)
+export const deleteBusiness = (id) => req(`/businesses/${id}`, { method: 'DELETE' })
+export const followBusiness = (id, follow = true) => req(`/businesses/${id}/follow`, { method: 'POST', body: { follow } })
+export const addListing = (id, body) => req(`/businesses/${id}/listings`, { method: 'POST', body }).then((d) => d.listing)
+export const deleteListing = (id, listingId) => req(`/businesses/${id}/listings/${listingId}`, { method: 'DELETE' })
+export const viewListing = (id, listingId) => req(`/businesses/${id}/listings/${listingId}/view`, { method: 'POST' }).catch(() => {})
+export const businessReviews = (id) => req(`/businesses/${id}/reviews`).then((d) => d.reviews)
+export const reviewBusiness = (id, body) => req(`/businesses/${id}/reviews`, { method: 'POST', body })
+export const promoteListing = (id, body) => req(`/businesses/${id}/promote`, { method: 'POST', body }).then((d) => d.promotion)
+export const businessPromotions = (id) => req(`/businesses/${id}/promotions`).then((d) => d.promotions)

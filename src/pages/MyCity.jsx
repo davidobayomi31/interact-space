@@ -17,14 +17,16 @@ import { CITIES } from '../components/NigeriaMap.jsx'
 const CityMap = lazy(() => import('../components/CityMap.jsx').then((m) => ({ default: m.CityMap })))
 import { HomeAds } from '../components/AdsRail.jsx'
 import { JobCard } from './Jobs.jsx'
+import { FEATURES } from '../features.js'
+import { BusinessCard, PromotedListings } from '../components/BusinessBits.jsx'
 
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'events', label: 'Events', icon: 'calendar' },
   { id: 'jobs', label: 'Jobs', icon: 'wrench' },
   { id: 'communities', label: 'Communities', icon: 'community' },
-  { id: 'trips', label: 'Trips', icon: 'car', soon: true },
-  { id: 'businesses', label: 'Businesses', icon: 'store', soon: true },
+  ...(FEATURES.trips ? [{ id: 'trips', label: 'Trips', icon: 'car', soon: true }] : []),
+  { id: 'businesses', label: 'Businesses', icon: 'store' },
 ]
 
 // Seeded events don't carry a city; they're Lagos, like their communities.
@@ -40,6 +42,8 @@ export default function MyCity() {
   const city = place
 
   useEffect(() => { api.listJobs().then(setJobs).catch(() => setJobs([])) }, [user])
+  const [businesses, setBusinesses] = useState(null)
+  useEffect(() => { setBusinesses(null); api.listBusinesses({ city: place }).then(setBusinesses).catch(() => setBusinesses([])) }, [place])
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
     api.listEvents().then((list) => setMadeEvents(list.filter((e) => e.date >= today))).catch(() => {})
@@ -113,9 +117,11 @@ export default function MyCity() {
               <button className="city-tile" onClick={() => setFilter('communities')} style={{ '--img': `url(${local[0]?.cover ?? '/images/communities/african-startup-network.jpg'})` }}>
                 <b>Communities</b><span>{local.length || global.length} to join</span>
               </button>
-              <button className="city-tile soon" onClick={() => setFilter('trips')} style={{ '--img': 'url(/images/city/lagos.jpg)' }}>
-                <b>Ride share</b><span>Coming soon</span>
-              </button>
+              {FEATURES.trips && (
+                <button className="city-tile soon" onClick={() => setFilter('trips')} style={{ '--img': 'url(/images/city/lagos.jpg)' }}>
+                  <b>Ride share</b><span>Coming soon</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -136,6 +142,21 @@ export default function MyCity() {
               {cityJobs.length
                 ? <div className="card-grid two">{cityJobs.slice(0, 6).map((j) => <JobCard key={j.id} job={j} />)}</div>
                 : <p className="meta-dim">No open jobs in {city} right now. <Link to="/jobs?post=1">Post one</Link>.</p>}
+            </section>
+          )}
+
+          {filter === 'all' && <PromotedListings city={city} title={`Promoted in ${city}`} />}
+
+          {show('businesses') && (
+            <section className="section">
+              <div className="row-head">
+                <h2>Businesses in {city}</h2>
+                <Link to={user ? '/business/new' : '/auth'}><Icon name="plus" size={13} /> Add yours</Link>
+              </div>
+              {businesses === null ? <p className="meta-dim">Loading…</p> : businesses.length
+                ? <div className="biz-grid-list">{businesses.slice(0, filter === 'all' ? 4 : 30).map((b) => <BusinessCard key={b.id} business={b} />)}</div>
+                : <p className="meta-dim">No businesses in {city} yet. <Link to={user ? '/business/new' : '/auth'}>Put yours on the map</Link>.</p>}
+              {filter === 'all' && businesses?.length > 4 && <Link to="/businesses" className="btn ghost small">See all businesses</Link>}
             </section>
           )}
 

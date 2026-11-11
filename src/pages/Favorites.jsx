@@ -14,6 +14,7 @@ const KINDS = [
   { id: 'person', label: 'People', icon: 'user' },
   { id: 'job', label: 'Jobs', icon: 'wrench' },
   { id: 'event', label: 'Events', icon: 'calendar' },
+  { id: 'business', label: 'Businesses', icon: 'store' },
 ]
 const ICON = Object.fromEntries(KINDS.filter((k) => k.icon).map((k) => [k.id, k.icon]))
 

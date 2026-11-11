@@ -1,0 +1,314 @@
+/* ══ VOIDAJ design layer ═════════════════════════════════════════════
+   David, Nov 10: "fix the UI entirely, it still looks poorly made… follow
+   the images sent as examples" (modern product sites: full-bleed photos
+   under dark gradients, glass panels over imagery, light large headings
+   with serif italic accents, small uppercase labels, flat pill buttons,
+   image-first cards with big radii, quiet chrome).
+
+   What this file does, on top of everything before it (loaded last):
+   - Type: Inter Tight at medium weights with tight tracking; Instrument
+     Serif italic for accent words (<em> in big headings).
+   - Surfaces: flat. No gradients, inner highlights or gloss on panels;
+     fine 1px borders and soft, low shadows.
+   - Buttons: flat pills (white on dark, black on light), a glass pill for
+     use over photos, and a thin outline pill.
+   - Icon tiles: monochrome, no glossy colours.
+   - Cards: 22px radius, photos fill the top, slow zoom on hover.
+   - Home hero: the city's photo full-bleed with glass panels over it.
+   Layout (header, side list, ads panel) still comes from reddit.css. */
+
+:root {
+  --font-body: 'Inter Tight', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Inter Tight', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --r-xl: 28px; --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+  --ds-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Light */
+  --bg: #FFFFFF; --bg-raised: #FFFFFF;
+  --surface: #FFFFFF; --surface-2: #F4F4F5;
+  --text: #0A0A0B; --text-dim: #6B6B73;
+  --border: rgba(10, 10, 12, 0.1); --border-soft: rgba(10, 10, 12, 0.07); --border-strong: rgba(10, 10, 12, 0.2);
+  --rd-hover: rgba(10, 10, 12, 0.045); --rd-pill: #F4F4F5;
+  --ds-tile: rgba(10, 10, 12, 0.05);
+  --gl-fill: #FFFFFF;
+  --gl-rim: rgba(10, 10, 12, 0.08);
+  --gl-spec: 0 0 #0000;
+  --gl-shadow: 0 1px 2px rgba(10, 10, 12, 0.04), 0 12px 32px -20px rgba(10, 10, 12, 0.22);
+  --gl-float: 0 1px 2px rgba(10, 10, 12, 0.05), 0 18px 44px -22px rgba(10, 10, 12, 0.3);
+  --gl-blur: blur(20px) saturate(140%);
+  --gl-btn: #0A0A0B; --gl-btn-text: #FFFFFF; --gl-btn-shadow: 0 0 #0000;
+  --ds-bar: rgba(255, 255, 255, 0.82);
+}
+:root[data-mode="dark"] {
+  --bg: #0A0A0B; --bg-raised: #0A0A0B;
+  --surface: #131315; --surface-2: #1B1B1E;
+  --text: #F4F4F5; --text-dim: #9A9AA3;
+  --border: rgba(255, 255, 255, 0.1); --border-soft: rgba(255, 255, 255, 0.07); --border-strong: rgba(255, 255, 255, 0.2);
+  --rd-hover: rgba(255, 255, 255, 0.055); --rd-pill: rgba(255, 255, 255, 0.06);
+  --ds-tile: rgba(255, 255, 255, 0.06);
+  --gl-fill: #131315;
+  --gl-rim: rgba(255, 255, 255, 0.08);
+  --gl-spec: 0 0 #0000;
+  --gl-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+  --gl-float: 0 24px 60px -28px rgba(0, 0, 0, 0.95);
+  --gl-btn: #F4F4F5; --gl-btn-text: #0A0A0B; --gl-btn-shadow: 0 0 #0000;
+  --ds-bar: rgba(10, 10, 11, 0.72);
+}
+body, :root[data-mode="dark"] body { background: var(--bg); color: var(--text); font-family: var(--font-body); letter-spacing: -0.006em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* ── Type ── */
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em; }
+b, strong { font-weight: 600; }
+.page-head h1, .page-head h1 { font-size: clamp(28px, 2.6vw, 36px); font-weight: 600; letter-spacing: -0.04em; line-height: 1.05; }
+.page-head p, .page-head .meta-dim { font-size: 15px; color: var(--text-dim); }
+.row-head h2, .section > h2, .section-head h2, .sh-title, .home-row h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.025em; }
+.row-head a, .section-head a { color: var(--text-dim); text-decoration: none; font-weight: 500; font-size: 13.5px; display: inline-flex; align-items: center; gap: 4px; transition: color 0.2s; }
+.row-head a:hover, .section-head a:hover { color: var(--text); }
+.meta-dim { color: var(--text-dim); }
+em.serif, .serif { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+/* Small caps labels, like the references' eyebrows. */
+.ads-rail-label, .ads-rail-head, .eyebrow, .settings-label { font-size: 11.5px !important; letter-spacing: 0.1em !important; text-transform: uppercase; font-weight: 600 !important; color: var(--text-dim) !important; }
+
+/* ── Surfaces: flat, fine borders ── */
+.card, .tile, .ad-card, .shortcut, .ev-card, .cm-pop, .cm-hero, .feed-composer, .biz-card, .lst-card,
+:root[data-mode="dark"] .card, :root[data-mode="dark"] .tile, :root[data-mode="dark"] .ad-card, :root[data-mode="dark"] .ev-card,
+:root[data-mode="dark"] .cm-pop, :root[data-mode="dark"] .cm-hero, :root[data-mode="dark"] .feed-composer {
+  background: var(--surface); border: 1px solid var(--gl-rim); box-shadow: var(--gl-shadow);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.card, .tile, .ev-card, .cm-pop, .cm-hero, .feed-composer, .biz-card, .lst-card, .welcome-card { border-radius: var(--r-lg); }
+.card .card, :root[data-mode="dark"] .card .card { background: var(--surface-2); border-color: transparent; box-shadow: none; }
+.card-link:hover, :root[data-mode="dark"] .card-link:hover, .tile.card-link:hover { border-color: var(--border-strong); box-shadow: var(--gl-float); transform: translateY(-2px); }
+.card-link, .tile, .ev-card, .cm-pop, .biz-card, .lst-card { transition: transform 0.45s var(--ds-ease), box-shadow 0.45s var(--ds-ease), border-color 0.3s; }
+
+/* Photos fill the top of cards and drift in on hover. */
+.tile-photo, .cm-pop-photo img, .lst-photo img, .biz-card-cover img, .ev-card img, .xp-card img, .city-tile {
+  transition: transform 0.9s var(--ds-ease);
+}
+.tile:hover .tile-photo, .cm-pop:hover .cm-pop-photo img, .lst-card:hover .lst-photo img, .biz-card:hover .biz-card-cover img, .ev-card:hover img { transform: scale(1.045); }
+.tile-top, .cm-pop-photo, .lst-photo, .biz-card-cover { overflow: hidden; }
+
+/* Icon tiles: monochrome, flat. */
+.itile, .itile[class*="itile-"], :root[data-mode="dark"] .itile {
+  background: var(--ds-tile) !important; box-shadow: none !important; border: 1px solid var(--gl-rim);
+  color: var(--text) !important; --itile: none; --itile-glow: transparent;
+}
+.itile .icon, .itile svg { color: var(--text) !important; stroke: currentColor; filter: none !important; }
+.snav-ico, .sidenav .snav-ico { background: none !important; box-shadow: none !important; border: 0 !important; }
+
+/* ── Buttons: flat pills ── */
+.btn { border-radius: 999px; font-weight: 550; letter-spacing: -0.01em; transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, transform 0.2s; }
+.btn.primary, .btn.primary:hover, :root[data-mode="dark"] .btn.primary, :root[data-mode="dark"] .btn.primary:hover,
+:root:not([data-mode="dark"]) .btn.primary {
+  background: var(--gl-btn); color: var(--gl-btn-text); border: 1px solid transparent; box-shadow: none; filter: none;
+}
+.btn.primary:hover { opacity: 0.86; }
+.btn.ghost, .btn.brand-outline, :root[data-mode="dark"] .btn.ghost, :root[data-mode="dark"] .btn.brand-outline {
+  background: transparent; border: 1px solid var(--border); color: var(--text); box-shadow: none;
+}
+.btn.ghost:hover, :root[data-mode="dark"] .btn.ghost:hover { background: var(--rd-hover); border-color: var(--border-strong); }
+/* Over photos. */
+.btn.glass {
+  display: inline-flex; align-items: center; gap: 6px; color: #fff; background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.btn.glass:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* ── Tabs and chips: flat; selected is solid ── */
+.float-bar.chip-row, .float-bar.seg, .jobs-views-row.float-bar, .feed-tabs, .pf2-tabs,
+:root[data-mode="dark"] .float-bar.chip-row, :root[data-mode="dark"] .float-bar.seg, :root[data-mode="dark"] .jobs-views-row.float-bar,
+:root[data-mode="dark"] .feed-tabs, :root[data-mode="dark"] .pf2-tabs {
+  background: var(--ds-bar); border: 1px solid var(--gl-rim); box-shadow: var(--gl-float);
+  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+}
+.feed-tabs button, .pf2-tabs button, .float-bar.chip-row button, .float-bar.seg button { font-weight: 550; letter-spacing: -0.01em; }
+.feed-tabs button.on, .pf2-tabs button.on, .chip-row button.on, .seg button.on, .filter-row button.on,
+:root[data-mode="dark"] .feed-tabs button.on, :root[data-mode="dark"] .pf2-tabs button.on, :root[data-mode="dark"] .chip-row button.on,
+:root[data-mode="dark"] .seg button.on, :root[data-mode="dark"] .filter-row button.on,
+:root:not([data-mode="dark"]) .feed-tabs button.on, :root:not([data-mode="dark"]) .chip-row button.on, :root:not([data-mode="dark"]) .filter-row button.on {
+  background: var(--gl-btn); color: var(--gl-btn-text); border: 1px solid transparent; box-shadow: none;
+}
+.chip-row button:not(.on), .filter-row button:not(.on), :root[data-mode="dark"] .chip-row button:not(.on), :root[data-mode="dark"] .filter-row button:not(.on) {
+  background: transparent; border: 1px solid var(--border); box-shadow: none; color: var(--text); font-weight: 500;
+}
+.chip-row button:not(.on):hover, .filter-row button:not(.on):hover { background: var(--rd-hover); }
+.float-bar.chip-row button:not(.on) { border-color: transparent; }
+
+/* ── Chrome: header, side list, ads panel ── */
+@media (min-width: 681px) {
+  .topbar, :root[data-mode="dark"] .topbar {
+    background: var(--ds-bar); border-bottom: 1px solid var(--gl-rim); box-shadow: none;
+    -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+  }
+  .sidenav, :root[data-mode="dark"] .sidenav { background: var(--bg); border-right: 1px solid var(--gl-rim); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .topbar-search { background: var(--rd-pill); border: 1px solid transparent; box-shadow: none; }
+  .topbar-search:hover, .topbar-search:focus-within { border-color: var(--border); background: var(--rd-pill); }
+}
+.sidenav-links > a, .sidenav-foot > a:not(.btn), .sidenav-add, :root[data-mode="dark"] .sidenav-add { font-size: 14px; font-weight: 500; color: var(--text-dim) !important; }
+.sidenav-links > a:hover, .sidenav-foot > a:not(.btn):hover { color: var(--text) !important; }
+.sidenav-links > a.active:not(.sidenav-add), :root[data-mode="dark"] .sidenav-links > a.active:not(.sidenav-add) {
+  background: var(--rd-hover); box-shadow: none; color: var(--text) !important; font-weight: 600;
+}
+.sidenav .snav-ico .icon, .sidenav-links > a .icon { color: currentColor; stroke: currentColor; }
+.sidenav .sidenav-links > a.active .snav-ico .icon { color: var(--text); stroke: var(--text); }
+@media (min-width: 1081px) {
+  .ads-rail, :root[data-mode="dark"] .ads-rail { background: var(--surface); border: 1px solid var(--gl-rim); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.ads-rail .ad-card b, .ads-rail .ad-card strong { font-size: 15px; letter-spacing: -0.02em; }
+
+/* ── Feed ── */
+.fp-act, :root[data-mode="dark"] .fp-act { background: transparent; border: 1px solid var(--border); box-shadow: none; font-weight: 500; }
+.fp-act:hover { background: var(--rd-hover); }
+.feed-post .fp-who b { font-weight: 600; letter-spacing: -0.015em; }
+.feed-post p, .feed-post .fp-body { font-size: 15px; line-height: 1.55; }
+
+/* ── Inputs ── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { border-radius: var(--r-sm); }
+.explore-search, :root[data-mode="dark"] .explore-search { background: var(--rd-pill) !important; border: 1px solid transparent !important; box-shadow: none !important; }
+
+/* ── Story rings: thin brand ring ── */
+.story-ring > * { border-width: 2.5px; }
+
+/* ══ Home hero: the city full-bleed, glass over it ═══════════════════ */
+.hero-x {
+  position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: flex-end;
+  min-height: clamp(360px, 50vh, 520px); padding: clamp(22px, 3.6vw, 44px); border-radius: var(--r-xl);
+  color: #fff; background: #0B0D12; border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: vj-rise 0.6s var(--ds-ease) both;
+}
+.hero-x-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transform: scale(1.03); animation: hx-drift 18s ease-in-out infinite alternate; }
+@keyframes hx-drift { from { transform: scale(1.03); } to { transform: scale(1.09) translateX(-1.2%); } }
+.hero-x-shade {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(5, 6, 10, 0.88) 0%, rgba(5, 6, 10, 0.6) 42%, rgba(5, 6, 10, 0.12) 78%),
+    linear-gradient(0deg, rgba(5, 6, 10, 0.75) 0%, rgba(5, 6, 10, 0) 55%);
+}
+.hero-x-body { position: relative; max-width: min(620px, calc(100% - 380px)); display: flex; flex-direction: column; gap: 14px; }
+.hero-x-eyebrow {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.hero-x h1 { margin: 0; color: #fff; font-size: clamp(34px, 4.4vw, 60px); line-height: 1.02; font-weight: 500; letter-spacing: -0.045em; }
+.hero-x h1 em { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -0.015em; }
+.hero-x p { margin: 0; max-width: 520px; color: rgba(255, 255, 255, 0.72); font-size: 15.5px; line-height: 1.55; }
+.hero-x-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.hero-x .btn { height: 44px; padding: 0 20px; font-size: 14.5px; }
+.hero-x .btn.primary, :root[data-mode="dark"] .hero-x .btn.primary, :root:not([data-mode="dark"]) .hero-x .btn.primary { background: #fff; color: #0A0A0B; }
+.hero-x-stats {
+  position: absolute; right: clamp(16px, 3vw, 32px); bottom: clamp(16px, 3vw, 32px); display: flex; padding: 6px; border-radius: 20px;
+  background: rgba(10, 10, 12, 0.5); border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+}
+.hero-x-stats a { display: flex; flex-direction: column; gap: 2px; padding: 10px 18px; border-radius: 14px; color: #fff; transition: background 0.2s; }
+.hero-x-stats a + a { box-shadow: -1px 0 0 rgba(255, 255, 255, 0.12); }
+.hero-x-stats a:hover { background: rgba(255, 255, 255, 0.08); }
+.hero-x-stats b { font-size: 26px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.05; }
+.hero-x-stats span { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+@media (max-width: 1180px) {
+  .hero-x-body { max-width: 640px; }
+  .hero-x { flex-direction: column; align-items: stretch; justify-content: flex-end; gap: 20px; min-height: 440px; }
+  .hero-x-stats { position: static; align-self: flex-start; }
+}
+@media (max-width: 480px) { .hero-x-stats a { padding: 8px 12px; } .hero-x-stats b { font-size: 21px; } }
+@media (prefers-reduced-motion: reduce) { .hero-x-photo { animation: none; } }
+/* On larger screens the header search is the search. */
+@media (min-width: 681px) { .home3 .home-search { display: none; } }
+.home3 { gap: 22px; }
+
+/* ── Hero: your card and the city's numbers, stacked on the right ── */
+.hero-x { min-height: clamp(440px, 58vh, 600px); }
+.hero-x-body { max-width: min(620px, calc(100% - 400px)); }
+.hero-x-side {
+  position: absolute; right: clamp(16px, 3vw, 32px); bottom: clamp(16px, 3vw, 32px);
+  width: 360px; display: flex; flex-direction: column; gap: 12px;
+}
+.hero-x-side .hero-x-stats { position: static; justify-content: space-between; }
+.hero-x-side .hero-x-stats a { flex: 1; }
+.hero-x-me {
+  display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 20px; color: #fff;
+  background: rgba(10, 10, 12, 0.5); border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+}
+.hero-x-me .ys-me { display: flex; align-items: center; gap: 12px; color: #fff; }
+.hero-x-me .ys-me span { display: flex; flex-direction: column; gap: 1px; }
+.hero-x-me .ys-me b { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: #fff; }
+.hero-x-me .ys-me em { font-style: normal; font-size: 12.5px; color: rgba(255, 255, 255, 0.6); }
+.hero-x-me .ys-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hero-x-me .ys-stats a { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); color: #fff; transition: background 0.2s; }
+.hero-x-me .ys-stats a:hover { background: rgba(255, 255, 255, 0.13); }
+.hero-x-me .ys-stats b { font-size: 18px; font-weight: 600; letter-spacing: -0.03em; color: #fff; }
+.hero-x-me .ys-stats span { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.hero-x-me .ys-level { display: flex; flex-direction: column; gap: 6px; color: #fff; }
+.hero-x-me .ys-level > span:first-child { display: flex; justify-content: space-between; font-size: 12.5px; }
+.hero-x-me .ys-level b { color: #fff; font-weight: 600; }
+.hero-x-me .ys-level em { font-style: normal; color: rgba(255, 255, 255, 0.6); }
+.hero-x-me .lv-bar { height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.hero-x-me .lv-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3B82F6, #8B5CF6); }
+@media (max-width: 1180px) {
+  .hero-x-body { max-width: 640px; }
+  .hero-x-side { position: static; width: 100%; max-width: 440px; }
+}
+
+/* ── Beside the statuses: people to follow and jobs (wide screens) ── */
+.home-strip-side { display: none; }
+@media (min-width: 1240px) {
+  .home-strip-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+}
+
+/* ── Ads: a full-height column down the right edge ── */
+@media (min-width: 1081px) {
+  .ads-rail, :root[data-mode="dark"] .ads-rail {
+    top: 0; bottom: 0; right: 0; width: 240px; max-height: none; height: 100dvh;
+    border-radius: 0; border: 0; border-left: 1px solid var(--gl-rim); box-shadow: none;
+    padding: 18px 18px 16px; background: var(--bg);
+  }
+  body.has-ads-rail .app-shell { padding-right: 240px; }
+}
+
+/* Home: one two-column flow under the statuses — promoted and the feed on
+   the left, people / jobs / communities on the right — so neither side
+   leaves a gap. The side column scrolls with the page. */
+.home3 > .stories { margin: 0 -6px; }
+.home3 > .stories .stories-track { padding: 4px 6px 6px; }
+@media (min-width: 1240px) { .home-aside { position: static; } }
+/* Statuses sit at the top of the left column, level with People to follow;
+   if they ever run past the column they scroll sideways and fade at the edge. */
+.home-main > .stories { margin: 0; }
+.home-main > .stories .stories-track { padding: 4px 2px 6px; -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent); mask-image: linear-gradient(90deg, #000 92%, transparent); }
+/* Slightly smaller rings beside the side column, so all of them fit. */
+@media (min-width: 1240px) {
+  .home-main .stories-track { gap: 6px; }
+  .home-main .story { width: 64px; }
+  .home-main .story-ring .avatar, .home-main .story-ring .story-blank { width: 56px !important; height: 56px !important; }
+  .home-main .story-name { font-size: 12px; }
+}
+
+/* One search: on larger screens the header box searches these pages, so
+   their own boxes are hidden (phones keep them; the header there is an icon). */
+@media (min-width: 681px) { .page-search { display: none !important; } }
+
+/* ── Side list: a floating panel from top to bottom, with the logo at its
+   top (David, Nov 10: "push the left tab higher… then make the tab float") ── */
+@media (min-width: 681px) {
+  .sidenav, :root[data-mode="dark"] .sidenav {
+    top: 12px; bottom: 12px; left: 12px; height: auto; z-index: 80;
+    border-radius: 22px; border: 1px solid var(--gl-rim); background: var(--surface);
+    box-shadow: var(--gl-float); padding-top: 18px;
+  }
+  .sidenav-brand { display: flex !important; padding: 2px 8px 16px; margin-bottom: 6px; border-bottom: 1px solid var(--border-soft); }
+  .topbar-brand { display: none !important; }
+  body.has-sidenav .app-shell { padding-left: 96px; }
+}
+@media (min-width: 1001px) {
+  .sidenav { width: 236px; }
+  body.has-sidenav .app-shell { padding-left: 260px; }
+}
+/* With the logo in the side panel, keep the header search centred. */
+@media (min-width: 681px) {
+  .topbar .topbar-search { grid-column: 2; }
+  .topbar .topbar-right { grid-column: 3; }
+}

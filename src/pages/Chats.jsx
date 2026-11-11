@@ -44,6 +44,7 @@ const ORIGIN = {
   community: { icon: 'community', tone: 'teal', label: 'Community', re: 'You met in this community' },
   profile: { icon: 'user', tone: 'blue', label: 'Profile', re: 'Started from their profile' },
   map: { icon: 'map-pin', tone: 'green', label: 'My City', re: 'Started from My City' },
+  business: { icon: 'store', tone: 'green', label: 'Business', re: 'An enquiry about this business' },
 }
 
 // The "Re:" card: what this conversation is about, with a way back to it.
@@ -252,9 +253,20 @@ export default function Chats() {
     if (params.get('post')) return { kind: 'post', id: params.get('post'), title: '' }
     if (params.get('event')) return { kind: 'event', id: params.get('event'), title: ev?.title || '', sub: ev ? `${ev.date} · ${ev.time}` : '', image: ev?.cover || '' }
     if (params.get('community')) return { kind: 'community', id: params.get('community'), title: '' }
+    if (params.get('business')) return { kind: 'business', id: params.get('business'), listing: params.get('listing') || undefined, title: '' }
     if (params.get('from') === 'profile') return { kind: 'profile', id: params.get('dm'), title: '' }
     return null
   })
+
+  // A chat opened from a business or one of its listings: show what it's
+  // about straight away (the server fills it in for real when you send).
+  useEffect(() => {
+    if (pending?.kind !== 'business' || pending.title) return
+    api.getBusiness(pending.id).then((b) => {
+      const l = b.listings.find((x) => x.id === pending.listing)
+      setPending((p) => p && p.kind === 'business' ? { ...p, title: l?.title || b.name, sub: l ? b.name : 'Business', image: l?.image && !l.image.startsWith('data:') ? l.image : '' } : p)
+    }).catch(() => {})
+  }, [pending?.kind, pending?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadConversations = () => api.listConversations().then(setConversations).catch(() => {})
   const loadChats = () => api.listChats().then(setChats).catch(() => {})

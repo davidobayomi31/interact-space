@@ -67,8 +67,10 @@ export default function Communities() {
   const { all } = useCommunities()
   const [params, setParams] = useSearchParams()
   const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'foryou'
-  const setTab = (t) => setParams(t === 'foryou' ? {} : { tab: t }, { replace: true })
-  const [q, setQ] = useState('')
+  const setTab = (t) => setParams((p) => { t === 'foryou' ? p.delete('tab') : p.set('tab', t); return p }, { replace: true })
+  // The search is in the URL (?q=) so the header search box drives it.
+  const q = params.get('q') || ''
+  const setQ = (v) => setParams((p) => { v ? p.set('q', v) : p.delete('q'); return p }, { replace: true })
   const term = q.trim().toLowerCase()
 
   const interests = (profile.interests || []).map((i) => i.toLowerCase())
@@ -92,14 +94,13 @@ export default function Communities() {
         {TABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
       </div>
 
-      <label className="search-pill"><Icon name="search" size={17} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search communities" aria-label="Search communities" /></label>
+      <label className="search-pill page-search"><Icon name="search" size={17} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search communities" aria-label="Search communities" /></label>
 
       {tab === 'foryou' && !term && (
         <section className="cm-hero">
           <div className="cm-hero-text">
             <strong>Communities</strong>
             <span>People · Interests · Places</span>
-            <button className="btn small cm-hero-btn" onClick={() => setTab('discover')}>Join communities <Icon name="arrow" size={14} /></button>
           </div>
           <div className="cm-hero-faces" aria-hidden="true">
             {faces.map((c, i) => <img key={c.id} src={c.cover} alt="" style={{ '--i': i }} />)}

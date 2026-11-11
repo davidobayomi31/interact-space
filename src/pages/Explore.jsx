@@ -124,7 +124,7 @@ function PlaceCard({ city }) {
 export default function Explore() {
   const { user } = useApp()
   const [params, setParams] = useSearchParams()
-  const [query, setQuery] = useState(params.get('q') || '')
+  const query = params.get('q') || ''
   const kind = KINDS.some((k) => k.id === params.get('type')) ? params.get('type') : 'all'
   const { all: communities } = useCommunities()
   const [posts, setPosts] = useState([])
@@ -140,7 +140,6 @@ export default function Explore() {
   // Keep the query in the URL so a search can be shared or come back to.
   const setKind = (id) => setParams((p) => { id === 'all' ? p.delete('type') : p.set('type', id); return p }, { replace: true })
   const onQuery = (v) => {
-    setQuery(v)
     setParams((p) => { v ? p.set('q', v) : p.delete('q'); return p }, { replace: true })
   }
 
@@ -176,6 +175,7 @@ export default function Explore() {
       <header className="page-head">
         <h1>Explore</h1>
         <p className="meta-dim">People, places, events, jobs and more.</p>
+        <Link to="/businesses" className="btn ghost small xp-biz-link"><Icon name="store" size={14} /> Explore businesses</Link>
       </header>
 
       <div className="explore-search">

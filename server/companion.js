@@ -1,5 +1,5 @@
 // ── The AI Companion (real LLM, grounded, with rule-based fallback) ──
-// Discovery layer for Interact Space. Reads the live catalog from the DB,
+// Discovery layer for VOIDAJ. Reads the live catalog from the DB,
 // asks Claude to select + explain the most relevant communities, people
 // and discussions, then validates every id against the DB so the model
 // can never invent a community or person. If no ANTHROPIC_API_KEY is set

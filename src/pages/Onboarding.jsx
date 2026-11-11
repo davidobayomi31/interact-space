@@ -8,7 +8,7 @@ import { GOAL_OPTIONS } from '../data/seed.js'
 import { extractTags, tagLabel, matchCommunities, matchPeople, matchEvents } from '../ai.js'
 import { Icon } from '../components/Icons.jsx'
 import { VoidajLockup } from '../components/VoidajMark.jsx'
-import { Eagle } from '../components/Eagle.jsx'
+import { VjMark } from '../components/VoidajMark.jsx'
 import { CommunityCard, PersonCard, EventCard } from '../components/bits.jsx'
 
 const AREAS = ['Yaba', 'Lekki', 'Ikeja', 'Surulere', 'Victoria Island', 'Ikorodu', 'Somewhere else in Lagos']
@@ -37,7 +37,7 @@ export default function Onboarding() {
   }
 
   useEffect(() => {
-    say({ role: 'ai', text: 'Welcome to VOIDAJ. 🌍 I’m your companion — my job is to connect you to people, not keep you scrolling.' }, 300)
+    say({ role: 'ai', text: 'Welcome to VOIDAJ. 🌍 Let’s get you set up — VOIDAJ is here to connect you to people, not keep you scrolling.' }, 300)
     say({ role: 'ai', text: 'First things first — what should the city call you?' }, 1300)
     const t = setTimeout(() => setStep('name'), 1400)
     timers.current.push(t)
@@ -235,7 +235,7 @@ export default function Onboarding() {
             }
             return (
               <div key={i} className={`bubble-row ${m.role}`}>
-                {m.role === 'ai' && <div className="assistant-orb small"><Eagle size={24} /></div>}
+                {m.role === 'ai' && <div className="assistant-orb small"><VjMark size={12} title="" /></div>}
                 <div className={`bubble ${m.role}`}>{m.text}</div>
               </div>
             )

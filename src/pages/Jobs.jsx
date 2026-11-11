@@ -341,7 +341,6 @@ export default function Jobs() {
   const [matched, setMatched] = useState([])
   const [category, setCategory] = useState('')
   const [filter, setFilter] = useState('all')
-  const [search, setSearch] = useState('')
   const [allMatches, setAllMatches] = useState(false)
   const saved = useFavorites()
   const [showVerify, setShowVerify] = useState(false)
@@ -351,6 +350,9 @@ export default function Jobs() {
   // (with &category= when offering a job from someone's card); ?job=<id>
   // opens that job; ?view=people shows Find people.
   const [params, setParams] = useSearchParams()
+  // The search is in the URL (?q=) so the header search box drives it.
+  const search = params.get('q') || ''
+  const setSearch = (v) => setParams((p) => { v ? p.set('q', v) : p.delete('q'); return p }, { replace: true })
   const view = params.get('view') === 'people' ? 'people' : 'work'
   const setView = (v) => setParams((p) => { v === 'people' ? p.set('view', 'people') : p.delete('view'); return p }, { replace: true })
   const [posting, setPosting] = useState(params.get('post') === '1')
@@ -471,7 +473,7 @@ export default function Jobs() {
             <PostJobForm startCategory={params.get('category')} onClose={() => setPosting(false)} onCreated={(j) => setJobs((js) => [j, ...js])} />
           )}
 
-          <label className="search-pill jobs-search">
+          <label className="search-pill jobs-search page-search">
             <Icon name="search" size={17} />
             <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search jobs — e.g. plumber, Yaba, tutoring" aria-label="Search jobs" />
             {search && <button type="button" className="icon-btn subtle" onClick={() => setSearch('')} aria-label="Clear search"><Icon name="x" size={14} /></button>}

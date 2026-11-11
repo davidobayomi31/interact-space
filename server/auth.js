@@ -6,13 +6,14 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { getUserById } from './db.js'
 
-const SECRET = process.env.JWT_SECRET || 'interact-space-dev-secret-change-me'
+const SECRET = process.env.JWT_SECRET || 'voidaj-dev-secret-change-me'
 const COOKIE = 'is_token'
 const MAX_AGE = 30 * 24 * 3600 * 1000 // 30 days
 const IS_PRODUCTION = !!process.env.VERCEL || process.env.NODE_ENV === 'production'
 
 export const hashPassword = (pw) => bcrypt.hashSync(pw, 10)
-export const checkPassword = (pw, hash) => bcrypt.compareSync(pw, hash)
+// Accounts made with Google or Apple have no password hash: nothing matches.
+export const checkPassword = (pw, hash) => !!hash && bcrypt.compareSync(pw, hash)
 
 // `version` is the user's token_version: raising it in the database signs
 // out every session issued before (Settings → Security → sign out others).
