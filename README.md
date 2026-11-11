@@ -50,6 +50,19 @@ npm run test:coverage  # with a coverage report in coverage/
 
 The server tests wipe their database, so they refuse to run unless it's local and named `*_test`. CI (`.github/workflows/test.yml`) runs the suite with coverage and the production build on every push; it fails if a test fails or server line coverage drops below 80%.
 
+## Monitoring
+
+- **Health endpoint:** `GET /api/health` runs `SELECT 1` against Postgres with a 3-second timeout (`HEALTH_DB_TIMEOUT_MS`). It answers `200` with `"status": "ok"`, the database latency, the app version and the deployed commit, or `503` if the database is unreachable or too slow. The response never includes connection details or driver errors; those go to the server log.
+- **Uptime check and alerts:** `.github/workflows/uptime.yml` calls the health endpoint every 15 minutes. A run fails if the answer isn't a `200` with `"status": "ok"` within 5 seconds (`HEALTH_MAX_SECONDS`), twice in a row 30 seconds apart. GitHub emails a failed run to whoever last changed the workflow's schedule (as long as Actions email notifications are on in their GitHub settings). It needs the repository variable `HEALTH_URL` (Settings → Secrets and variables → Actions → Variables), for example `https://voidaj.com/api/health`. GitHub may start scheduled runs a few minutes late and pauses them after 60 days with no commits.
+- **Error logs:** every 5xx response writes one line of JSON (`"event": "request_failed"`) with the method, route, status, duration, request id and, for a crash, the error and stack. Search for `request_failed` or a request id in the Vercel dashboard's Logs. Every response carries an `X-Request-Id` header; on Vercel it matches Vercel's own request id. Query strings are never logged.
+
+Run the check by hand:
+
+```bash
+curl -i https://voidaj.com/api/health
+gh workflow run uptime.yml   # or Actions tab → Uptime → Run workflow
+```
+
 ## Where to look in the code
 
 | File | What it does |
@@ -58,6 +71,7 @@ The server tests wipe their database, so they refuse to run unless it's local an
 | `server/db.js` | Postgres schema and queries |
 | `server/companion.js` | AI companion: grounding and fallback |
 | `server/auth.js` | Sessions and passwords |
+| `server/monitoring.js` | Health check, request ids, JSON error logs |
 | `server/social.js` | Sign in with Google and Apple |
 | `server/business.js` | Business pages, listings and promotions |
 | `test/` | Server integration tests (`test/unit/` for helpers) |
