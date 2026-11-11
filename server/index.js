@@ -635,11 +635,10 @@ app.post('/api/communities/:id/join', requireAuth, async (req, res) => {
   if (!row) return err(res, 404, 'Community not found.')
   // Joining makes you a member. Staff roles are given by a community's
   // owner or admins (see /roles), or come from starting a community.
-  const existing = await q.get('SELECT role FROM memberships WHERE user_id = ? AND community_id = ?', req.userId, row.id)
-  if (!existing) {
-    await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'member', ?)", req.userId, row.id, now())
-    await q.run('UPDATE communities SET member_count = member_count + 1 WHERE id = ?', row.id)
-  }
+  // ON CONFLICT makes two quick taps (or two tabs) safe: only the insert
+  // that actually adds the membership bumps the member count.
+  const { changes } = await q.run("INSERT INTO memberships (user_id, community_id, role, created_at) VALUES (?, ?, 'member', ?) ON CONFLICT DO NOTHING", req.userId, row.id, now())
+  if (changes) await q.run('UPDATE communities SET member_count = member_count + 1 WHERE id = ?', row.id)
   res.json({ community: await serializeCommunity(row, req.userId), user: await selfUser(req.userRow) })
 })
 
@@ -1314,10 +1313,11 @@ app.post('/api/jobs/:id/offer', requireAuth, async (req, res) => {
 app.post('/api/jobs/:id/interest', requireAuth, async (req, res) => {
   const job = await q.get('SELECT * FROM jobs WHERE id = ?', req.params.id)
   if (!job) return err(res, 404, 'Job not found.')
+  if (job.poster_id === req.userId) return err(res, 400, 'This is your own job.')
   if (job.verified_only && !req.userRow.id_verified) return err(res, 403, 'This job requires ID verification.')
-  const existing = await q.get('SELECT 1 FROM job_interests WHERE job_id = ? AND user_id = ?', job.id, req.userId)
-  if (existing) await q.run('DELETE FROM job_interests WHERE job_id = ? AND user_id = ?', job.id, req.userId)
-  else await q.run('INSERT INTO job_interests (job_id, user_id, created_at) VALUES (?, ?, ?)', job.id, req.userId, now())
+  // Tapping again takes your interest back.
+  const { changes } = await q.run('DELETE FROM job_interests WHERE job_id = ? AND user_id = ?', job.id, req.userId)
+  if (!changes) await q.run('INSERT INTO job_interests (job_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', job.id, req.userId, now())
   res.json({ job: await serializeJob(job, req.userId) })
 })
 
@@ -1612,7 +1612,8 @@ app.post('/api/chats', requireAuth, async (req, res) => {
 app.post('/api/chats/:id/join', requireAuth, async (req, res) => {
   const chat = await q.get('SELECT * FROM chats WHERE id = ?', req.params.id)
   if (!chat) return err(res, 404, 'Group chat not found.')
-  await q.run('INSERT INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?)', chat.id, req.userId, now())
+  // Joining twice (a double tap, or the creator tapping Join) is a no-op, not an error.
+  await q.run('INSERT INTO chat_members (chat_id, user_id, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', chat.id, req.userId, now())
   res.json({ chat: await serializeChat(chat, req.userId) })
 })
 

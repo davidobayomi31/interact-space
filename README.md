@@ -19,7 +19,7 @@ A community platform where an **AI companion introduces you to people, communiti
 - **The AI can't make things up.** Claude picks from a catalog of live database records, and every ID it returns is checked against the database before it's shown. If the API key is missing or the call fails, a rule-based matcher takes over, so the feature never breaks.
 - **Serverless on Postgres.** The API runs as one Vercel serverless function. Data moved from SQLite to managed Postgres, because serverless functions have no disk that lasts between requests.
 - **Auth and roles:** bcrypt-hashed passwords, Sign in with Google and Apple (OAuth code flow with state checks), JWT sessions in httpOnly cookies, "sign out other devices", and community roles (owner > admin > moderator > member).
-- **Integration tests** drive the real Express app against a real Postgres in GitHub Actions: auth, membership rules, voting, moderation permissions, and the AI companion's grounding and fallback (with the Claude SDK mocked).
+- **Tests** run on every push in GitHub Actions. Integration tests drive the real Express app against a real Postgres: auth, privacy and messaging rules, membership, moderation permissions, jobs, business pages, and the AI companion's grounding and fallback (with the Claude SDK mocked). Unit tests cover the server's helpers, and React Testing Library covers the API client and components.
 
 ## Tech
 
@@ -42,10 +42,13 @@ The first request creates the tables and seeds sample data. Add `ANTHROPIC_API_K
 
 ```bash
 createdb voidaj_test   # once
-npm test
+npm test               # everything
+npm run test:api       # server only (needs the database)
+npm run test:web       # React only (no database)
+npm run test:coverage  # with a coverage report in coverage/
 ```
 
-The tests wipe their database, so they refuse to run unless it's local and named `*_test`.
+The server tests wipe their database, so they refuse to run unless it's local and named `*_test`. CI (`.github/workflows/test.yml`) runs the suite with coverage and the production build on every push; it fails if a test fails or server line coverage drops below 80%.
 
 ## Where to look in the code
 
@@ -57,4 +60,5 @@ The tests wipe their database, so they refuse to run unless it's local and named
 | `server/auth.js` | Sessions and passwords |
 | `server/social.js` | Sign in with Google and Apple |
 | `server/business.js` | Business pages, listings and promotions |
-| `test/` | Integration tests |
+| `test/` | Server integration tests (`test/unit/` for helpers) |
+| `src/**/*.test.js(x)` | React tests |
