@@ -12,6 +12,7 @@ import q, {
   serializeJob, serializeChat, serializeChatMessage, serializeDm,
   serializeAd, serializeLive, serializeEvent, SPARK_KINDS, journey, parseJson, mediaLabel, timeAgo,
   ROLE_RANK, STAFF_SQL, isStaff, readSettings, DEFAULT_SETTINGS, transaction,
+  pool,
 } from './db.js'
 import { seedIfEmpty, seedExtras, keepDemoStatuses } from './seed.js'
 import { hashPassword, checkPassword, issueSession, clearSession, attachUser, requireAuth } from './auth.js'
@@ -19,8 +20,12 @@ import { companionReply } from './companion.js'
 import * as social from './social.js'
 import { businessRoutes, businessContext, countEnquiry } from './business.js'
 import { storageReady, uploadImage, readImage, cleanCover } from './storage.js'
+import { requestLogger, errorHandler, healthHandler } from './monitoring.js'
 
 const app = express()
+// Request id on every response, and a JSON log line for every 5xx
+// (server/monitoring.js).
+app.use(requestLogger)
 // Photos, voice notes and short videos travel inline in JSON for now, so
 // the body limit sits above the default (see cleanMedia below).
 app.use(express.json({ limit: '25mb' }))
@@ -45,6 +50,10 @@ function ready() {
   }
   return bootstrap
 }
+
+// Registered before the bootstrap below, so it answers (with a 503) even
+// when the database is down and the schema can't be set up.
+app.get('/api/health', healthHandler(pool))
 
 app.use(async (_req, _res, next) => {
   try { await ready(); next() } catch (e) { next(e) }
@@ -1728,8 +1737,6 @@ app.post('/api/companion', async (req, res) => {
   res.json(reply)
 })
 
-app.get('/api/health', async (_req, res) => res.json({ ok: true, llm: !!process.env.ANTHROPIC_API_KEY }))
-
 // Serve the built frontend (npm run build → dist/) when present, so the whole
 // app is one origin on one port — ready for a tunnel (cloudflared/ngrok) or any
 // host. In dev this folder doesn't exist and Vite serves the frontend instead.
@@ -1744,12 +1751,9 @@ if (fs.existsSync(clientDir)) {
 
 // Any route that throws (including a rejected promise from an async handler)
 // lands here, so a database failure is a clean JSON error rather than a
-// request that hangs until the platform times it out.
-app.use((error, _req, res, _next) => {
-  console.error('[api]', error)
-  if (res.headersSent) return
-  res.status(500).json({ error: 'Something went wrong on our end.' })
-})
+// request that hangs until the platform times it out. It is logged as one
+// JSON line by requestLogger.
+app.use(errorHandler)
 
 // On Vercel the app is imported by api/index.js and invoked per request —
 // there is no port to listen on. Locally it is a normal server.

@@ -1,0 +1,76 @@
+# Uptime check for production. Every 15 minutes (and on demand: Actions tab →
+# Uptime → Run workflow) it calls the health endpoint, which runs a query
+# against the database (server/monitoring.js). The run fails if the endpoint
+# doesn't answer 200 with "status":"ok" within MAX_SECONDS, on two tries 30
+# seconds apart (one retry, so a single slow cold start doesn't page anyone).
+# A failed run is the alert: GitHub emails it to whoever last changed this
+# file's schedule, per their Actions notification settings.
+#
+# Setup: Settings → Secrets and variables → Actions → Variables →
+#   HEALTH_URL = https://voidaj.com/api/health
+# Without it every run fails, on purpose: an unconfigured monitor should look
+# broken, not quietly pass.
+#
+# Caveats: GitHub runs scheduled workflows only from the default branch, can
+# start them several minutes late, and pauses them in a public repo after 60
+# days with no commits.
+name: Uptime
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check production health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEALTH_URL: ${{ vars.HEALTH_URL }}
+      MAX_SECONDS: ${{ vars.HEALTH_MAX_SECONDS || '5' }}
+    steps:
+      - name: Call the health endpoint
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::error::HEALTH_URL is not set. Add it under Settings → Secrets and variables → Actions → Variables."
+            exit 1
+          fi
+
+          check() {
+            # -w prints the status code and total time; the body goes to a file.
+            rm -f body.json
+            out=$(curl -sS -o body.json -w '%{http_code} %{time_total}' \
+              --max-time 20 -H 'User-Agent: voidaj-uptime-check' "$HEALTH_URL") || out="000 0"
+            code=${out% *}; secs=${out#* }
+            status=$(jq -r '.status // empty' body.json 2>/dev/null || true)
+            echo "Attempt $1: HTTP $code in ${secs}s, status=${status:-none}"
+            [ "$code" = 200 ] && [ "$status" = ok ] && awk -v s="$secs" -v m="$MAX_SECONDS" 'BEGIN { exit !(s <= m) }'
+          }
+
+          if check 1 || { sleep 30; check 2; }; then
+            result=up
+          else
+            result=down
+          fi
+
+          {
+            echo "### Uptime: $result"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| HTTP status | $code |"
+            echo "| Response time | ${secs}s (limit ${MAX_SECONDS}s) |"
+            echo "| Database | $(jq -r 'if .db then (if .db.ok then "ok, \(.db.latencyMs) ms" else .db.error end) else "no answer" end' body.json 2>/dev/null || echo 'no answer') |"
+            echo "| Commit | $(jq -r '.commit // "unknown"' body.json 2>/dev/null || echo unknown) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$result" = down ]; then
+            echo "::error::$HEALTH_URL failed the health check twice (HTTP $code in ${secs}s)."
+            exit 1
+          fi

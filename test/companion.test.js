@@ -26,7 +26,7 @@ describe('AI companion', () => {
   let realCommunity
 
   beforeAll(async () => {
-    await request(app).get('/api/health') // first request creates the schema and seed data
+    await request(app).get('/api/communities') // first request creates the schema and seed data
     realCommunity = await q.get('SELECT id FROM communities ORDER BY id LIMIT 1')
   })
 
