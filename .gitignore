@@ -11,3 +11,6 @@ dist/
 .claude/settings.local.json
 .vercel
 .env*
+
+# Test coverage reports (npm run test:coverage)
+coverage/

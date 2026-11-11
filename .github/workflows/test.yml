@@ -1,13 +1,37 @@
+# Runs on every push to any branch, on every pull request into main, and on
+# demand (Actions tab → Tests → Run workflow).
+#
+# Two jobs run side by side:
+#   test   – the whole test suite with coverage:
+#            • api: server unit tests, and integration tests that run the real
+#              Express app against a real Postgres (a throwaway service
+#              container below, wiped before each run)
+#            • web: React helpers and components in a simulated browser
+#            Fails if any test fails or server line coverage drops below 80%.
+#            The coverage report is attached to the run as an artifact.
+#   build  – the production build (vite build), so a broken import or a CSS
+#            syntax error is caught before deploy.
 name: Tests
 
 on:
   push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the run it replaces.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   test:
+    name: Test suite (api + web)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17
@@ -30,6 +54,36 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Integration tests: the real Express app against a real Postgres.
-      - run: npm test
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e '
+              const t = require("./coverage/coverage-summary.json").total
+              const row = (k) => `| ${k} | ${t[k].pct}% | ${t[k].covered}/${t[k].total} |`
+              console.log(["### Test coverage", "| | % | covered |", "|---|---|---|", ...["lines", "statements", "functions", "branches"].map(row)].join("\n"))
+            ' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - run: npm run build
